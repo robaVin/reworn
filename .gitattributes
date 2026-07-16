@@ -1,0 +1,14 @@
+# Normalise line endings so that Prettier's `endOfLine: "lf"` check passes
+# identically on Windows dev machines and Linux CI runners.
+* text=auto eol=lf
+
+# Binary assets must never be normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
