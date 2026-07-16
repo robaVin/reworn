@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="luxury">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReWorn — Buy &amp; Sell Fashion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#F7F5F2; --surface:#fff; --surface2:#F1EEE9; --text:#111; --muted:#8A8A8A;
+  --border:#E4E2DD; --accent:#111; --accent2:#3A3A3A;
+  --font-display:'Fraunces',serif; --font-body:'Inter',sans-serif;
+  --btn-radius:2px; --card-radius:3px; --ease:cubic-bezier(.22,.61,.36,1);
+  --shadow:0 18px 50px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.5;
+  -webkit-font-smoothing:antialiased;transition:background .5s var(--ease),color .5s var(--ease)}
+::selection{background:var(--accent);color:var(--bg)}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font:inherit}
+
+/* ---------- Top announcement ---------- */
+.ann{background:var(--accent);color:var(--bg);text-align:center;font-size:12px;letter-spacing:.06em;padding:8px}
+
+/* ---------- Header ---------- */
+header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--border);transition:background .5s var(--ease),border-color .5s var(--ease)}
+.nav{display:flex;align-items:center;gap:clamp(8px,2.2vw,18px);padding:14px clamp(12px,4vw,42px);max-width:1360px;margin:0 auto}
+.logo{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.logo .mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);display:grid;place-items:center;font-family:var(--font-body);font-weight:900;font-size:15px}
+.searchwrap{flex:1 1 auto;min-width:0;max-width:460px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:9px 16px;transition:border-color .3s}
+.searchwrap:focus-within{border-color:var(--accent)}
+.searchwrap input{border:none;outline:none;background:none;flex:1;min-width:0;width:100%;color:var(--text);font-size:14px;text-overflow:ellipsis}
+.searchwrap svg{width:16px;height:16px;flex-shrink:0;stroke:var(--muted);fill:none;stroke-width:2}
+.nav-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.iconbtn{position:relative;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--border);transition:.3s}
+.iconbtn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.iconbtn svg{width:19px;height:19px;stroke:var(--text);fill:none;stroke-width:1.7}
+.badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--accent);color:var(--bg);font-size:10.5px;font-weight:700;display:grid;place-items:center}
+.badge:empty{display:none}
+.sell-btn{padding:11px 20px;border-radius:var(--btn-radius);background:var(--accent);color:var(--bg);font-weight:600;font-size:13.5px;transition:transform .3s var(--ease)}
+.sell-btn:hover{transform:translateY(-2px)}
+
+/* theme switcher */
+.themes{display:flex;gap:6px;padding:10px clamp(14px,4vw,42px);max-width:1360px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+.themes::-webkit-scrollbar{display:none}
+.themes button{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--border);padding:7px 13px;border-radius:999px;white-space:nowrap;transition:.3s}
+.themes button:hover{color:var(--text);border-color:var(--accent)}
+.themes button.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;overflow:hidden;margin:clamp(14px,3vw,26px) auto 0;max-width:1360px;border-radius:18px;
+  padding:clamp(36px,7vw,86px) clamp(22px,5vw,64px);background:linear-gradient(130deg,var(--surface2),var(--surface));border:1px solid var(--border)}
+.hero .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.4}
+.hero-in{position:relative;z-index:2;max-width:560px}
+.hero .kick{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.hero h1{font-family:var(--font-display);font-size:clamp(34px,6vw,68px);line-height:.98;letter-spacing:-.02em;margin:16px 0 14px;font-weight:700}
+.hero p{color:var(--muted);font-size:16px;max-width:44ch}
+.hero-cta{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.btn{padding:13px 26px;border-radius:var(--btn-radius);font-weight:600;font-size:14px;border:1px solid transparent;transition:transform .3s var(--ease),background .3s,color .3s}
+.btn:hover{transform:translateY(-2px)}
+.btn-p{background:var(--accent);color:var(--bg)}
+.btn-o{border-color:var(--border);color:var(--text)}
+.btn-o:hover{border-color:var(--accent)}
+[data-theme="boutique"] .btn-p{background:transparent;color:var(--accent);border-color:var(--accent)}
+[data-theme="boutique"] .btn-p:hover{background:var(--accent);color:var(--bg)}
+[data-theme="street"] .btn-p{box-shadow:0 8px 30px color-mix(in srgb,var(--accent) 45%,transparent)}
+.hstats{display:flex;gap:28px;margin-top:34px;flex-wrap:wrap}
+.hstats div b{font-family:var(--font-display);font-size:26px;font-weight:700;display:block}
+.hstats div span{font-size:12px;color:var(--muted);letter-spacing:.05em}
+
+/* ---------- Toolbar ---------- */
+.shell{max-width:1360px;margin:0 auto;padding:0 clamp(14px,4vw,42px)}
+.toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:40px 0 6px}
+.toolbar h2{font-family:var(--font-display);font-size:clamp(24px,3vw,34px);font-weight:700;margin-right:auto}
+.count{color:var(--muted);font-size:13px;font-weight:400;margin-left:10px}
+.select{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:9px 14px;font-size:13px}
+.chips{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 26px}
+.chip{font-size:13px;font-weight:500;color:var(--muted);border:1px solid var(--border);padding:8px 16px;border-radius:999px;transition:.25s}
+.chip:hover{color:var(--text);border-color:var(--accent)}
+.chip.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+/* ---------- Product grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(14px,1.8vw,24px);padding-bottom:60px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);overflow:hidden;
+  display:flex;flex-direction:column;transition:transform .4s var(--ease),box-shadow .4s var(--ease),border-color .3s;animation:pop .4s var(--ease) both}
+.card:hover{transform:translateY(-6px);box-shadow:var(--shadow);border-color:var(--accent)}
+[data-theme="street"] .card:hover{transform:translateY(-6px) rotate(-1deg)}
+@keyframes pop{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.thumb{aspect-ratio:3/4;position:relative;display:grid;place-items:center;overflow:hidden;cursor:pointer}
+.thumb svg.gm{width:48%;transition:transform .5s var(--ease)}
+.card:hover .thumb svg.gm{transform:scale(1.08) rotate(-2deg)}
+.tag{position:absolute;top:10px;left:10px;font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--accent);color:var(--bg)}
+.heart{position:absolute;top:9px;right:9px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--bg) 60%,transparent);backdrop-filter:blur(6px);transition:.25s}
+.heart svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:1.8;transition:.25s}
+.heart:hover{transform:scale(1.12)}
+.heart.on svg{fill:#e0245e;stroke:#e0245e}
+.quick{position:absolute;left:10px;right:10px;bottom:10px;padding:11px;border-radius:var(--btn-radius);background:var(--accent);color:var(--bg);
+  font-weight:600;font-size:13px;text-align:center;opacity:0;transform:translateY(10px);transition:.3s var(--ease)}
+.card:hover .quick{opacity:1;transform:none}
+.cbody{padding:13px 14px 16px;display:flex;flex-direction:column;flex:1}
+.brand{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pname{font-family:var(--font-display);font-size:16px;font-weight:600;margin:4px 0 2px;line-height:1.2}
+.psize{font-size:12px;color:var(--muted)}
+.prow{display:flex;align-items:center;justify-content:space-between;margin-top:11px}
+.price{font-weight:700;font-size:16px}
+.cond{font-size:10.5px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:3px 9px}
+.empty{grid-column:1/-1;text-align:center;padding:70px 0;color:var(--muted)}
+
+/* ---------- Drawer ---------- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.35s;z-index:80}
+.overlay.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(420px,100%);background:var(--bg);z-index:90;
+  transform:translateX(100%);transition:transform .4s var(--ease);display:flex;flex-direction:column;border-left:1px solid var(--border)}
+.drawer.show{transform:none}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--border)}
+.dhead h3{font-family:var(--font-display);font-size:21px;font-weight:700}
+.close{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);display:grid;place-items:center;font-size:18px}
+.close:hover{border-color:var(--accent)}
+.ditems{flex:1;overflow-y:auto;padding:8px 22px}
+.ci{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--border)}
+.ci .im{width:74px;height:96px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+.ci .im svg{width:52%}
+.ci .info{flex:1;min-width:0}
+.ci .info .b{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ci .info .n{font-family:var(--font-display);font-size:15px;font-weight:600;margin:2px 0}
+.ci .info .p{font-weight:700;margin-top:2px}
+.qty{display:flex;align-items:center;gap:0;margin-top:8px;border:1px solid var(--border);border-radius:999px;width:fit-content;overflow:hidden}
+.qty button{width:28px;height:28px;font-size:15px;display:grid;place-items:center}
+.qty button:hover{background:var(--surface2)}
+.qty span{min-width:26px;text-align:center;font-size:13px;font-weight:600}
+.rm{font-size:11.5px;color:var(--muted);margin-top:6px;text-decoration:underline;display:block}
+.rm:hover{color:#e0245e}
+.dfoot{padding:20px 22px;border-top:1px solid var(--border)}
+.subtotal{display:flex;justify-content:space-between;font-size:15px;margin-bottom:6px}
+.subtotal.total{font-weight:700;font-size:19px;font-family:var(--font-display)}
+.dfoot .note{font-size:12px;color:var(--muted);margin:10px 0 16px}
+.checkout{width:100%;padding:15px;border-radius:var(--btn-radius);background:var(--accent);color:var(--bg);font-weight:600;font-size:15px;transition:transform .3s}
+.checkout:hover{transform:translateY(-2px)}
+.dempty{text-align:center;color:var(--muted);padding:70px 20px}
+.dempty svg{width:44px;height:44px;stroke:var(--muted);fill:none;stroke-width:1.4;margin-bottom:14px}
+
+/* ---------- Quick view modal ---------- */
+.modal{position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:.3s}
+.modal.show{opacity:1;pointer-events:auto}
+.mcard{background:var(--bg);border:1px solid var(--border);border-radius:16px;max-width:820px;width:100%;max-height:90vh;overflow:auto;
+  display:grid;grid-template-columns:1fr 1fr;transform:scale(.96);transition:.35s var(--ease)}
+.modal.show .mcard{transform:none}
+.mimg{position:relative;display:grid;place-items:center;min-height:340px}
+.mimg svg{width:52%}
+.minfo{padding:34px 32px;display:flex;flex-direction:column}
+.minfo .brand{margin-bottom:8px}
+.minfo h2{font-family:var(--font-display);font-size:30px;font-weight:700;line-height:1.05}
+.minfo .mp{font-size:24px;font-weight:700;margin:14px 0}
+.minfo .desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.spec{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+.spec span{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:6px 12px;color:var(--muted)}
+.spec b{color:var(--text)}
+.sizes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.sizes button{width:44px;height:44px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;transition:.2s}
+.sizes button:hover{border-color:var(--accent)}
+.sizes button.sel{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.mactions{margin-top:auto;display:flex;gap:10px}
+.mactions .btn{flex:1;text-align:center}
+.seller-row{display:flex;align-items:center;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
+.seller-row .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.mclose{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(6px);display:grid;place-items:center;font-size:18px;z-index:3}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,120%);background:var(--accent);color:var(--bg);
+  padding:14px 22px;border-radius:999px;font-size:14px;font-weight:600;z-index:120;transition:transform .4s var(--ease);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.toast.show{transform:translate(-50%,0)}
+
+/* ---------- Sell / footer ---------- */
+.sellband{max-width:1360px;margin:20px auto 0;border:1px solid var(--border);border-radius:18px;padding:clamp(28px,5vw,54px);
+  display:flex;align-items:center;gap:30px;flex-wrap:wrap;background:linear-gradient(120deg,var(--surface2),var(--surface))}
+.sellband h3{font-family:var(--font-display);font-size:clamp(24px,3.4vw,38px);font-weight:700;flex:1;min-width:260px;line-height:1.02}
+.sellband p{color:var(--muted);max-width:34ch}
+footer{max-width:1360px;margin:0 auto;padding:50px clamp(14px,4vw,42px) 70px;color:var(--muted);font-size:13px;
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:50px}
+
+/* ---------- Seller dashboard ---------- */
+.dash{max-width:1360px;margin:0 auto;padding:clamp(20px,3vw,34px) clamp(14px,4vw,42px) 40px}
+.dash-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.dash-head .ey{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.dash-head h1{font-family:var(--font-display);font-size:clamp(28px,4vw,46px);font-weight:700;line-height:1}
+.dash-head p{color:var(--muted);font-size:14px;margin-top:6px}
+.backbtn{border:1px solid var(--border);border-radius:999px;padding:10px 18px;font-size:13px;font-weight:600;transition:.3s}
+.backbtn:hover{border-color:var(--accent);color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:26px 0}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:20px 22px}
+.stat .lab{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.stat .val{font-family:var(--font-display);font-size:clamp(26px,3vw,36px);font-weight:700;margin-top:8px;line-height:1}
+.stat .delta{font-size:12px;margin-top:8px;color:#22a06b;font-weight:600}
+.stat .delta.down{color:#e0245e}
+.stat .ic{float:right;width:38px;height:38px;border-radius:10px;background:color-mix(in srgb,var(--accent) 16%,transparent);display:grid;place-items:center}
+.stat .ic svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2}
+.dash-cols{display:grid;grid-template-columns:1.6fr 1fr;gap:20px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:22px}
+.pcard h3{font-family:var(--font-display);font-size:19px;font-weight:700;margin-bottom:4px}
+.pcard .sub{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+/* chart */
+.chart{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:10px}
+.bar{flex:1;background:linear-gradient(var(--accent),color-mix(in srgb,var(--accent) 40%,transparent));border-radius:6px 6px 0 0;position:relative;transition:height .6s var(--ease);min-height:6px}
+.bar span{position:absolute;bottom:-22px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
+.bar b{position:absolute;top:-20px;left:0;right:0;text-align:center;font-size:11px;font-weight:600;opacity:0;transition:.2s}
+.bar:hover b{opacity:1}
+.chart-wrap{padding-bottom:26px}
+/* listing rows */
+.listing{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.listing:last-child{border-bottom:none}
+.listing .lim{width:52px;height:66px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+.listing .lim svg{width:54%}
+.listing .lmeta{flex:1;min-width:0}
+.listing .lmeta .n{font-family:var(--font-display);font-size:15px;font-weight:600}
+.listing .lmeta .m{font-size:12px;color:var(--muted);margin-top:2px}
+.listing .lp{font-weight:700;font-size:15px;white-space:nowrap}
+.status{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.status.live{background:color-mix(in srgb,#22a06b 18%,transparent);color:#22a06b}
+.status.sold{background:color-mix(in srgb,var(--muted) 22%,transparent);color:var(--muted)}
+.status.draft{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+/* form */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:11px 13px;font-size:14px;outline:none;transition:border-color .25s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.uploadzone{border:1.5px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:13px;margin-bottom:16px;transition:.25s}
+.uploadzone:hover{border-color:var(--accent);color:var(--text)}
+.uploadzone svg{width:26px;height:26px;stroke:var(--muted);fill:none;stroke-width:1.6;margin-bottom:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pub{width:100%;padding:14px;border-radius:var(--btn-radius);background:var(--accent);color:var(--bg);font-weight:600;font-size:15px;margin-top:6px;transition:transform .3s}
+.pub:hover{transform:translateY(-2px)}
+.order{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);font-size:13px}
+.order:last-child{border-bottom:none}
+.order .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));flex-shrink:0}
+.order .ot{flex:1}.order .ot b{font-weight:600}.order .ot span{color:var(--muted);font-size:12px}
+.order .oamt{font-weight:700}
+
+@media(max-width:1000px){
+  .stats{grid-template-columns:repeat(2,1fr)}.dash-cols{grid-template-columns:1fr}
+  .grid{grid-template-columns:repeat(2,1fr)}.mcard{grid-template-columns:1fr}.mimg{min-height:260px}
+}
+/* tablet / large phone: hide sell button, shrink header, let search flex down */
+@media(max-width:760px){
+  .sell-btn{display:none}
+  .logo{font-size:20px}
+  .searchwrap{padding:8px 13px}
+  .searchwrap input{font-size:13px}
+  .iconbtn{width:38px;height:38px}.iconbtn svg{width:17px;height:17px}
+  .nav-actions{gap:6px}
+  .hstats{gap:18px}
+  .quick{opacity:1;transform:none}        /* always show Add-to-bag on touch */
+}
+/* phone */
+@media(max-width:480px){
+  .logo{font-size:17px;gap:6px}
+  .logo .mk{width:26px;height:26px;font-size:13px}
+  .searchwrap{padding:7px 11px;gap:6px}
+  .searchwrap input{font-size:12.5px}
+  .iconbtn{width:36px;height:36px}.iconbtn svg{width:16px;height:16px}
+  .grid{gap:10px}
+  .pname{font-size:15px}
+  .two{grid-template-columns:1fr}          /* stack form fields */
+  .stat .val{font-size:24px}
+  .bar b{opacity:1}                        /* always show chart values on touch */
+  .minfo{padding:26px 22px}
+  .dhead,.ditems,.dfoot{padding-left:18px;padding-right:18px}
+}
+/* very small phone: drop to a single product column so cards stay legible */
+@media(max-width:380px){
+  .grid{grid-template-columns:1fr}
+  .stats{gap:10px}
+  .searchwrap input::placeholder{font-size:0}   /* placeholder hidden, icon stays */
+}
+</style>
+</head>
+<body>
+
+<div class="ann" id="ann">Free authenticated shipping on orders over €150 · New drops every Friday</div>
+
+<header>
+  <div class="nav">
+    <div class="logo"><span class="mk">R</span>ReWorn</div>
+    <label class="searchwrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input id="search" placeholder="Search brands, items, styles…" />
+    </label>
+    <div class="nav-actions">
+      <button class="iconbtn" id="wishBtn" title="Wishlist">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-8-5.3-8-11a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 5.7-8 11-8 11z"/></svg>
+        <span class="badge" id="wishBadge"></span>
+      </button>
+      <button class="iconbtn" id="cartBtn" title="Cart">
+        <svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M6 6L5 3H2"/></svg>
+        <span class="badge" id="cartBadge"></span>
+      </button>
+      <button class="sell-btn" id="sellTop">Sell an item</button>
+    </div>
+  </div>
+  <div class="themes" id="themes"></div>
+</header>
+
+<section class="hero">
+  <div class="blob" id="b1"></div><div class="blob" id="b2"></div>
+  <div class="hero-in">
+    <div class="kick" id="hk">Pre-loved · Authenticated · Circular</div>
+    <h1 id="ht">Give great clothes a second life.</h1>
+    <p id="hs">Buy and sell curated pre-loved fashion. Thousands of verified pieces, one beautiful place.</p>
+    <div class="hero-cta">
+      <button class="btn btn-p" onclick="document.getElementById('shop').scrollIntoView()">Shop the edit</button>
+      <button class="btn btn-o" id="sellHero">Start selling</button>
+    </div>
+    <div class="hstats">
+      <div><b>48k+</b><span>Items listed</span></div>
+      <div><b>12k</b><span>Verified sellers</span></div>
+      <div><b>2.1M</b><span>Garments rehomed</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="shell" id="shop">
+  <div class="toolbar">
+    <h2>The edit <span class="count" id="count"></span></h2>
+    <select class="select" id="sort">
+      <option value="new">Newest first</option>
+      <option value="low">Price: low to high</option>
+      <option value="high">Price: high to low</option>
+    </select>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<section class="sellband">
+  <h3 id="sbt">List an item in under 3 minutes.</h3>
+  <p id="sbs">Snap it, price it, ship it. Reach thousands of buyers looking for exactly what's in your closet.</p>
+  <button class="btn btn-p" id="sellBand">Open seller studio</button>
+</section>
+
+<!-- ============ SELLER DASHBOARD ============ -->
+<section class="dash" id="dash" style="display:none">
+  <div class="dash-head">
+    <div>
+      <div class="ey">Seller studio</div>
+      <h1>Welcome back, Nikola</h1>
+      <p>Here's how your closet is performing this month.</p>
+    </div>
+    <button class="backbtn" id="backShop">← Back to shopping</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="dash-cols">
+    <div>
+      <div class="pcard chart-wrap">
+        <h3>Sales this week</h3>
+        <div class="sub">€1,284 earned · 9 items sold</div>
+        <div class="chart" id="chart"></div>
+      </div>
+      <div class="pcard" style="margin-top:20px">
+        <h3>Your listings</h3>
+        <div class="sub" id="listCount">Manage everything you're selling</div>
+        <div id="listings"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="pcard">
+        <h3>Create a listing</h3>
+        <div class="sub">Publish in under 3 minutes.</div>
+        <div class="uploadzone">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+          <div>Drag photos here or click to upload</div>
+        </div>
+        <div class="field"><label>Item name</label><input id="f-name" placeholder="e.g. Wool Overcoat" /></div>
+        <div class="field"><label>Brand</label><input id="f-brand" placeholder="e.g. Maison Kré" /></div>
+        <div class="two">
+          <div class="field"><label>Price (€)</label><input id="f-price" type="number" placeholder="120" /></div>
+          <div class="field"><label>Size</label><input id="f-size" placeholder="M" /></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Category</label><select id="f-cat"></select></div>
+          <div class="field"><label>Condition</label><select id="f-cond">
+            <option>Pristine</option><option>Excellent</option><option>Like new</option><option>Very good</option><option>Good</option>
+          </select></div>
+        </div>
+        <button class="pub" id="publish">Publish listing</button>
+      </div>
+      <div class="pcard" style="margin-top:20px">
+        <h3>Recent orders</h3>
+        <div class="sub">Latest sales &amp; messages</div>
+        <div id="orders"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>ReWorn — Buy &amp; Sell Fashion Marketplace</span>
+  <span>Switch the theme above to preview all 5 design directions →</span>
+</footer>
+
+<!-- Cart / wishlist drawer -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="dhead"><h3 id="drawerTitle">Your bag</h3><button class="close" id="drawerClose">×</button></div>
+  <div class="ditems" id="drawerItems"></div>
+  <div class="dfoot" id="drawerFoot"></div>
+</aside>
+
+<!-- Quick view -->
+<div class="modal" id="modal"><div class="mcard" id="mcard"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- THEMES (all keys quoted → no syntax errors) ---------------- */
+const THEMES = {
+  luxury:{ label:"01 · Minimal Luxury",
+    v:{"bg":"#F7F5F2","surface":"#ffffff","surface2":"#F1EEE9","text":"#111111","muted":"#8A8A8A","border":"#E4E2DD","accent":"#111111","accent2":"#3A3A3A"},
+    f:{"font-display":"'Fraunces',serif","font-body":"'Inter',sans-serif"}, r:{"btn-radius":"2px","card-radius":"3px"},
+    hero:{k:"Pre-loved · Authenticated · Circular",t:"Give great clothes a second life.",s:"Buy and sell curated pre-loved fashion. Thousands of verified pieces, one beautiful place."},
+    sell:{t:"List an item in under 3 minutes.",s:"Snap it, price it, ship it. Reach buyers who want exactly what's in your closet."} },
+  street:{ label:"02 · Streetwear",
+    v:{"bg":"#0A0A0A","surface":"#141420","surface2":"#1B1B2B","text":"#F2F2F2","muted":"#8b8ba7","border":"#26263a","accent":"#39FF14","accent2":"#7B2FF7"},
+    f:{"font-display":"'Anton',sans-serif","font-body":"'Space Grotesk',sans-serif"}, r:{"btn-radius":"999px","card-radius":"16px"},
+    hero:{k:"◉ Drop live · authenticated hype",t:"Cop it. Flip it. Flex it.",s:"Real-time offers on the most wanted pieces. Authenticated, gamified, always moving."},
+    sell:{t:"Turn your closet into a scoreboard.",s:"List, get offers, watch your sales velocity climb. Selling here feels like winning."} },
+  sustainable:{ label:"03 · Sustainable",
+    v:{"bg":"#F4EFE6","surface":"#FBF8F2","surface2":"#EDE4D6","text":"#3A342E","muted":"#8a7f6f","border":"#E0D3C0","accent":"#C06B4E","accent2":"#2F4A3C"},
+    f:{"font-display":"'Fraunces',serif","font-body":"'Work Sans',sans-serif"}, r:{"btn-radius":"999px","card-radius":"18px"},
+    hero:{k:"🌱 2.1M garments rehomed",t:"Slow fashion, second life.",s:"Every piece you buy or sell keeps good clothing in circulation — and out of landfill."},
+    sell:{t:"Your closet clean-out can do good.",s:"List in minutes and watch the water and CO₂ your resale saves add up."} },
+  boutique:{ label:"04 · Premium Boutique",
+    v:{"bg":"#0C0C0C","surface":"#161513","surface2":"#1E1C18","text":"#EDE9E1","muted":"#8f887c","border":"#2a2721","accent":"#C8A24B","accent2":"#8C7434"},
+    f:{"font-display":"'Cormorant Garamond',serif","font-body":"'Inter',sans-serif"}, r:{"btn-radius":"3px","card-radius":"4px"},
+    hero:{k:"The Edit · Autumn",t:"Extraordinary pieces, authenticated.",s:"A curated resale house for luxury fashion — consigned, verified, presented like a magazine."},
+    sell:{t:"Consign with white-glove ease.",s:"We authenticate, photograph and present your pieces to a discerning global audience."} },
+  scandi:{ label:"05 · Scandinavian",
+    v:{"bg":"#FFFFFF","surface":"#FAFBFC","surface2":"#F0F1F2","text":"#2B2B2B","muted":"#8b9096","border":"#E6E8EA","accent":"#7FA0B2","accent2":"#B7C4B1"},
+    f:{"font-display":"'Archivo',sans-serif","font-body":"'Inter',sans-serif"}, r:{"btn-radius":"10px","card-radius":"12px"},
+    hero:{k:"Buy · Sell · Simple",t:"A tidier way to buy and sell clothes.",s:"Clean, calm and effortless. List in minutes, shop with confidence, no fuss."},
+    sell:{t:"Selling, made refreshingly simple.",s:"Three steps: photograph, price, publish. We handle the rest."} }
+};
+
+/* ---------------- Product catalog ---------------- */
+const CATS=["All","Outerwear","Tops","Dresses","Denim","Knitwear","Bags","Shoes"];
+const SHAPES={
+  Outerwear:`<path d="M30 20 L45 10 L55 18 L70 10 L85 20 L78 40 L68 36 L68 92 L32 92 L32 36 L22 40 Z"/>`,
+  Tops:`<path d="M32 18 L46 12 L54 18 L68 12 L82 18 L76 36 L67 33 L67 88 L33 88 L33 33 L24 36 Z"/>`,
+  Dresses:`<path d="M38 12 L62 12 L58 30 L72 92 L28 92 L42 30 Z"/>`,
+  Denim:`<path d="M32 14 L68 14 L64 50 L60 92 L52 92 L50 55 L48 92 L40 92 L36 50 Z"/>`,
+  Knitwear:`<path d="M30 22 L44 14 L56 14 L70 22 L64 40 L66 88 L34 88 L36 40 Z"/>`,
+  Bags:`<rect x="34" y="16" width="32" height="18" rx="6"/><path d="M28 34 L72 34 L68 90 L32 90 Z"/>`,
+  Shoes:`<path d="M18 60 Q22 44 40 46 L58 58 L82 62 Q88 64 88 72 L88 78 L18 78 Z"/>`
+};
+const P=[
+  ["Maison Kré","Wool Overcoat",240,"Outerwear","M","Excellent","EDIT"],
+  ["Studio Nord","Silk Slip Dress",120,"Dresses","S","Like new",""],
+  ["Archive Lab","Cashmere Knit",95,"Knitwear","L","Very good","NEW"],
+  ["Neue Form","Leather Tote",310,"Bags","OS","Excellent",""],
+  ["Halden","Straight Denim",78,"Denim","30","Very good",""],
+  ["Bris & Co","Oversized Blazer",165,"Outerwear","M","Pristine","EDIT"],
+  ["Lykke","Canvas Sneakers",64,"Shoes","41","Like new","NEW"],
+  ["Fernwood","Merino Cardigan",88,"Knitwear","M","Excellent",""],
+  ["Atelier Vég","Poplin Shirt",52,"Tops","S","Good",""],
+  ["Cedarhaus","Structured Bag",198,"Bags","OS","Excellent","EDIT"],
+  ["Willow Row","Linen Sundress",74,"Dresses","M","Very good","NEW"],
+  ["Marsh","Raw Selvedge Jeans",130,"Denim","32","Pristine",""],
+  ["Halden","Cropped Puffer",210,"Outerwear","S","Like new",""],
+  ["Studio Nord","Ribbed Tank",34,"Tops","XS","Good",""],
+  ["Lumen","Suede Loafers",120,"Shoes","39","Excellent","EDIT"],
+  ["Archive Lab","Mohair Sweater",110,"Knitwear","L","Very good",""],
+  ["Neue Form","Trench Coat",285,"Outerwear","L","Pristine","NEW"],
+  ["Willow Row","Wrap Dress",96,"Dresses","M","Excellent",""]
+].map((a,i)=>({id:i+1,brand:a[0],name:a[1],price:a[2],cat:a[3],size:a[4],cond:a[5],tag:a[6],
+  hue:(i*47)%360}));
+
+/* ---------------- State ---------------- */
+const state={theme:'luxury',cat:'All',q:'',sort:'new',cart:{},wish:new Set()};
+const root=document.documentElement;
+const $=id=>document.getElementById(id);
+
+function tint(hue){return `linear-gradient(150deg,hsl(${hue} 30% 82% / .5),hsl(${(hue+40)%360} 34% 88% / .35))`;}
+function gm(cat,color){return `<svg class="gm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="${color}" opacity=".85">${SHAPES[cat]||SHAPES.Tops}</svg>`;}
+function money(n){return '€'+n.toLocaleString();}
+
+/* ---------------- Theme apply ---------------- */
+function applyTheme(key){
+  state.theme=key;const t=THEMES[key];
+  root.setAttribute('data-theme',key);
+  for(const[k,v]of Object.entries(t.v))root.style.setProperty('--'+k,v);
+  for(const[k,v]of Object.entries(t.f))root.style.setProperty('--'+k,v);
+  for(const[k,v]of Object.entries(t.r))root.style.setProperty('--'+k,v);
+  $('hk').textContent=t.hero.k;$('ht').textContent=t.hero.t;$('hs').textContent=t.hero.s;
+  $('sbt').textContent=t.sell.t;$('sbs').textContent=t.sell.s;
+  $('b1').style.cssText=`width:360px;height:360px;top:-90px;right:-40px;background:${t.v.accent}`;
+  $('b2').style.cssText=`width:300px;height:300px;bottom:-140px;right:160px;background:${t.v.accent2}`;
+  document.querySelectorAll('#themes button').forEach(b=>b.classList.toggle('on',b.dataset.k===key));
+}
+
+/* ---------------- Render grid ---------------- */
+function visible(){
+  let list=P.filter(p=>(state.cat==='All'||p.cat===state.cat));
+  if(state.q){const q=state.q.toLowerCase();
+    list=list.filter(p=>(p.name+' '+p.brand+' '+p.cat).toLowerCase().includes(q));}
+  if(state.sort==='low')list=[...list].sort((a,b)=>a.price-b.price);
+  if(state.sort==='high')list=[...list].sort((a,b)=>b.price-a.price);
+  return list;
+}
+function renderGrid(){
+  const list=visible();const g=$('grid');
+  $('count').textContent=`(${list.length})`;
+  if(!list.length){g.innerHTML=`<div class="empty">No pieces match “${state.q}”. Try another search.</div>`;return;}
+  g.innerHTML=list.map((p,i)=>`
+   <div class="card" style="animation-delay:${Math.min(i*40,400)}ms">
+     <div class="thumb" style="background:${tint(p.hue)}" onclick="openView(${p.id})">
+       ${p.tag?`<span class="tag">${p.tag}</span>`:''}
+       <button class="heart ${state.wish.has(p.id)?'on':''}" onclick="event.stopPropagation();toggleWish(${p.id})" aria-label="wishlist">
+         <svg viewBox="0 0 24 24"><path d="M12 21s-8-5.3-8-11a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 5.7-8 11-8 11z"/></svg>
+       </button>
+       ${gm(p.cat,THEMES[state.theme].v.accent)}
+       <div class="quick" onclick="event.stopPropagation();addCart(${p.id})">Add to bag</div>
+     </div>
+     <div class="cbody">
+       <div class="brand">${p.brand}</div>
+       <div class="pname">${p.name}</div>
+       <div class="psize">Size ${p.size} · ${p.cat}</div>
+       <div class="prow"><span class="price">${money(p.price)}</span><span class="cond">${p.cond}</span></div>
+     </div>
+   </div>`).join('');
+}
+function renderChips(){
+  $('chips').innerHTML=CATS.map(c=>`<button class="chip ${state.cat===c?'on':''}" onclick="setCat('${c}')">${c}</button>`).join('');
+}
+function setCat(c){state.cat=c;renderChips();renderGrid();}
+
+/* ---------------- Cart / wishlist ---------------- */
+function addCart(id,size){state.cart[id]=(state.cart[id]||0)+1;syncBadges();toast('Added to bag');renderDrawer();}
+function changeQty(id,d){state.cart[id]=(state.cart[id]||0)+d;if(state.cart[id]<=0)delete state.cart[id];syncBadges();renderDrawer();}
+function removeItem(id){delete state.cart[id];syncBadges();renderDrawer();}
+function toggleWish(id){state.wish.has(id)?state.wish.delete(id):state.wish.add(id);syncBadges();renderGrid();
+  if(drawerMode==='wish')renderDrawer();}
+function cartCount(){return Object.values(state.cart).reduce((a,b)=>a+b,0);}
+function cartTotal(){return Object.entries(state.cart).reduce((s,[id,q])=>s+P.find(p=>p.id==id).price*q,0);}
+function syncBadges(){
+  $('cartBadge').textContent=cartCount()||'';
+  $('wishBadge').textContent=state.wish.size||'';
+}
+
+/* ---------------- Drawer ---------------- */
+let drawerMode='cart';
+function openDrawer(mode){drawerMode=mode;renderDrawer();$('overlay').classList.add('show');$('drawer').classList.add('show');}
+function closeDrawer(){$('overlay').classList.remove('show');$('drawer').classList.remove('show');}
+function renderDrawer(){
+  const isCart=drawerMode==='cart';
+  $('drawerTitle').textContent=isCart?'Your bag':'Wishlist';
+  const items=isCart
+    ? Object.entries(state.cart).map(([id,q])=>({p:P.find(x=>x.id==id),q:q}))
+    : [...state.wish].map(id=>({p:P.find(x=>x.id==id),q:1}));
+  const box=$('drawerItems'),foot=$('drawerFoot');
+  if(!items.length){
+    box.innerHTML=`<div class="dempty"><svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
+      <p>${isCart?'Your bag is empty.':'No saved items yet.'}</p></div>`;
+    foot.innerHTML='';return;
+  }
+  box.innerHTML=items.map(({p,q})=>`
+   <div class="ci">
+     <div class="im" style="background:${tint(p.hue)}">${gm(p.cat,THEMES[state.theme].v.accent)}</div>
+     <div class="info">
+       <div class="b">${p.brand}</div><div class="n">${p.name}</div>
+       <div class="p">${money(p.price)}</div>
+       ${isCart?`<div class="qty"><button onclick="changeQty(${p.id},-1)">−</button><span>${q}</span><button onclick="changeQty(${p.id},1)">+</button></div>
+       <span class="rm" onclick="removeItem(${p.id})">Remove</span>`
+       :`<div class="qty" style="margin-top:8px"><button class="btn btn-o" style="border-radius:999px;padding:7px 14px;font-size:12px" onclick="addCart(${p.id})">Add to bag</button></div>
+       <span class="rm" onclick="toggleWish(${p.id})">Remove</span>`}
+     </div>
+   </div>`).join('');
+  if(isCart){
+    const t=cartTotal(),ship=t>150||t===0?0:9;
+    foot.innerHTML=`
+      <div class="subtotal"><span>Subtotal</span><span>${money(t)}</span></div>
+      <div class="subtotal"><span>Shipping</span><span>${ship?money(ship):'Free'}</span></div>
+      <div class="subtotal total"><span>Total</span><span>${money(t+ship)}</span></div>
+      <p class="note">Authenticated & buyer-protected. Free returns within 14 days.</p>
+      <button class="checkout" onclick="toast('Checkout — demo only ✓')">Proceed to checkout</button>`;
+  }else{
+    foot.innerHTML=`<button class="checkout" onclick="drawerMode='cart';renderDrawer()">View bag (${cartCount()})</button>`;
+  }
+}
+
+/* ---------------- Quick view ---------------- */
+let selSize=null;
+function openView(id){
+  const p=P.find(x=>x.id==id);selSize=p.size;
+  const sizes=p.cat==='Shoes'?['38','39','40','41','42']:p.cat==='Denim'?['28','30','32','34']:['XS','S','M','L','XL'];
+  $('mcard').innerHTML=`
+    <div class="mimg" style="background:${tint(p.hue)}">
+      <button class="mclose" onclick="closeModal()">×</button>
+      ${gm(p.cat,THEMES[state.theme].v.accent)}
+    </div>
+    <div class="minfo">
+      <div class="brand">${p.brand}</div>
+      <h2>${p.name}</h2>
+      <div class="mp">${money(p.price)}</div>
+      <div class="desc">A pre-loved ${p.name.toLowerCase()} in <b>${p.cond.toLowerCase()}</b> condition. Authenticated by ReWorn, buyer-protected, and ready for its second life.</div>
+      <div class="spec"><span>Condition <b>${p.cond}</b></span><span>Category <b>${p.cat}</b></span><span>Listed size <b>${p.size}</b></span></div>
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Select size</div>
+      <div class="sizes" id="sizes">${sizes.map(s=>`<button class="${s===p.size?'sel':''}" onclick="pickSize(this,'${s}')">${s}</button>`).join('')}</div>
+      <div class="mactions">
+        <button class="btn btn-p" onclick="addCart(${p.id});closeModal()">Add to bag</button>
+        <button class="btn btn-o" onclick="toggleWish(${p.id});this.textContent=state.wish.has(${p.id})?'♥ Saved':'♡ Save'">${state.wish.has(p.id)?'♥ Saved':'♡ Save'}</button>
+      </div>
+      <div class="seller-row"><span class="av"></span> Sold by <b style="color:var(--text)">@${p.brand.toLowerCase().replace(/[^a-z]/g,'')}</b> · ⭐ 4.9 (211)</div>
+    </div>`;
+  $('modal').classList.add('show');
+}
+function pickSize(el,s){selSize=s;document.querySelectorAll('#sizes button').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
+function closeModal(){$('modal').classList.remove('show');}
+
+/* ---------------- Toast ---------------- */
+let toastT;
+function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),1800);}
+
+/* ---------------- Seller dashboard ---------------- */
+let sellerListings=[
+  {name:"Wool Overcoat",brand:"Maison Kré",price:240,cat:"Outerwear",cond:"Excellent",status:"live",views:412,likes:38,hue:20},
+  {name:"Silk Slip Dress",brand:"Studio Nord",price:120,cat:"Dresses",cond:"Like new",status:"live",views:288,likes:24,hue:300},
+  {name:"Leather Tote",brand:"Neue Form",price:310,cat:"Bags",cond:"Excellent",status:"sold",views:640,likes:71,hue:140},
+  {name:"Cashmere Knit",brand:"Archive Lab",price:95,cat:"Knitwear",cond:"Very good",status:"live",views:176,likes:15,hue:210},
+  {name:"Raw Selvedge Jeans",brand:"Marsh",price:130,cat:"Denim",cond:"Pristine",status:"draft",views:0,likes:0,hue:250}
+];
+const WEEK=[["Mon",120],["Tue",340],["Wed",210],["Thu",90],["Fri",480],["Sat",530],["Sun",280]];
+const ORDERS=[
+  ["Leather Tote","Sold to @amelie · 2h ago",310],
+  ["Silk Slip Dress","Message from @jonas · 5h ago",120],
+  ["Merino Cardigan","Sold to @priya · yesterday",88]
+];
+
+function renderStats(){
+  const active=sellerListings.filter(l=>l.status==='live').length;
+  const views=sellerListings.reduce((s,l)=>s+l.views,0);
+  const sold=sellerListings.filter(l=>l.status==='sold').length+8;
+  const cards=[
+    ["Total earnings","€4,820","+18% this month",false,`<path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>`],
+    ["Active listings",active,"3 added this week",false,`<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>`],
+    ["Total views",views.toLocaleString(),"+12% vs last month",false,`<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>`],
+    ["Items sold",sold,"−2 vs last month",true,`<path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/>`]
+  ];
+  $('stats').innerHTML=cards.map(c=>`
+    <div class="stat">
+      <div class="ic"><svg viewBox="0 0 24 24">${c[4]}</svg></div>
+      <div class="lab">${c[0]}</div><div class="val">${c[1]}</div>
+      <div class="delta ${c[3]?'down':''}">${c[2]}</div>
+    </div>`).join('');
+}
+function renderChart(){
+  const max=Math.max(...WEEK.map(w=>w[1]));
+  $('chart').innerHTML=WEEK.map(([d,v])=>`
+    <div class="bar" style="height:${Math.round(v/max*100)}%"><b>€${v}</b><span>${d}</span></div>`).join('');
+}
+function renderListings(){
+  $('listCount').textContent=`${sellerListings.length} listings · ${sellerListings.filter(l=>l.status==='live').length} live`;
+  $('listings').innerHTML=sellerListings.map(l=>`
+    <div class="listing">
+      <div class="lim" style="background:${tint(l.hue)}">${gm(l.cat,THEMES[state.theme].v.accent)}</div>
+      <div class="lmeta"><div class="n">${l.name}</div>
+        <div class="m">${l.brand} · ${l.cat} · ${l.views} views · ${l.likes} ♥</div></div>
+      <div class="lp">${money(l.price)}</div>
+      <span class="status ${l.status}">${l.status}</span>
+    </div>`).join('');
+}
+function renderOrders(){
+  $('orders').innerHTML=ORDERS.map(o=>`
+    <div class="order"><span class="av"></span>
+      <div class="ot"><b>${o[0]}</b><br><span>${o[1]}</span></div>
+      <div class="oamt">${money(o[2])}</div></div>`).join('');
+}
+function renderDashboard(){renderStats();renderChart();renderListings();renderOrders();}
+
+function publishListing(){
+  const name=$('f-name').value.trim()||'Untitled piece';
+  const price=parseInt($('f-price').value,10)||0;
+  sellerListings.unshift({name,brand:$('f-brand').value.trim()||'ReWorn seller',price,
+    cat:$('f-cat').value,cond:$('f-cond').value,status:'live',views:0,likes:0,hue:(sellerListings.length*57)%360});
+  ['f-name','f-brand','f-price','f-size'].forEach(id=>$(id).value='');
+  renderStats();renderListings();
+  // also add to the live shop catalog
+  P.unshift({id:1000+P.length,brand:sellerListings[0].brand,name,price,cat:sellerListings[0].cat,
+    size:$('f-size').value||'M',cond:sellerListings[0].cond,tag:'NEW',hue:sellerListings[0].hue});
+  toast('Listing published — now live in the shop ✓');
+}
+
+/* ---------------- View switching ---------------- */
+function showView(v){
+  const shop=[document.querySelector('.hero'),$('shop'),document.querySelector('.sellband')];
+  const isDash=v==='dash';
+  shop.forEach(el=>el.style.display=isDash?'none':'');
+  $('dash').style.display=isDash?'':'none';
+  if(isDash)renderDashboard();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------------- Wire up ---------------- */
+$('themes').innerHTML=Object.entries(THEMES).map(([k,t])=>`<button data-k="${k}" onclick="applyTheme('${k}')">${t.label}</button>`).join('');
+$('f-cat').innerHTML=CATS.filter(c=>c!=='All').map(c=>`<option>${c}</option>`).join('');
+$('backShop').onclick=()=>showView('shop');
+$('publish').onclick=publishListing;
+$('search').addEventListener('input',e=>{state.q=e.target.value;renderGrid();});
+$('sort').addEventListener('change',e=>{state.sort=e.target.value;renderGrid();});
+$('cartBtn').onclick=()=>openDrawer('cart');
+$('wishBtn').onclick=()=>openDrawer('wish');
+$('drawerClose').onclick=closeDrawer;
+$('overlay').onclick=closeDrawer;
+$('modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
+['sellTop','sellHero','sellBand'].forEach(id=>$(id).onclick=()=>showView('dash'));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeModal();}});
+
+/* ---------------- Init ---------------- */
+applyTheme('luxury');
+renderChips();
+renderGrid();
+syncBadges();
+</script>
+</body>
+</html>
