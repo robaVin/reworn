@@ -1,8 +1,24 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
+
+const srcPath = fileURLToPath(new URL('./src', import.meta.url));
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: {
+    alias: {
+      // Mirrors the `@/*` path mapping in tsconfig.json. Declared directly
+      // rather than via vite-tsconfig-paths, which is ESM-only and cannot be
+      // loaded by this CommonJS config.
+      '@': srcPath,
+
+      // The real `server-only` package throws outside a React Server
+      // Components graph, which would make server modules untestable.
+      // The production guard is unaffected — see tests/stubs/server-only.ts.
+      'server-only': fileURLToPath(
+        new URL('./tests/stubs/server-only.ts', import.meta.url),
+      ),
+    },
+  },
   test: {
     environment: 'node',
     globals: true,

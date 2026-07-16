@@ -6,6 +6,23 @@
  * These are fake values used only by the test runner — never real secrets.
  */
 
+import { webcrypto } from 'node:crypto';
+
+/**
+ * Node 18 does not expose the Web Crypto API as a global without
+ * `--experimental-global-webcrypto` (it became default in Node 19+).
+ * Production runs on the Edge runtime and Node 20, where `crypto` is always
+ * global, so this polyfill is TEST-ONLY and does not mask a real problem.
+ *
+ * It can be deleted once local development moves to Node 20 LTS.
+ */
+if (typeof globalThis.crypto === 'undefined') {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: webcrypto,
+    configurable: true,
+  });
+}
+
 // NODE_ENV is set to 'test' by Vitest itself and is read-only in @types/node.
 process.env.NEXT_PUBLIC_APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
