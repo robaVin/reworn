@@ -1,0 +1,68 @@
+# ---------------------------------------------------------------------------
+# Secrets — NOTHING sensitive may ever be committed.
+# Only .env.example (placeholders) is tracked; it is force-included below.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+secrets/
+.secrets/
+doppler.yaml
+.vercel
+.supabase/
+service-account*.json
+credentials*.json
+
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+
+# Build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Test / coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# Prisma — generated client only; migrations ARE tracked
+prisma/generated/
+prisma/*.db
+prisma/*.db-journal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Misc
+.cache/
+.turbo/
+tmp/
+temp/
