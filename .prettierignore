@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+coverage
+playwright-report
+test-results
+prisma/migrations
+design/preview.html
+docs/mermaid.live
+package-lock.json
+*.md

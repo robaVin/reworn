@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Font family variables are bound by next/font in layout.tsx */
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream text-ink antialiased;
+  }
+
+  /* Accessibility: never remove focus affordances, only restyle them. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-terracotta;
+  }
+}
