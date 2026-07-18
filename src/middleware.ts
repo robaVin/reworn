@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { generateNonce, securityHeaders } from '@/lib/security/headers';
 import { verifyCsrf } from '@/lib/security/csrf';
 import { checkRateLimit, clientIdentity } from '@/lib/security/rate-limit';
+import { refreshSession } from '@/lib/supabase/middleware';
 
 /**
  * Edge middleware — the outermost security boundary.
@@ -22,7 +23,7 @@ function isSensitive(pathname: string): boolean {
   return SENSITIVE_PATH_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
 
@@ -67,6 +68,12 @@ export function middleware(request: NextRequest): NextResponse {
   requestHeaders.set('x-nonce', nonce);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Refresh the Supabase session (rotates tokens, writes cookies onto the
+  // response). This is a convenience layer only — NOT authorization. Every
+  // protected route independently re-verifies the user server-side.
+  await refreshSession(request, response);
+
   return applySecurity(response, nonce);
 }
 

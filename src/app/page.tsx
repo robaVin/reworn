@@ -22,11 +22,16 @@ export default function HomePage() {
 
       <div className="mt-10 rounded-card border border-line bg-surface p-6 shadow-soft">
         <h2 className="font-display text-lg">Foundation status</h2>
+        {/* Honest, current-state checklist — updated per increment. */}
         <ul className="mt-3 space-y-2 text-sm text-muted">
-          <li>Secure application shell and PWA — ready</li>
-          <li>Authentication, roles and permissions — wired</li>
-          <li>Subscription domain and payment abstraction — implemented</li>
-          <li>Marketplace features — Stage 2</li>
+          <li>Secure application shell — done</li>
+          <li>
+            Security foundation (headers, CSP, CSRF, rate limiting) — done
+          </li>
+          <li>Database schema, migrations and row-level security — done</li>
+          <li>Authentication &amp; role-based access — done</li>
+          <li>PWA install support — upcoming</li>
+          <li>Seller subscriptions and marketplace features — Stage 2</li>
         </ul>
       </div>
     </main>

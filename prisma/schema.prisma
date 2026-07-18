@@ -213,9 +213,14 @@ model SubscriptionEvent {
   paymentAttemptId String? @map("payment_attempt_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription   Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  // Referential integrity for the causing attempt (added in migration 0003).
+  // SetNull: if an attempt is ever purged, the historical event survives with a
+  // null reference rather than being deleted or orphaned.
+  paymentAttempt PaymentAttempt? @relation(fields: [paymentAttemptId], references: [id], onDelete: SetNull)
 
   @@index([subscriptionId, createdAt])
+  @@index([paymentAttemptId])
   @@map("subscription_events")
 }
 
@@ -261,8 +266,9 @@ model PaymentAttempt {
 
   seller        SellerProfile     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   plan          SubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Restrict)
-  subscription  Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-  events        PaymentEvent[]
+  subscription      Subscription?       @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  events            PaymentEvent[]
+  subscriptionEvents SubscriptionEvent[]
 
   @@index([sellerId, status])
   @@index([status, expiresAt])
