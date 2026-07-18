@@ -1,0 +1,399 @@
+// =============================================================================
+// ReWorn — Prisma schema (Stage 1 database foundation)
+// =============================================================================
+// Scope (approved): profiles, roles, user_roles, seller_profiles,
+// subscription_plans, subscriptions, subscription_events, payment_attempts,
+// payment_events, audit_logs, and categories (needed for seed validation).
+//
+// DEFERRED to later increments: products, variants, product_images, messaging,
+// wishlists, reviews, notifications, analytics.
+//
+// Conventions
+//  - PostgreSQL. UUID primary keys for every externally referenced record.
+//  - Timestamps are timezone-aware (@db.Timestamptz) and stored in UTC.
+//  - Money is INTEGER MINOR UNITS (e.g. denari, cents) + an ISO-4217 code.
+//    Never floats — floating point cannot represent money exactly.
+//  - We NEVER store passwords, OAuth tokens, OTP values or provider secrets.
+//    Authentication lives entirely in Supabase Auth (auth.users); `profiles`
+//    references that UUID.
+//  - Immutable snapshots (subscription_events, payment_events) are append-only
+//    by convention AND enforced by RLS/triggers in the SQL migration.
+//  - Idempotency & duplicate-period protection are DATABASE constraints, not
+//    just application checks (see @@unique / partial indexes below and the
+//    accompanying SQL migration).
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Identity & access
+// -----------------------------------------------------------------------------
+
+/// Application-side profile for a Supabase Auth user.
+/// `id` IS the Supabase Auth user UUID (auth.users.id) — one row per account.
+/// No credentials are stored here; authentication is owned by Supabase Auth.
+model Profile {
+  id          String   @id @db.Uuid // == auth.users.id
+  displayName String?  @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  locale      String   @default("mk")
+  status      UserStatus @default(active)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  roles         UserRole[]
+  sellerProfile SellerProfile?
+  auditLogs     AuditLog[]     @relation("AuditActor")
+
+  @@index([status])
+  @@map("profiles")
+}
+
+/// System role catalogue. Small, seeded, rarely changes.
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        RoleName @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+/// Assignment of a role to a profile (many-to-many).
+/// A user may hold several roles (a seller is also a buyer).
+model UserRole {
+  id         String   @id @default(uuid()) @db.Uuid
+  profileId  String   @map("profile_id") @db.Uuid
+  roleId     String   @map("role_id") @db.Uuid
+  grantedAt  DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  /// Nullable: the Supabase UUID of the admin who granted it (null = system/seed).
+  grantedBy  String?  @map("granted_by") @db.Uuid
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  role    Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  // A profile cannot hold the same role twice.
+  @@unique([profileId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// -----------------------------------------------------------------------------
+// Seller domain
+// -----------------------------------------------------------------------------
+
+/// Extended profile for a user who sells. Created when a user opts to sell;
+/// seller *privileges* still depend on a server-verified active subscription.
+model SellerProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  profileId    String   @unique @map("profile_id") @db.Uuid
+  shopName     String   @map("shop_name")
+  isBusiness   Boolean  @default(false) @map("is_business")
+  status       SellerStatus @default(active)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile         Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  subscriptions   Subscription[]
+  paymentAttempts PaymentAttempt[]
+  listingUsage    ListingUsage[]
+
+  @@index([status])
+  @@map("seller_profiles")
+}
+
+/// Tracks how many listings a seller has created within an ISO week, to enforce
+/// the per-plan weekly quota. One row per (seller, iso_year, iso_week).
+/// Present in Stage 1 because quota enforcement is part of the subscription
+/// domain; product creation that increments it arrives in Stage 2.
+model ListingUsage {
+  id        String   @id @default(uuid()) @db.Uuid
+  sellerId  String   @map("seller_id") @db.Uuid
+  isoYear   Int      @map("iso_year")
+  isoWeek   Int      @map("iso_week")
+  used      Int      @default(0)
+  quota     Int
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  seller SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // Exactly one usage row per seller per ISO week — prevents duplicate quota
+  // counters (a required "protection against duplicate quota changes").
+  @@unique([sellerId, isoYear, isoWeek])
+  @@map("listing_usage")
+}
+
+// -----------------------------------------------------------------------------
+// Subscription domain
+// -----------------------------------------------------------------------------
+
+/// A purchasable plan. Prices are minor units + ISO currency.
+/// Seed values are PROVISIONAL and configurable — not approved pricing.
+model SubscriptionPlan {
+  id                 String   @id @default(uuid()) @db.Uuid
+  /// Stable machine code (e.g. "starter"); safe to reference in code/config.
+  code               String   @unique
+  name               String
+  /// Price in MINOR UNITS (e.g. 30000 = 300.00 MKD). Never a float.
+  priceMinor         Int      @map("price_minor")
+  currency           String   @default("MKD") @db.Char(3)
+  /// Billing term length in days (manual-renewal model; no auto-recurring).
+  termDays           Int      @map("term_days")
+  weeklyListingQuota Int      @map("weekly_listing_quota")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  subscriptions   Subscription[]
+  paymentAttempts PaymentAttempt[]
+
+  @@index([isActive])
+  @@map("subscription_plans")
+}
+
+/// A seller's subscription. Its lifecycle is governed by the state machine
+/// (pending → active → grace_period → expired, plus cancelled/suspended).
+model Subscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  sellerId  String   @map("seller_id") @db.Uuid
+  planId    String   @map("plan_id") @db.Uuid
+  status    SubscriptionStatus @default(pending)
+
+  /// Current paid term window (UTC). Null until first activation.
+  currentPeriodStart DateTime? @map("current_period_start") @db.Timestamptz(6)
+  currentPeriodEnd   DateTime? @map("current_period_end") @db.Timestamptz(6)
+  /// End of the configurable grace window after currentPeriodEnd.
+  graceEndsAt        DateTime? @map("grace_ends_at") @db.Timestamptz(6)
+  /// Set when a cancellation is scheduled to take effect at period end.
+  cancelAt           DateTime? @map("cancel_at") @db.Timestamptz(6)
+
+  /// Whether a free trial applied to this subscription (trial disabled by
+  /// default at the platform level; modelled for forward compatibility).
+  isTrial   Boolean  @default(false) @map("is_trial")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  seller          SellerProfile       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  plan            SubscriptionPlan    @relation(fields: [planId], references: [id], onDelete: Restrict)
+  events          SubscriptionEvent[]
+  paymentAttempts PaymentAttempt[]
+
+  // Fast lookups for authorization ("is this seller currently allowed to
+  // publish?") and for the expiry/grace sweeper.
+  @@index([sellerId, status])
+  @@index([status, currentPeriodEnd])
+  @@index([status, graceEndsAt])
+  @@map("subscriptions")
+}
+
+/// Immutable, append-only audit trail of every subscription state transition.
+/// A financial/lifecycle snapshot; never updated or deleted (enforced by the
+/// SQL migration's RLS + revoked UPDATE/DELETE).
+model SubscriptionEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  subscriptionId String   @map("subscription_id") @db.Uuid
+  fromStatus     SubscriptionStatus? @map("from_status")
+  toStatus       SubscriptionStatus  @map("to_status")
+  reason         String
+  /// Frozen snapshot of relevant fields at event time (period, plan, amount…).
+  snapshot       Json?    @db.JsonB
+  /// The PaymentAttempt that caused this transition, when applicable.
+  paymentAttemptId String? @map("payment_attempt_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+  @@map("subscription_events")
+}
+
+// -----------------------------------------------------------------------------
+// Payment domain (subscription payments only — no goods checkout)
+// -----------------------------------------------------------------------------
+
+/// A single attempt to pay for a subscription term. Created BEFORE redirecting
+/// to the gateway. The `merchantReference` is generated by us and is globally
+/// unique — it is the idempotency key that guarantees a verified callback
+/// activates a subscription EXACTLY ONCE, even under concurrent callbacks.
+model PaymentAttempt {
+  id               String   @id @default(uuid()) @db.Uuid
+
+  /// Globally unique reference we send to the gateway and expect back.
+  merchantReference String  @unique @map("merchant_reference")
+
+  /// Who is paying (the auth UUID) and their seller/plan/subscription context.
+  profileId        String   @map("profile_id") @db.Uuid
+  sellerId         String   @map("seller_id") @db.Uuid
+  planId           String   @map("plan_id") @db.Uuid
+  /// Null until an activation binds the attempt to a concrete subscription.
+  subscriptionId   String?  @map("subscription_id") @db.Uuid
+
+  /// Server-computed expected charge (minor units) + ISO currency. The gateway
+  /// callback amount MUST match these — client-supplied amounts are ignored.
+  expectedAmountMinor Int    @map("expected_amount_minor")
+  expectedCurrency    String @map("expected_currency") @db.Char(3)
+
+  status           PaymentStatus @default(pending)
+  provider         String        // "mock" | "casys" | ...
+
+  /// Provider's own event/transaction id, when returned. Unique when present
+  /// (partial unique index in SQL) — a second callback for the same provider
+  /// event cannot be processed twice.
+  providerReference String? @map("provider_reference")
+
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// Attempts expire if the user abandons the redirect.
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  /// Set exactly once, when a terminal verified callback is processed.
+  processedAt      DateTime? @map("processed_at") @db.Timestamptz(6)
+
+  seller        SellerProfile     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  plan          SubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscription  Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  events        PaymentEvent[]
+
+  @@index([sellerId, status])
+  @@index([status, expiresAt])
+  @@index([subscriptionId])
+  @@map("payment_attempts")
+}
+
+/// Immutable, append-only record of every callback/status change on an attempt.
+/// Reconciliation-ready. Never updated or deleted.
+model PaymentEvent {
+  id               String   @id @default(uuid()) @db.Uuid
+  paymentAttemptId String   @map("payment_attempt_id") @db.Uuid
+  type             PaymentEventType
+  fromStatus       PaymentStatus? @map("from_status")
+  toStatus         PaymentStatus  @map("to_status")
+  /// Provider's event id for this specific callback, when available.
+  providerEventId  String? @map("provider_event_id")
+  /// Redacted, non-sensitive snapshot of the callback for audit/reconciliation.
+  /// MUST NOT contain signatures, card data or provider secrets.
+  payloadSummary   Json?    @map("payload_summary") @db.JsonB
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  attempt PaymentAttempt @relation(fields: [paymentAttemptId], references: [id], onDelete: Cascade)
+
+  @@index([paymentAttemptId, createdAt])
+  @@map("payment_events")
+}
+
+// -----------------------------------------------------------------------------
+// Catalogue (minimal — categories only, for seed validation)
+// -----------------------------------------------------------------------------
+
+/// Product categories. Included in Stage 1 only to validate the seed/migration
+/// pipeline and support hierarchical setup. Products themselves are DEFERRED.
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String
+  slug      String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+// -----------------------------------------------------------------------------
+// Audit
+// -----------------------------------------------------------------------------
+
+/// Append-only audit log for security-sensitive actions. Immutable.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// The auth UUID of the actor (null for system/automated actions).
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  /// Redacted contextual detail. MUST NOT contain secrets or sensitive PII.
+  metadata   Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.Inet
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor Profile? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum UserStatus {
+  active
+  suspended
+  deleted
+
+  @@map("user_status")
+}
+
+enum RoleName {
+  buyer
+  seller
+  admin
+
+  @@map("role_name")
+}
+
+enum SellerStatus {
+  active
+  frozen
+  banned
+
+  @@map("seller_status")
+}
+
+/// Subscription lifecycle. Transitions are validated by the state machine and
+/// recorded immutably in subscription_events.
+enum SubscriptionStatus {
+  pending
+  active
+  grace_period
+  expired
+  cancelled
+  suspended
+
+  @@map("subscription_status")
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  expired
+  cancelled
+
+  @@map("payment_status")
+}
+
+enum PaymentEventType {
+  created
+  callback_received
+  verified
+  rejected
+  expired
+
+  @@map("payment_event_type")
+}
