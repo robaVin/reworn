@@ -4,7 +4,7 @@
   "private": true,
   "description": "ReWorn — second-hand fashion marketplace (classifieds model, subscription-gated sellers)",
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "dev": "next dev",
@@ -30,10 +30,11 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "_overridesReason": "Security: force patched transitive dev-tooling deps. postcss GHSA-qx2v-qp2m-jg93 (incl. Next's bundled copy); esbuild GHSA-67mh-4wv8-2f99 / vite path-traversal (dev-server only, pulled by vitest). Both ranges are backward compatible.",
+  "_overridesReason": "Security: force patched transitive deps. postcss GHSA-qx2v-qp2m-jg93 (incl. Next's bundled copy); esbuild GHSA-67mh-4wv8-2f99 / vite path-traversal (dev-server only, pulled by vitest); sharp GHSA-f88m-g3jw-g9cj libvips CVEs (Next's image-optimizer dependency). All ranges are backward compatible.",
   "overrides": {
     "postcss": "^8.5.10",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "sharp": "^0.35.0"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

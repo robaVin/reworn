@@ -10,14 +10,73 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
 
   body {
     @apply bg-cream text-ink antialiased;
   }
 
+  ::selection {
+    @apply bg-terracotta-strong text-cream;
+  }
+
   /* Accessibility: never remove focus affordances, only restyle them. */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-terracotta;
+  }
+
+  /*
+   * Reduced motion: disable decorative animation and smooth scrolling for
+   * users who ask for it. Transitions collapse to near-instant rather than
+   * being removed, so state changes still repaint correctly.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Softly blurred hero shapes from the Sustainable prototype. Decorative. */
+  .blob {
+    @apply pointer-events-none absolute rounded-full opacity-40 blur-3xl;
+  }
+
+  /* Card entrance used by the listing grid; disabled under reduced motion. */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .animate-rise {
+    animation: rise 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  /* Skeleton shimmer; degrades to a static tone under reduced motion. */
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  .animate-pulse-soft {
+    animation: pulse-soft 1.6s ease-in-out infinite;
   }
 }

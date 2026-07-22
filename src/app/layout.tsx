@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Work_Sans } from 'next/font/google';
+import { AnnouncementBar } from '@/components/shell/AnnouncementBar';
+import { SiteHeader } from '@/components/shell/SiteHeader';
+import { SiteFooter } from '@/components/shell/SiteFooter';
 import './globals.css';
 
 /**
@@ -38,6 +41,18 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
+/**
+ * Force dynamic rendering for every route.
+ *
+ * REQUIRED by the nonce-based Content-Security-Policy: the middleware mints
+ * a fresh nonce per request and Next.js stamps it onto its scripts during
+ * SERVER rendering. Statically prerendered HTML cannot carry a per-request
+ * nonce, so the strict CSP would block hydration on any static route in
+ * production. Dynamic rendering is also what the auth-aware header needs
+ * (it reads the session cookie on every request).
+ */
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -50,7 +65,21 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body className="min-h-dvh">{children}</body>
+      <body className="flex min-h-dvh flex-col">
+        <a
+          href="#main"
+          className="absolute left-4 top-4 z-[100] -translate-y-[300%] rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-cream transition-transform focus:translate-y-0"
+        >
+          Skip to content
+        </a>
+        <AnnouncementBar />
+        {/* Server-authoritative header: identity comes from getAuthContext(). */}
+        <SiteHeader />
+        <div id="main" className="flex-1">
+          {children}
+        </div>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

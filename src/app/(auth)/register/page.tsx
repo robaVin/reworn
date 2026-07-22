@@ -93,7 +93,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-control bg-terracotta px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-hover disabled:opacity-60"
+          className="w-full rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-hover disabled:opacity-60"
         >
           {pending ? 'Creating…' : 'Create account'}
         </button>
@@ -101,7 +101,7 @@ export default function RegisterPage() {
 
       <p className="mt-6 text-sm text-muted">
         Already have an account?{' '}
-        <a href="/login" className="font-semibold text-terracotta">
+        <a href="/login" className="font-semibold text-terracotta-strong">
           Log in
         </a>
       </p>

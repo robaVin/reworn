@@ -89,7 +89,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-control bg-terracotta px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-hover disabled:opacity-60"
+          className="w-full rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-hover disabled:opacity-60"
         >
           {pending ? 'Signing in…' : 'Log in'}
         </button>
@@ -97,7 +97,7 @@ function LoginForm() {
 
       <p className="mt-6 text-sm text-muted">
         No account?{' '}
-        <a href="/register" className="font-semibold text-terracotta">
+        <a href="/register" className="font-semibold text-terracotta-strong">
           Create one
         </a>
       </p>

@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { generateNonce, securityHeaders } from '@/lib/security/headers';
+import {
+  buildContentSecurityPolicy,
+  generateNonce,
+  securityHeaders,
+} from '@/lib/security/headers';
 import { verifyCsrf } from '@/lib/security/csrf';
 import { checkRateLimit, clientIdentity } from '@/lib/security/rate-limit';
 import { refreshSession } from '@/lib/supabase/middleware';
@@ -66,6 +70,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Expose the nonce to Server Components so they can nonce any inline script.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  // REQUIRED for hydration: Next.js reads the CSP from the REQUEST headers to
+  // discover the nonce and stamp it onto its own inline/bootstrap scripts.
+  // Without this, the nonce-based policy blocks Next's scripts and no client
+  // component hydrates in production builds.
+  requestHeaders.set(
+    'content-security-policy',
+    buildContentSecurityPolicy(nonce),
+  );
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
