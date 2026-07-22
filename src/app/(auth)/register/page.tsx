@@ -1,33 +1,85 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { AuthCard } from '@/components/auth/AuthCard';
+import { OAuthButtons } from '@/components/auth/OAuthButtons';
+import { PasswordStrengthHint } from '@/components/auth/PasswordStrengthHint';
+import { Field, TextInput } from '@/components/ui/Field';
+import { PasswordInput } from '@/components/ui/PasswordInput';
+import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
 
+/**
+ * Registration UI.
+ *
+ * Browser collects display name, password confirmation and terms acceptance
+ * for UX. Only email, password and displayName are sent to the server.
+ *
+ * Durable legal consent recording is DEFERRED — accepting terms here is not
+ * claimed as a permanent consent ledger entry.
+ */
 export default function RegisterPage() {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setPending(true);
     setError(null);
-    setMessage(null);
+    setFieldError(null);
+
+    if (!displayName.trim()) {
+      setFieldError('Please enter a display name.');
+      return;
+    }
+    if (password.length < 8) {
+      setFieldError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirm) {
+      setConfirm('');
+      setFieldError('Passwords do not match.');
+      return;
+    }
+    if (!acceptedTerms) {
+      setFieldError('Please accept the terms to continue.');
+      return;
+    }
+
+    setPending(true);
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          displayName: displayName.trim(),
+        }),
       });
       const data = (await res.json()) as { message?: string; error?: string };
+      // Clear passwords after any attempt — never leave them on screen.
+      setPassword('');
+      setConfirm('');
       if (!res.ok) {
         setError(data.error ?? 'Please check your details and try again.');
         return;
       }
-      // Enumeration-safe: the same message shows whether or not the email exists.
-      setMessage(data.message ?? 'Check your email to verify your account.');
+      // Enumeration-safe: same outcome path whether or not the email exists.
+      router.push(
+        `/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`,
+      );
     } catch {
+      setPassword('');
+      setConfirm('');
       setError('Something went wrong. Please try again.');
     } finally {
       setPending(false);
@@ -35,76 +87,117 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-16">
-      <h1 className="font-display text-3xl">Create your account</h1>
-      <p className="mt-2 text-sm text-muted">
-        Free for buyers. Selling requires a subscription (coming in Stage 2).
-      </p>
-
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-xs uppercase tracking-wide text-muted"
-          >
-            Email
-          </label>
-          <input
+    <AuthCard
+      title="Create your account"
+      subtitle="Free for buyers. Everyone starts with a buyer account — seller access opens with a subscription later."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link href="/login" className="font-semibold text-terracotta-strong">
+            Log in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <Field id="displayName" label="Display name">
+          <TextInput
+            id="displayName"
+            name="displayName"
+            type="text"
+            autoComplete="nickname"
+            required
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            disabled={pending}
+          />
+        </Field>
+        <Field id="email" label="Email">
+          <TextInput
             id="email"
+            name="email"
             type="email"
             autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-terracotta"
+            disabled={pending}
           />
-        </div>
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-1 block text-xs uppercase tracking-wide text-muted"
-          >
-            Password
-          </label>
-          <input
+        </Field>
+        <Field
+          id="password"
+          label="Password"
+          hint="At least 8 characters. Confirmation is checked in your browser only."
+        >
+          <PasswordInput
             id="password"
-            type="password"
+            name="password"
             autoComplete="new-password"
             required
             minLength={8}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-terracotta"
+            onChange={setPassword}
+            disabled={pending}
+            aria-describedby="password-strength"
           />
-          <p className="mt-1 text-xs text-muted">At least 8 characters.</p>
+        </Field>
+        <div id="password-strength">
+          <PasswordStrengthHint password={password} />
         </div>
+        <Field id="confirm" label="Confirm password">
+          <PasswordInput
+            id="confirm"
+            name="confirm"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={confirm}
+            onChange={setConfirm}
+            disabled={pending}
+          />
+        </Field>
 
-        {error && (
+        <label className="flex items-start gap-3 text-sm text-ink">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-line text-terracotta-strong"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            disabled={pending}
+            required
+          />
+          <span>
+            I agree to the terms of use and privacy policy.
+            <span className="mt-1 block text-xs text-muted">
+              Acceptance is recorded in this browser session for the form only.
+              A durable legal consent record is not stored yet and arrives in a
+              later increment.
+            </span>
+          </span>
+        </label>
+
+        {(fieldError || error) && (
           <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p role="status" className="text-sm text-forest">
-            {message}
+            {fieldError ?? error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-hover disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? 'Creating…' : 'Create account'}
-        </button>
+        </Button>
       </form>
 
-      <p className="mt-6 text-sm text-muted">
-        Already have an account?{' '}
-        <a href="/login" className="font-semibold text-terracotta-strong">
-          Log in
-        </a>
-      </p>
-    </main>
+      <div className="mt-6">
+        <OAuthButtons mode="register" />
+      </div>
+
+      <div className="mt-6">
+        <Alert tone="info" title="Buyer role only">
+          You cannot choose seller or admin at registration. Seller privileges
+          require a real subscription later; admin is granted only by verified
+          operators.
+        </Alert>
+      </div>
+    </AuthCard>
   );
 }

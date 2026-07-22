@@ -24,7 +24,14 @@ import { logger } from '@/lib/logger';
  *
  * The DEFAULT ROLE IS ALWAYS `buyer`. Role data supplied by the client during
  * registration is ignored entirely.
+ *
+ * `displayName` is applied ONLY when this call creates the profile row. An
+ * existing profile is never overwritten by provisioning input.
  */
+
+export interface ProvisionOptions {
+  displayName?: string | null;
+}
 
 export interface ProvisionResult {
   profileCreated: boolean;
@@ -33,11 +40,17 @@ export interface ProvisionResult {
 
 export async function provisionProfile(
   verifiedUserId: string,
+  options: ProvisionOptions = {},
 ): Promise<ProvisionResult> {
+  const displayName =
+    typeof options.displayName === 'string' && options.displayName.trim()
+      ? options.displayName.trim().slice(0, 80)
+      : null;
+
   return prisma.$transaction(async (tx) => {
     // 1. Profile — id is the verified auth uuid; never overwrite an existing row.
     const profileInsert = await tx.profile.createMany({
-      data: [{ id: verifiedUserId }],
+      data: [{ id: verifiedUserId, displayName }],
       skipDuplicates: true,
     });
     const profileCreated = profileInsert.count > 0;

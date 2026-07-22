@@ -1,14 +1,40 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { safeRedirectPath } from '@/lib/safe-redirect';
+import { AuthCard } from '@/components/auth/AuthCard';
+import { OAuthButtons } from '@/components/auth/OAuthButtons';
+import { Field, TextInput } from '@/components/ui/Field';
+import { PasswordInput } from '@/components/ui/PasswordInput';
+import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
+
+function loginErrorMessage(code: string | null): string | null {
+  switch (code) {
+    case 'auth':
+      return 'Sign-in could not be completed. Please try again.';
+    case 'oauth':
+      return 'Google sign-in is unavailable or not configured for this project.';
+    case 'config':
+      return 'Authentication is not configured in this environment.';
+    case 'session':
+      return 'Your session ended. Please log in again to continue.';
+    default:
+      return null;
+  }
+}
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  // The `next` param is also re-validated server-side; never trust it raw.
   const next = safeRedirectPath(params.get('next'), '/');
+  const banner =
+    loginErrorMessage(params.get('error')) ??
+    (params.get('next') && !params.get('error')
+      ? 'Please log in to continue to the page you requested.'
+      : null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +52,7 @@ function LoginForm() {
         body: JSON.stringify({ email, password, redirectTo: next }),
       });
       if (!res.ok) {
+        setPassword('');
         setError('Invalid email or password.');
         return;
       }
@@ -33,6 +60,7 @@ function LoginForm() {
       router.push(safeRedirectPath(data.redirectTo, '/'));
       router.refresh();
     } catch {
+      setPassword('');
       setError('Something went wrong. Please try again.');
     } finally {
       setPending(false);
@@ -40,44 +68,61 @@ function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-16">
-      <h1 className="font-display text-3xl">Welcome back</h1>
-      <p className="mt-2 text-sm text-muted">Log in to continue.</p>
-
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-xs uppercase tracking-wide text-muted"
+    <AuthCard
+      title="Welcome back"
+      subtitle="Log in to your ReWorn account."
+      footer={
+        <>
+          No account?{' '}
+          <Link
+            href="/register"
+            className="font-semibold text-terracotta-strong"
           >
-            Email
-          </label>
-          <input
+            Create one
+          </Link>
+        </>
+      }
+    >
+      {banner && (
+        <div className="mb-6">
+          <Alert tone="info" title="Sign in required">
+            {banner}
+          </Alert>
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <Field id="email" label="Email">
+          <TextInput
             id="email"
+            name="email"
             type="email"
             autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-terracotta"
+            disabled={pending}
           />
-        </div>
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-1 block text-xs uppercase tracking-wide text-muted"
-          >
-            Password
-          </label>
-          <input
+        </Field>
+        <Field id="password" label="Password">
+          <PasswordInput
             id="password"
-            type="password"
+            name="password"
             autoComplete="current-password"
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-terracotta"
+            onChange={setPassword}
+            disabled={pending}
           />
+        </Field>
+
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs font-semibold text-terracotta-strong"
+          >
+            Forgot password?
+          </Link>
         </div>
 
         {error && (
@@ -86,28 +131,27 @@ function LoginForm() {
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-hover disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? 'Signing in…' : 'Log in'}
-        </button>
+        </Button>
       </form>
 
-      <p className="mt-6 text-sm text-muted">
-        No account?{' '}
-        <a href="/register" className="font-semibold text-terracotta-strong">
-          Create one
-        </a>
-      </p>
-    </main>
+      <div className="mt-6">
+        <OAuthButtons next={next} mode="login" />
+      </div>
+    </AuthCard>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <AuthCard title="Welcome back" subtitle="Loading…">
+          <div className="animate-pulse-soft h-40 rounded-xl bg-sand" />
+        </AuthCard>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

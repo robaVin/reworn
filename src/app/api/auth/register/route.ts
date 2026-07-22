@@ -13,6 +13,11 @@ import { logger } from '@/lib/logger';
  *  - NO seller/admin privileges are granted here. Any role field in the body is
  *    ignored (the schema does not accept one). The application profile + default
  *    buyer role are provisioned idempotently on first successful login.
+ *  - Optional `displayName` is stored as Auth user metadata and applied during
+ *    first-login provisioning only (never overwrites an existing profile).
+ *  - Terms acceptance is validated in the browser for UX. Durable legal consent
+ *    recording is DEFERRED — this route does not claim or persist a consent
+ *    ledger.
  *  - Rate limiting is applied by middleware for /api/auth/*.
  */
 export async function POST(request: NextRequest): Promise<Response> {
@@ -35,14 +40,17 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const { email, password } = parsed.data;
+  const { email, password, displayName } = parsed.data;
   const supabase = await createSupabaseUserClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${appUrl}/api/auth/callback` },
+    options: {
+      emailRedirectTo: `${appUrl}/api/auth/callback`,
+      data: displayName ? { display_name: displayName } : undefined,
+    },
   });
 
   if (error) {

@@ -51,7 +51,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // Idempotent, concurrency-safe provisioning against the verified user id.
   try {
-    await provisionProfile(data.user.id);
+    const meta = data.user.user_metadata as { display_name?: unknown } | null;
+    const displayName =
+      typeof meta?.display_name === 'string' ? meta.display_name : null;
+    await provisionProfile(data.user.id, { displayName });
   } catch (e) {
     // Auth succeeded but provisioning failed: do not block login. Provisioning
     // is idempotent and will re-converge on the next authenticated action.

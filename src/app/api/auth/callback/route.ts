@@ -7,10 +7,14 @@ import { logger } from '@/lib/logger';
 /**
  * GET /api/auth/callback
  *
- * OAuth (Google) and email-verification return here with a `code`. We exchange
- * it for a session (server-side), then provision the application profile
- * idempotently — this is the FIRST-LOGIN provisioning point for OAuth users,
- * who never hit /register.
+ * Handles:
+ *  1. OAuth (Google) code exchange
+ *  2. Email-verification link returns
+ *  3. Password-recovery link returns (`next` should be `/reset-password`)
+ *
+ * Recovery is distinguished by the safe `next` destination (`/reset-password`),
+ * not by inventing token-type parsing. After a recovery exchange the user has
+ * a short-lived authenticated session used only to call updateUser(password).
  *
  * The `next` destination is reduced to a safe internal path to prevent an open
  * redirect through the callback.
@@ -19,25 +23,38 @@ export async function GET(request: NextRequest): Promise<Response> {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get('code');
   const next = safeRedirectPath(searchParams.get('next'), '/');
+  const isRecovery = next === '/reset-password';
 
   if (!code) {
-    return NextResponse.redirect(new URL('/login?error=auth', origin));
+    const fail = isRecovery
+      ? '/reset-password?error=expired'
+      : '/login?error=auth';
+    return NextResponse.redirect(new URL(fail, origin));
   }
 
   const supabase = await createSupabaseUserClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    logger.warn('oauth callback exchange failed', {
+    logger.warn('auth callback exchange failed', {
       reason: error?.message ?? 'no_user',
+      recovery: isRecovery,
     });
-    return NextResponse.redirect(new URL('/login?error=auth', origin));
+    const fail = isRecovery
+      ? '/reset-password?error=expired'
+      : '/login?error=auth';
+    return NextResponse.redirect(new URL(fail, origin));
   }
 
+  // Provision on OAuth / email-verify first login. Harmless (idempotent) on
+  // recovery sessions for existing users.
   try {
-    await provisionProfile(data.user.id);
+    const meta = data.user.user_metadata as { display_name?: unknown } | null;
+    const displayName =
+      typeof meta?.display_name === 'string' ? meta.display_name : null;
+    await provisionProfile(data.user.id, { displayName });
   } catch (e) {
-    logger.error('provisioning after oauth failed', {
+    logger.error('provisioning after auth callback failed', {
       userId: data.user.id,
       error: e,
     });
