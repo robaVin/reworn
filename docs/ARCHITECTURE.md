@@ -12,7 +12,24 @@ Verified from the codebase at the current HEAD. Updated per increment.
 - **Supabase**: Auth (sole authentication authority), Postgres host, and — later —
   Storage. Row-Level Security is deny-by-default.
 - **Deployment target:** Vercel (app) + Supabase (DB/Auth/Storage) + Render (n8n,
-  later). **Node 20** (`.nvmrc`, `engines`).
+  later). **Node 20** (`.nvmrc`, `engines`, and a `preinstall` guard in
+  `scripts/check-node.mjs` that fails a fresh install on Node < 20).
+
+### Node version (required: 20+)
+
+Node 18 is End-of-Life and unsupported (`@supabase/supabase-js` drops it). A
+fresh `npm install` on Node < 20 fails with upgrade instructions. To upgrade on
+Windows (recommended, nvm-windows):
+
+```powershell
+# install nvm-windows from https://github.com/coreybutler/nvm-windows/releases
+nvm install 20
+nvm use 20
+node -v   # v20.x
+```
+
+Or install the Node 20 LTS MSI from https://nodejs.org/en/download. CI runs the
+full gate on Node 20 (`.github/workflows/ci.yml`, `node-version-file: .nvmrc`).
 
 ## Module layout
 

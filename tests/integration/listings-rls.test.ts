@@ -347,6 +347,45 @@ describe('listing service — drafts, completeness, IDOR, duplicates', () => {
   });
 });
 
+describe('listing persistence verification (credential-free)', () => {
+  it('create → publish yields exactly the expected persisted state', async () => {
+    const uniqueTitle = 'Persistence Check 11223344';
+    const created = await svc.createDraftListing(SELLER, {
+      ...baseInput(),
+      title: uniqueTitle,
+    });
+    // draft created
+    expect(created.status).toBe('draft');
+    expect(created.publishedAt).toBeNull();
+
+    // belongs to the correct seller
+    const sellerProfile = await prisma.sellerProfile.findUniqueOrThrow({
+      where: { profileId: SELLER },
+    });
+    expect(created.sellerId).toBe(sellerProfile.id);
+
+    // publishing changes status and stamps publishedAt (same row, no new one)
+    const published = await svc.transitionListing(
+      SELLER,
+      created.id,
+      'publish',
+    );
+    expect(published.id).toBe(created.id);
+    expect(published.status).toBe('published');
+    expect(published.publishedAt).not.toBeNull();
+
+    // no duplicate listing for this title
+    expect(await prisma.listing.count({ where: { title: uniqueTitle } })).toBe(
+      1,
+    );
+
+    // no fake subscription or payment rows were created by this flow
+    expect(await prisma.subscription.count()).toBe(0);
+    expect(await prisma.paymentAttempt.count()).toBe(0);
+    expect(await prisma.paymentEvent.count()).toBe(0);
+  });
+});
+
 describe('seller access (getSellerAccess, dev bridge — enforcement off)', () => {
   it('an active provisioned seller can publish (no fake subscription created)', async () => {
     const access = await svc.getSellerAccess(SELLER);

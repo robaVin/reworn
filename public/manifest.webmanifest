@@ -1,0 +1,8 @@
+{
+  "name": "ReWorn — Second-hand fashion marketplace",
+  "short_name": "ReWorn",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#C06B4E",
+  "background_color": "#F4EFE6"
+}

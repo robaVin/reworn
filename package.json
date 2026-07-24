@@ -7,6 +7,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "preinstall": "node scripts/check-node.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -33,11 +34,12 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "_overridesReason": "Security: force patched transitive deps. postcss GHSA-qx2v-qp2m-jg93 (incl. Next's bundled copy); esbuild GHSA-67mh-4wv8-2f99 / vite path-traversal (dev-server only, pulled by vitest); sharp GHSA-f88m-g3jw-g9cj libvips CVEs (Next's image-optimizer dependency). All ranges are backward compatible.",
+  "_overridesReason": "Security: force patched transitive deps. postcss GHSA-qx2v-qp2m-jg93 (incl. Next's bundled copy); esbuild GHSA-67mh-4wv8-2f99 / vite path-traversal (dev-server only, pulled by vitest); sharp GHSA-f88m-g3jw-g9cj libvips CVEs (Next's image-optimizer dependency); brace-expansion 5.0.8 (dev-only ESLint tree, DoS advisory range <=5.0.7; 5.0.8 ships a CommonJS build so minimatch@3 still resolves). All ranges are backward compatible.",
   "overrides": {
     "postcss": "^8.5.10",
     "esbuild": "^0.25.0",
-    "sharp": "^0.35.0"
+    "sharp": "^0.35.0",
+    "brace-expansion": "5.0.8"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

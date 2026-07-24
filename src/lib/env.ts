@@ -90,11 +90,21 @@ const schema = z
      *
      * These exist to make an entire class of incident impossible:
      * a fake payment must never be able to activate a real subscription.
+     *
+     * They target production RUNTIME, not the build step. `next build` sets
+     * NODE_ENV=production but does not run the app; these server-only values
+     * are read at request time, not baked into the bundle. Skipping the checks
+     * during the build phase lets a developer build locally with a dev bridge
+     * in .env, while a real production server (not the build phase) still
+     * refuses to start with an unsafe configuration.
      * ---------------------------------------------------------------- */
+    const isProdRuntime =
+      v.NODE_ENV === 'production' &&
+      process.env.NEXT_PHASE !== 'phase-production-build';
 
     // 1. The mock gateway is a development tool. In production it would let
     //    anyone mint a free subscription. Refuse to boot.
-    if (v.NODE_ENV === 'production' && v.PAYMENT_PROVIDER === 'mock') {
+    if (isProdRuntime && v.PAYMENT_PROVIDER === 'mock') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['PAYMENT_PROVIDER'],
@@ -108,7 +118,7 @@ const schema = z
     // 1b. The subscription-enforcement bypass is a development bridge only.
     //     In production it would let sellers publish without ever paying.
     //     Refuse to boot.
-    if (v.NODE_ENV === 'production' && v.SUBSCRIPTION_ENFORCEMENT === false) {
+    if (isProdRuntime && v.SUBSCRIPTION_ENFORCEMENT === false) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['SUBSCRIPTION_ENFORCEMENT'],
