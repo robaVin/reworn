@@ -1,0 +1,75 @@
+name: CI
+
+# Runs the full verification gate on every push and pull request.
+# Secret-free: no real credentials are used. Prisma parsing needs the two DB
+# URLs to be *defined* (not reachable); the RLS/integration tests spin up their
+# own throwaway PostgreSQL via embedded-postgres, so no service container is
+# required.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Dummy, non-secret placeholders so `prisma validate/generate` can parse
+      # the datasource. They are NEVER connected to. Integration tests override
+      # them with an embedded-postgres instance.
+      DATABASE_URL: 'postgresql://ci:ci@localhost:5432/ci?schema=public'
+      DIRECT_URL: 'postgresql://ci:ci@localhost:5432/ci?schema=public'
+      # Deterministic, non-production test configuration.
+      NODE_ENV: test
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000'
+      NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co'
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci-anon-key'
+      SUPABASE_SERVICE_ROLE_KEY: 'ci-service-role-key'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit + integration tests (incl. real-Postgres RLS)
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Security audit (fail on high/critical)
+        run: npm audit --audit-level=high
