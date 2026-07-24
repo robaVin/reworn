@@ -2,7 +2,12 @@ import 'server-only';
 
 import { AuthorizationError } from '@/modules/auth/errors';
 import { InvalidListingTransitionError } from './listing-status';
-import { ListingConflictError, ListingIncompleteError } from './errors';
+import {
+  ImageLimitError,
+  ImageRejectedError,
+  ListingConflictError,
+  ListingIncompleteError,
+} from './errors';
 import { logger } from '@/lib/logger';
 
 /**
@@ -43,6 +48,12 @@ export function toActionError(error: unknown): ActionResult<never> {
   }
   if (error instanceof ListingIncompleteError) {
     return actionFail(error.status, 'listing_incomplete', error.fieldErrors);
+  }
+  if (error instanceof ImageRejectedError) {
+    return actionFail(error.status, error.message);
+  }
+  if (error instanceof ImageLimitError) {
+    return actionFail(error.status, error.message);
   }
   logger.error('listing action failed', { error });
   return actionFail(500, 'server_error');

@@ -24,3 +24,21 @@ export class ListingIncompleteError extends Error {
     this.name = 'ListingIncompleteError';
   }
 }
+
+/** An uploaded image failed validation or processing (422). */
+export class ImageRejectedError extends Error {
+  readonly status = 422 as const;
+  constructor(readonly reason: string) {
+    super(`image_rejected:${reason}`);
+    this.name = 'ImageRejectedError';
+  }
+}
+
+/** The listing already has the maximum number of images (409). */
+export class ImageLimitError extends Error {
+  readonly status = 409 as const;
+  constructor(readonly max: number) {
+    super(`image_limit:${max}`);
+    this.name = 'ImageLimitError';
+  }
+}

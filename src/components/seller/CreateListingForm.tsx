@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Field, TextInput, Textarea, Select } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { ImageManager } from '@/components/seller/ImageManager';
 import { LISTING_CONDITIONS, LISTING_GENDERS } from '@/modules/catalog/schemas';
 import {
   createListingAction,
@@ -378,6 +379,17 @@ export function CreateListingForm({
         </div>
       </fieldset>
 
+      {listingId ? (
+        <div className="border-t border-line pt-6">
+          <ImageManager listingId={listingId} />
+        </div>
+      ) : (
+        <p className="rounded-card border border-dashed border-line bg-sand/50 px-4 py-3 text-xs text-muted">
+          Save a draft first to add photos. You can publish without photos, or
+          add up to 8 once the draft is saved.
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <Button onClick={onPublish} disabled={busy}>
           {publishing ? 'Publishing…' : 'Publish listing'}
@@ -393,11 +405,6 @@ export function CreateListingForm({
             : 'Not saved yet'}
         </p>
       </div>
-
-      <p className="text-xs text-muted">
-        Photos are added in a later update. You can publish a listing without
-        photos for now.
-      </p>
     </form>
   );
 }

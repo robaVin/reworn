@@ -90,6 +90,21 @@ The privileged client bypasses RLS, so server code that uses it must perform its
 own ownership/role checks. Ordinary user access uses the user-scoped client so
 RLS actively protects the common path.
 
+## Object storage — listing images (Increment 2C)
+
+Listing photos are stored in a **private** Supabase Storage bucket
+(`listing-images`), reached only through the privileged client from the
+server-authoritative image service (`modules/catalog/image-service.ts`). The
+`StorageAdapter` interface (`modules/catalog/storage.ts`) isolates Storage so
+tests inject an in-memory fake; the sharp-backed processor is likewise seamed.
+Pipeline: signature validation → sharp re-encode (EXIF strip, orientation
+normalise, resize ≤1600px, WebP) → **storage upload then DB row**, with
+storage-cleanup compensation if the DB write fails (no orphans, retry-safe).
+Browsers receive short-lived **signed URLs**, never public object paths. `sharp`
+is imported lazily so `next build` never loads the native binary. One-time setup:
+create the `listing-images` bucket as **private** (no extra env var — it reuses
+the existing service-role key).
+
 ## Truthful configuration gating
 
 `lib/supabase/config.ts#isSupabaseConfigured()` detects missing/placeholder
@@ -156,7 +171,8 @@ var at runtime. Long term this becomes an application workflow, not a script.
 
 ## Not yet implemented (tracked in ROADMAP)
 
-Listings/catalog domain, image storage, saved items, recently viewed, messaging,
-subscription state machine + entitlement, payment abstraction module, admin
-operations, notifications, reviews, PWA, monitoring. UI shells for seller/admin
-areas are deliberately truthful placeholders.
+Saved items, recently viewed, messaging, subscription state machine +
+entitlement, payment abstraction module, admin operations, notifications,
+reviews, PWA, monitoring. UI shells for seller/admin areas are deliberately
+truthful placeholders. (Listings/catalog domain and listing-image storage are
+implemented — Increments 2A–2C.)

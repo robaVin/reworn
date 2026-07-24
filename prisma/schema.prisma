@@ -369,8 +369,9 @@ model Listing {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  category Category?     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  seller   SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images   ListingImage[]
 
   // Browse ordering/pagination and the common filter paths.
   @@index([status, createdAt])
@@ -379,6 +380,31 @@ model Listing {
   @@index([status, gender])
   @@index([status, priceMinor])
   @@map("listings")
+}
+
+/// A processed image belonging to a listing.
+///
+/// Storage keys are RANDOM (never the original filename). Files are stored in a
+/// private Supabase Storage bucket and read via short-lived signed URLs issued
+/// by the server. Uploads are validated (magic bytes, size, dimensions),
+/// EXIF-stripped, orientation-normalised and re-encoded server-side before they
+/// reach storage. `position` is 0-based; the cover image is position 0.
+model ListingImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  listingId  String   @map("listing_id") @db.Uuid
+  /// Random storage object key (path in the private bucket). Never a filename.
+  storageKey String   @unique @map("storage_key")
+  position   Int
+  width      Int
+  height     Int
+  byteSize   Int      @map("byte_size")
+  mimeType   String   @map("mime_type")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, position])
+  @@map("listing_images")
 }
 
 // -----------------------------------------------------------------------------
