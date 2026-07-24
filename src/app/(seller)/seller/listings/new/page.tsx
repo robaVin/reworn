@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { env } from '@/lib/env';
 import { requireAnyRolePage } from '@/modules/auth/page-guards';
 import {
   resolveSellerForUser,
@@ -42,7 +43,7 @@ export default async function NewListingPage() {
           <SellerNotActive status={seller.status} />
         ) : (
           <>
-            <TemporaryEntitlementNotice />
+            <EntitlementNotice enforced={env.SUBSCRIPTION_ENFORCEMENT} />
             <div className="mt-6">
               <CreateListingForm categories={categories} />
             </div>
@@ -80,12 +81,22 @@ function SellerNotActive({ status }: { status: string }) {
   );
 }
 
-function TemporaryEntitlementNotice() {
+function EntitlementNotice({ enforced }: { enforced: boolean }) {
+  if (!enforced) {
+    return (
+      <Alert tone="info" title="Development testing access">
+        Subscription enforcement is off in this environment, so publishing is
+        gated only by an <strong>active seller</strong> account. Subscription
+        and weekly-quota enforcement arrive in a later increment — there is no
+        subscription or payment behind this yet.
+      </Alert>
+    );
+  }
   return (
-    <Alert tone="info" title="Development entitlement">
-      Publishing is currently gated only by an <strong>active seller</strong>{' '}
-      account. Subscription and weekly-quota enforcement arrive in a later
-      increment — there is no subscription or payment behind this yet.
+    <Alert tone="info" title="Publishing requires a subscription">
+      You can save drafts freely. Publishing requires an active seller
+      subscription; the bank payment integration is awaiting configuration, so
+      publishing is unavailable until it is connected.
     </Alert>
   );
 }

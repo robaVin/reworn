@@ -11,7 +11,12 @@ import {
   type ListingStatus,
   type ListingTransition,
 } from './listing-status';
-import { assertCanCreateListing, assertCanPublishListing } from './entitlement';
+import { env } from '@/lib/env';
+import {
+  assertCanCreateListing,
+  assertCanPublishListing,
+  canPublishListing,
+} from './entitlement';
 import { ListingConflictError, ListingIncompleteError } from './errors';
 import {
   publishableListingSchema,
@@ -56,6 +61,44 @@ export async function listActiveCategories(): Promise<
   });
 }
 
+/** True if the seller currently holds an active/grace subscription. */
+async function sellerHasActiveSubscription(sellerId: string): Promise<boolean> {
+  const sub = await prisma.subscription.findFirst({
+    where: { sellerId, status: { in: ['active', 'grace_period'] } },
+    select: { id: true },
+  });
+  return sub !== null;
+}
+
+/**
+ * Aggregated seller access for routing/UI decisions (used by /sell). Reads the
+ * enforcement mode from the server environment and the real subscription state
+ * from the database — never from the request.
+ */
+export interface SellerAccess {
+  seller: Awaited<ReturnType<typeof resolveSellerForUser>>;
+  subscriptionEnforced: boolean;
+  hasActiveSubscription: boolean;
+  canPublish: boolean;
+}
+
+export async function getSellerAccess(userId: string): Promise<SellerAccess> {
+  const seller = await resolveSellerForUser(userId);
+  const subscriptionEnforced = env.SUBSCRIPTION_ENFORCEMENT;
+  const hasActiveSubscription =
+    seller && subscriptionEnforced
+      ? await sellerHasActiveSubscription(seller.id)
+      : false;
+  const canPublish = seller
+    ? canPublishListing({
+        sellerStatus: seller.status,
+        subscriptionEnforced,
+        hasActiveSubscription,
+      })
+    : false;
+  return { seller, subscriptionEnforced, hasActiveSubscription, canPublish };
+}
+
 function assertOwner(userId: string, listing: ListingWithOwner): void {
   if (listing.seller.profileId !== userId) {
     // 404 (not 403) to avoid disclosing that a listing exists to non-owners.
@@ -74,7 +117,7 @@ export async function createDraftListing(
     // onboarding is a later increment). Fail clearly; never fabricate one.
     throw new AuthorizationError(403, 'seller_profile_required');
   }
-  assertCanCreateListing(seller);
+  assertCanCreateListing({ sellerStatus: seller.status });
 
   // A draft may be incomplete: only the title is guaranteed; the rest is
   // whatever the seller has entered so far (null when absent).
@@ -214,7 +257,15 @@ export async function transitionListing(
   // AND the completeness gate: a draft may be incomplete, but a published
   // listing must have every mandatory field.
   if (nextStatus === 'published') {
-    assertCanPublishListing(listing.seller);
+    const subscriptionEnforced = env.SUBSCRIPTION_ENFORCEMENT;
+    const hasActiveSubscription = subscriptionEnforced
+      ? await sellerHasActiveSubscription(listing.seller.id)
+      : false;
+    assertCanPublishListing({
+      sellerStatus: listing.seller.status,
+      subscriptionEnforced,
+      hasActiveSubscription,
+    });
     const parsed = publishableListingSchema.safeParse({
       title: listing.title,
       description: listing.description ?? undefined,

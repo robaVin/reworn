@@ -49,5 +49,9 @@ process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS =
   process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS ?? '7';
 process.env.SUBSCRIPTION_TRIAL_ENABLED =
   process.env.SUBSCRIPTION_TRIAL_ENABLED ?? 'false';
+// Tests exercise the development bridge (enforcement off) so the listing
+// publish path is reachable; specific tests assert both modes explicitly.
+process.env.SUBSCRIPTION_ENFORCEMENT =
+  process.env.SUBSCRIPTION_ENFORCEMENT ?? 'false';
 
 process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? 'error';

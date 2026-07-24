@@ -82,10 +82,26 @@ configured" states rather than pretending a backend exists. It grants nothing.
 ## Listing entitlement — temporary development bridge
 
 `modules/catalog/entitlement.ts` is the **single, server-authoritative** gate
-for creating/publishing listings. **Today it enforces only that the seller
-profile is `active`.** Subscription-active and weekly-listing-quota enforcement
-do **not** exist yet — they arrive in Increment 7 and plug in at the documented
-seam inside that module (`assertCanPublishListing`).
+for creating/publishing listings. It is a **pure** function taking an explicit
+`ListingEntitlementInput` — no request/browser state can influence it.
+
+Behaviour is controlled by the server env var **`SUBSCRIPTION_ENFORCEMENT`**
+(default `true`):
+
+- **`true` (production default):** publishing requires an active subscription.
+  Because the bank gateway is not connected, no one has a subscription, so `/sell`
+  shows a truthful *"subscription required / payment setup unavailable"* state and
+  publishing is refused with `subscription_required`.
+- **`false` (development bridge, non-production only):** an active seller may
+  publish without a subscription, so the workflow is testable now. This value is
+  **refused in production** by environment validation (`src/lib/env.ts` — the app
+  fails to start). It is evaluated only on the server.
+
+The service (`listing-service.ts`) assembles the entitlement input from
+`env.SUBSCRIPTION_ENFORCEMENT` plus the seller's real subscription state (a DB
+query — no fabricated rows). Draft creation only ever needs an active seller.
+Increment 7 replaces the subscription-state source with the real subscription
+service **without changing listing-service APIs or the entitlement contract**.
 
 This is a deliberate, temporary bridge so the listing domain is usable before the
 subscription domain exists. It does **not**:

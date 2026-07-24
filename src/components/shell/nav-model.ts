@@ -54,12 +54,12 @@ export function buildHeaderNav(identity: NavIdentity): HeaderNav {
     href: authenticated ? '/messages' : loginWithNext('/messages'),
   };
   const sell: NavLink = {
+    // Canonical seller entry for EVERY user state. The /sell server route
+    // decides the destination (login, onboarding, profile-required,
+    // subscription-required, or create-a-listing) from the verified user — the
+    // client never decides.
     label: 'Sell an item',
-    // Sellers/admins go straight to create-a-listing; everyone else (buyers and
-    // logged-out visitors) goes to the public "start selling" page, which
-    // explains onboarding and routes them through real auth.
-    href:
-      authenticated && canActAsSeller(roles) ? '/seller/listings/new' : '/sell',
+    href: '/sell',
   };
 
   if (!authenticated) {

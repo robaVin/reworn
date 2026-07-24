@@ -347,6 +347,31 @@ describe('listing service — drafts, completeness, IDOR, duplicates', () => {
   });
 });
 
+describe('seller access (getSellerAccess, dev bridge — enforcement off)', () => {
+  it('an active provisioned seller can publish (no fake subscription created)', async () => {
+    const access = await svc.getSellerAccess(SELLER);
+    expect(access.seller?.status).toBe('active');
+    expect(access.subscriptionEnforced).toBe(false);
+    expect(access.hasActiveSubscription).toBe(false); // no real subscription
+    expect(access.canPublish).toBe(true);
+    // No subscription rows were fabricated by checking access.
+    const subs = await prisma.subscription.count();
+    expect(subs).toBe(0);
+  });
+
+  it('a buyer has no seller access', async () => {
+    const access = await svc.getSellerAccess(BUYER);
+    expect(access.seller).toBeNull();
+    expect(access.canPublish).toBe(false);
+  });
+
+  it('a frozen seller cannot publish', async () => {
+    const access = await svc.getSellerAccess(FROZEN_SELLER);
+    expect(access.seller?.status).toBe('frozen');
+    expect(access.canPublish).toBe(false);
+  });
+});
+
 describe('listing RLS (read path)', () => {
   it('anon and other users see published listings', async () => {
     const anon = await runAs('anon', 'SELECT count(*)::int n FROM listings');

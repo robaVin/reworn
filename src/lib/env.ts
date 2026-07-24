@@ -62,6 +62,17 @@ const schema = z
       .default(7),
     SUBSCRIPTION_TRIAL_ENABLED: booleanish,
     SUBSCRIPTION_TRIAL_DAYS: z.coerce.number().int().min(0).default(0),
+    /**
+     * Whether publishing a listing requires a valid seller subscription.
+     * Defaults to TRUE (enforce). Setting it to `false` is a NON-PRODUCTION
+     * development bridge that lets an active seller publish without a
+     * subscription (the bank gateway is not connected yet). It is refused in
+     * production (see superRefine) and is evaluated ONLY on the server.
+     */
+    SUBSCRIPTION_ENFORCEMENT: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((s) => s === 'true'),
 
     // --- Monitoring / logging ---
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional().or(z.literal('')),
@@ -91,6 +102,20 @@ const schema = z
           'PAYMENT_PROVIDER="mock" is forbidden in production. A mock payment ' +
           'must never activate a real subscription. Use "none" until the bank ' +
           'gateway is configured.',
+      });
+    }
+
+    // 1b. The subscription-enforcement bypass is a development bridge only.
+    //     In production it would let sellers publish without ever paying.
+    //     Refuse to boot.
+    if (v.NODE_ENV === 'production' && v.SUBSCRIPTION_ENFORCEMENT === false) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SUBSCRIPTION_ENFORCEMENT'],
+        message:
+          'SUBSCRIPTION_ENFORCEMENT="false" is forbidden in production. It is a ' +
+          'development-only bridge for testing listing publishing before the ' +
+          'bank gateway exists. Production must enforce subscriptions.',
       });
     }
 

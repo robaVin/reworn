@@ -45,6 +45,7 @@ describe('environment validation', () => {
       'SUBSCRIPTION_GRACE_PERIOD_DAYS',
       'SUBSCRIPTION_TRIAL_ENABLED',
       'SUBSCRIPTION_TRIAL_DAYS',
+      'SUBSCRIPTION_ENFORCEMENT',
       'AUTH_PHONE_OTP_ENABLED',
       'NEXT_PUBLIC_SENTRY_DSN',
       'RATE_LIMIT_MAX',
@@ -118,6 +119,29 @@ describe('environment validation', () => {
       setEnv({ PAYMENT_PROVIDER: 'none' });
       const { isPaymentsUnavailable } = await loadEnvModule();
       expect(isPaymentsUnavailable()).toBe(true);
+    });
+  });
+
+  describe('subscription enforcement bypass', () => {
+    it('FORBIDS disabling enforcement in production', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
+      await expect(loadEnvModule()).rejects.toThrow(
+        /SUBSCRIPTION_ENFORCEMENT.*forbidden in production|forbidden in production/i,
+      );
+    });
+
+    it('allows disabling enforcement outside production (dev bridge)', async () => {
+      vi.stubEnv('NODE_ENV', 'development');
+      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
+      const { env } = await loadEnvModule();
+      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
+    });
+
+    it('defaults to enforced (true) when unset', async () => {
+      setEnv({ PAYMENT_PROVIDER: 'none' });
+      const { env } = await loadEnvModule();
+      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(true);
     });
   });
 

@@ -170,9 +170,11 @@ export function CreateListingForm({
         setFormError(
           res.error === 'listing_incomplete'
             ? 'A published listing needs all required fields. Complete the highlighted fields.'
-            : res.status === 403
-              ? 'Your seller account is not currently allowed to publish.'
-              : 'Could not publish. Please try again.',
+            : res.error === 'subscription_required'
+              ? 'Publishing requires an active seller subscription, which is not available yet. Your draft is saved.'
+              : res.status === 403
+                ? 'Your seller account is not currently allowed to publish.'
+                : 'Could not publish. Please try again.',
         );
         return;
       }

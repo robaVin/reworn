@@ -1,43 +1,60 @@
-import 'server-only';
-
 import { AuthorizationError } from '@/modules/auth/errors';
 import type { SellerStatus } from '@prisma/client';
 
 /**
  * Listing entitlement — the SINGLE server-side authority for whether a seller
- * may create/publish listings. Every listing mutation routes through here; there
- * is no browser-only entitlement check.
+ * may create or publish listings.
  *
- * Current rules (for the system as it exists today):
- *   • The seller profile must be `active` (not `frozen` or `banned`).
+ * PURE by design (no env, no DB, no request access): callers assemble an
+ * explicit `ListingEntitlementInput` from server-side facts (the seller's
+ * status, whether subscription enforcement is on, whether they hold an active
+ * subscription) and pass it in. There is NO path through which browser state,
+ * a query string, or a cookie can influence the decision.
  *
- * Deliberately NOT yet enforced (the subscription domain does not exist until
- * Increment 7): active-subscription and weekly-listing-quota checks. This module
- * is the exact, documented place those checks are ADDED — they are not enforced
- * elsewhere, and nothing here fabricates a subscription. Until Increment 7, an
- * `active` seller may publish; after it, publishing additionally requires an
- * active subscription and remaining quota.
+ * Modes:
+ *  - `subscriptionEnforced = true` (production default): publishing requires an
+ *    active subscription. The bank gateway is not connected yet, so no one has a
+ *    subscription and publishing is refused with `subscription_required` — the
+ *    UI shows a truthful "payment setup unavailable" state.
+ *  - `subscriptionEnforced = false` (development bridge only): an active seller
+ *    may publish without a subscription, so the workflow is testable now. This
+ *    mode is refused in production by environment validation.
+ *
+ * Increment 7 replaces the source of `hasActiveSubscription` with the real
+ * subscription service WITHOUT changing listing-service APIs or this contract.
  */
 
-export interface SellerEntitlementView {
-  status: SellerStatus;
+export interface ListingEntitlementInput {
+  sellerStatus: SellerStatus;
+  subscriptionEnforced: boolean;
+  hasActiveSubscription: boolean;
 }
 
-export function assertSellerActive(seller: SellerEntitlementView): void {
-  if (seller.status !== 'active') {
-    throw new AuthorizationError(403, `seller_${seller.status}`);
+export function assertSellerActive(status: SellerStatus): void {
+  if (status !== 'active') {
+    throw new AuthorizationError(403, `seller_${status}`);
   }
 }
 
-/** May the seller create a draft listing? */
-export function assertCanCreateListing(seller: SellerEntitlementView): void {
-  assertSellerActive(seller);
+/** Draft creation only needs an active seller (drafts never require payment). */
+export function assertCanCreateListing(
+  input: Pick<ListingEntitlementInput, 'sellerStatus'>,
+): void {
+  assertSellerActive(input.sellerStatus);
 }
 
-/** May the seller publish a listing? (Subscription + quota join here at #7.) */
-export function assertCanPublishListing(seller: SellerEntitlementView): void {
-  assertSellerActive(seller);
-  // Increment 7 inserts here:
-  //   assertActiveSubscription(seller);
-  //   assertWeeklyQuotaRemaining(seller);
+/** Publishing needs an active seller AND, when enforced, a live subscription. */
+export function assertCanPublishListing(input: ListingEntitlementInput): void {
+  assertSellerActive(input.sellerStatus);
+  if (input.subscriptionEnforced && !input.hasActiveSubscription) {
+    throw new AuthorizationError(403, 'subscription_required');
+  }
+}
+
+/** Non-throwing predicate for UI/routing decisions. */
+export function canPublishListing(input: ListingEntitlementInput): boolean {
+  return (
+    input.sellerStatus === 'active' &&
+    (!input.subscriptionEnforced || input.hasActiveSubscription)
+  );
 }
