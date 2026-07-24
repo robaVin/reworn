@@ -58,3 +58,34 @@ export function TextInput({
 }: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(inputClasses, className)} {...props} />;
 }
+
+export function Textarea({
+  className,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        inputClasses,
+        'min-h-28 resize-y leading-relaxed',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function Select({
+  className,
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cn(inputClasses, 'appearance-none pr-9', className)}
+      {...props}
+    >
+      {children}
+    </select>
+  );
+}

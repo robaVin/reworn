@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  createListingSchema,
+  draftListingSchema,
+  publishableListingSchema,
   updateListingSchema,
 } from '@/modules/catalog/schemas';
 
-const valid = {
+const complete = {
   title: '  Wool Overcoat  ',
   description: 'A warm wool coat in excellent condition.',
   categoryId: '11111111-1111-1111-1111-111111111111',
@@ -14,78 +15,86 @@ const valid = {
   location: 'Skopje',
 };
 
-describe('createListingSchema', () => {
-  it('accepts valid input and applies defaults', () => {
-    const r = createListingSchema.parse(valid);
-    expect(r.title).toBe('Wool Overcoat'); // trimmed
+describe('draftListingSchema (lenient)', () => {
+  it('accepts a title-only draft (everything else optional)', () => {
+    const r = draftListingSchema.parse({ title: 'Just a title' });
+    expect(r.title).toBe('Just a title');
     expect(r.currency).toBe('MKD'); // default
     expect(r.gender).toBe('unisex'); // default
+    expect(r.priceMinor).toBeUndefined();
+    expect(r.categoryId).toBeUndefined();
   });
 
-  it('upper-cases the currency', () => {
-    const r = createListingSchema.parse({ ...valid, currency: 'eur' });
+  it('still requires a title', () => {
+    expect(draftListingSchema.safeParse({}).success).toBe(false);
+    expect(draftListingSchema.safeParse({ title: '   ' }).success).toBe(false);
+  });
+
+  it('validates fields that ARE provided', () => {
+    expect(
+      draftListingSchema.safeParse({ title: 'x', priceMinor: -1 }).success,
+    ).toBe(false);
+    expect(
+      draftListingSchema.safeParse({ title: 'x', categoryId: 'nope' }).success,
+    ).toBe(false);
+    expect(
+      draftListingSchema.safeParse({ title: 'x', condition: 'mint' }).success,
+    ).toBe(false);
+  });
+
+  it('normalises empty optional strings to undefined and trims/upper-cases', () => {
+    const r = draftListingSchema.parse({
+      title: 'x',
+      brand: '  ',
+      currency: 'eur',
+    });
+    expect(r.brand).toBeUndefined();
     expect(r.currency).toBe('EUR');
   });
+});
 
-  it('normalises empty optional strings to undefined', () => {
-    const r = createListingSchema.parse({ ...valid, brand: '  ', color: '' });
-    expect(r.brand).toBeUndefined();
-    expect(r.color).toBeUndefined();
+describe('publishableListingSchema (strict)', () => {
+  it('accepts a complete listing', () => {
+    const r = publishableListingSchema.parse(complete);
+    expect(r.title).toBe('Wool Overcoat');
   });
 
-  it('rejects a negative price', () => {
-    expect(
-      createListingSchema.safeParse({ ...valid, priceMinor: -1 }).success,
-    ).toBe(false);
+  it.each([
+    'description',
+    'categoryId',
+    'size',
+    'condition',
+    'priceMinor',
+    'location',
+  ])('rejects when %s is missing', (field) => {
+    const partial: Record<string, unknown> = { ...complete };
+    delete partial[field];
+    const res = publishableListingSchema.safeParse(partial);
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.error.flatten().fieldErrors).toHaveProperty(field);
+    }
   });
 
-  it('rejects a non-integer price', () => {
+  it('rejects an invalid price/condition even when present', () => {
     expect(
-      createListingSchema.safeParse({ ...valid, priceMinor: 12.5 }).success,
-    ).toBe(false);
-  });
-
-  it('rejects an empty title', () => {
-    expect(
-      createListingSchema.safeParse({ ...valid, title: '   ' }).success,
-    ).toBe(false);
-  });
-
-  it('rejects an over-long title', () => {
-    expect(
-      createListingSchema.safeParse({ ...valid, title: 'x'.repeat(141) })
+      publishableListingSchema.safeParse({ ...complete, priceMinor: 12.5 })
         .success,
     ).toBe(false);
-  });
-
-  it('rejects a bad category id', () => {
     expect(
-      createListingSchema.safeParse({ ...valid, categoryId: 'not-a-uuid' })
+      publishableListingSchema.safeParse({ ...complete, condition: 'mint' })
         .success,
-    ).toBe(false);
-  });
-
-  it('rejects an invalid condition', () => {
-    expect(
-      createListingSchema.safeParse({ ...valid, condition: 'mint' }).success,
-    ).toBe(false);
-  });
-
-  it('rejects a non-3-letter currency', () => {
-    expect(
-      createListingSchema.safeParse({ ...valid, currency: 'MK' }).success,
     ).toBe(false);
   });
 });
 
 describe('updateListingSchema', () => {
-  it('is a partial (all fields optional)', () => {
+  it('is fully partial (title optional too)', () => {
     expect(updateListingSchema.safeParse({}).success).toBe(true);
-    expect(updateListingSchema.safeParse({ title: 'New title' }).success).toBe(
+    expect(updateListingSchema.safeParse({ priceMinor: 100 }).success).toBe(
       true,
     );
   });
-
   it('still validates provided fields', () => {
     expect(updateListingSchema.safeParse({ priceMinor: -5 }).success).toBe(
       false,

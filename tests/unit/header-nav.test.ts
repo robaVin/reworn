@@ -76,8 +76,8 @@ describe('buildHeaderNav — seller', () => {
     expect(hrefs).not.toContain('/admin');
   });
 
-  it('routes the sell CTA straight to the dashboard', () => {
-    expect(buildHeaderNav(seller).sell.href).toBe('/seller');
+  it('routes the sell CTA straight to create-a-listing', () => {
+    expect(buildHeaderNav(seller).sell.href).toBe('/seller/listings/new');
   });
 });
 
@@ -95,7 +95,7 @@ describe('buildHeaderNav — admin', () => {
   it('lets admins operate seller tooling (canActAsSeller rule)', () => {
     const nav = buildHeaderNav(admin);
     expect(nav.menu.map((l) => l.href)).toContain('/seller');
-    expect(nav.sell.href).toBe('/seller');
+    expect(nav.sell.href).toBe('/seller/listings/new');
   });
 });
 

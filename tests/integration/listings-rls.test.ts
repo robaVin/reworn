@@ -5,7 +5,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
-import type { CreateListingInput } from '@/modules/catalog/schemas';
+import {
+  draftListingSchema,
+  type DraftListingInput,
+} from '@/modules/catalog/schemas';
+
+/** Parse partial input through the draft schema (as the server action does). */
+const parseDraft = (p: Record<string, unknown>): DraftListingInput =>
+  draftListingSchema.parse(p);
 
 /**
  * Listing domain integration tests against a REAL PostgreSQL (embedded).
@@ -35,9 +42,10 @@ let prisma: typeof import('@/lib/db').prisma;
 let svc: typeof import('@/modules/catalog/listing-service');
 let AuthorizationError: typeof import('@/modules/auth/errors').AuthorizationError;
 let ListingConflictError: typeof import('@/modules/catalog/errors').ListingConflictError;
+let ListingIncompleteError: typeof import('@/modules/catalog/errors').ListingIncompleteError;
 let InvalidListingTransitionError: typeof import('@/modules/catalog/listing-status').InvalidListingTransitionError;
 
-function baseInput(): CreateListingInput {
+function baseInput(): DraftListingInput {
   return {
     title: 'Wool Overcoat',
     description: 'Warm wool coat, excellent condition.',
@@ -97,7 +105,8 @@ beforeAll(async () => {
   ({ prisma } = await import('@/lib/db'));
   svc = await import('@/modules/catalog/listing-service');
   ({ AuthorizationError } = await import('@/modules/auth/errors'));
-  ({ ListingConflictError } = await import('@/modules/catalog/errors'));
+  ({ ListingConflictError, ListingIncompleteError } =
+    await import('@/modules/catalog/errors'));
   ({ InvalidListingTransitionError } =
     await import('@/modules/catalog/listing-status'));
 
@@ -255,6 +264,86 @@ describe('listing service — visibility', () => {
   it('listSellerListings returns the owner listings in any status', async () => {
     const mine = await svc.listSellerListings(SELLER);
     expect(mine.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('listing service — drafts, completeness, IDOR, duplicates', () => {
+  it('allows an incomplete (title-only) draft', async () => {
+    const draft = await svc.createDraftListing(
+      SELLER,
+      parseDraft({ title: 'Just a title' }),
+    );
+    expect(draft.status).toBe('draft');
+    expect(draft.priceMinor).toBeNull();
+    expect(draft.categoryId).toBeNull();
+  });
+
+  it('refuses to publish an incomplete draft (missing mandatory fields)', async () => {
+    const draft = await svc.createDraftListing(
+      SELLER,
+      parseDraft({ title: 'Incomplete' }),
+    );
+    await expect(
+      svc.transitionListing(SELLER, draft.id, 'publish'),
+    ).rejects.toBeInstanceOf(ListingIncompleteError);
+    // It stays a draft.
+    const still = await svc.getListingForViewer(
+      { userId: SELLER, roles: ['seller'] },
+      draft.id,
+    );
+    expect(still?.status).toBe('draft');
+  });
+
+  it('a seller cannot update another seller’s draft (404 hides existence)', async () => {
+    const draft = await svc.createDraftListing(
+      SELLER,
+      parseDraft({ title: 'Mine' }),
+    );
+    await expect(
+      svc.updateListing(OTHER_SELLER, draft.id, { title: 'Hijacked' }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('rejects a non-existent category (referential integrity)', async () => {
+    await expect(
+      svc.createDraftListing(
+        SELLER,
+        parseDraft({
+          title: 'Bad category',
+          categoryId: '99999999-9999-9999-9999-999999999999',
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('reusing the draft id does not create duplicates', async () => {
+    const before = await prisma.listing.count({
+      where: { sellerId: undefined },
+    });
+    const draft = await svc.createDraftListing(
+      SELLER,
+      parseDraft({ title: 'One draft' }),
+    );
+    await svc.updateListing(SELLER, draft.id, { title: 'One draft (edited)' });
+    await svc.updateListing(SELLER, draft.id, { size: 'L' });
+    const rows = await prisma.listing.count({
+      where: { title: 'One draft (edited)' },
+    });
+    expect(rows).toBe(1);
+    expect(before).toBeGreaterThanOrEqual(0);
+  });
+
+  it('hostile ids do not leak other listings via read', async () => {
+    // OTHER_SELLER cannot read SELLER's draft through the service.
+    const draft = await svc.createDraftListing(
+      SELLER,
+      parseDraft({ title: 'Secret draft' }),
+    );
+    const seen = await svc.getListingForViewer(
+      { userId: OTHER_SELLER, roles: ['seller'] },
+      draft.id,
+    );
+    expect(seen).toBeNull();
   });
 });
 

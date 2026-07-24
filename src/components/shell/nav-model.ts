@@ -55,7 +55,11 @@ export function buildHeaderNav(identity: NavIdentity): HeaderNav {
   };
   const sell: NavLink = {
     label: 'Sell an item',
-    href: authenticated && canActAsSeller(roles) ? '/seller' : '/sell',
+    // Sellers/admins go straight to create-a-listing; everyone else (buyers and
+    // logged-out visitors) goes to the public "start selling" page, which
+    // explains onboarding and routes them through real auth.
+    href:
+      authenticated && canActAsSeller(roles) ? '/seller/listings/new' : '/sell',
   };
 
   if (!authenticated) {

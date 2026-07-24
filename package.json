@@ -25,6 +25,9 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "dev:user:create": "tsx scripts/dev/create-user.ts",
+    "dev:role:grant": "tsx scripts/dev/grant-role.ts",
+    "dev:seller:provision": "tsx scripts/dev/provision-seller.ts",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "prisma": {

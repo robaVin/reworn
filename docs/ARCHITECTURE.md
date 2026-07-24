@@ -79,6 +79,48 @@ RLS actively protects the common path.
 Supabase env. UI uses it to render honest logged-out / "authentication not
 configured" states rather than pretending a backend exists. It grants nothing.
 
+## Listing entitlement — temporary development bridge
+
+`modules/catalog/entitlement.ts` is the **single, server-authoritative** gate
+for creating/publishing listings. **Today it enforces only that the seller
+profile is `active`.** Subscription-active and weekly-listing-quota enforcement
+do **not** exist yet — they arrive in Increment 7 and plug in at the documented
+seam inside that module (`assertCanPublishListing`).
+
+This is a deliberate, temporary bridge so the listing domain is usable before the
+subscription domain exists. It does **not**:
+
+- claim subscription enforcement exists,
+- show fake subscription success, or
+- create fake payment records.
+
+There is **no client-side entitlement gate** — the browser form calls server
+actions, and the server (service + this module) is authoritative. The
+create-listing UI shows a truthful "Development entitlement" notice stating that
+subscription/quota are not yet enforced.
+
+**Production deployment note:** because subscription enforcement is not yet
+active, any active seller can publish. Until Increment 7 ships, a production
+deployment that wants listings gated by payment must not open seller
+registration, OR must keep seller-profile creation an operator action. See
+[ROADMAP.md](ROADMAP.md) increment 7.
+
+## Development seller provisioning
+
+Seller onboarding is not yet an in-app workflow. For development only, three
+server-side scripts provision access against the dev database (they refuse to
+run with `NODE_ENV=production`, use privileged APIs, are idempotent, log safely,
+and are not reachable from the browser):
+
+```bash
+npm run dev:seller:provision -- --email you@example.com   # seller role + active seller profile
+npm run dev:role:grant       -- --email you@example.com --role admin
+npm run dev:user:create      -- --email you@example.com --password "Secret123"
+```
+
+Passwords are never committed — they come from a flag or the `DEV_PASSWORD` env
+var at runtime. Long term this becomes an application workflow, not a script.
+
 ## Not yet implemented (tracked in ROADMAP)
 
 Listings/catalog domain, image storage, saved items, recently viewed, messaging,

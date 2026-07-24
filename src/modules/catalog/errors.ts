@@ -10,3 +10,17 @@ export class ListingConflictError extends Error {
     this.name = 'ListingConflictError';
   }
 }
+
+/**
+ * Raised when a listing cannot be PUBLISHED because mandatory fields are
+ * missing/invalid. Carries per-field errors so the UI can point at the gaps.
+ * 422 (Unprocessable Entity): the request was understood but the listing is
+ * not yet complete enough to publish.
+ */
+export class ListingIncompleteError extends Error {
+  readonly status = 422 as const;
+  constructor(readonly fieldErrors: Record<string, string[]>) {
+    super('listing_incomplete');
+    this.name = 'ListingIncompleteError';
+  }
+}

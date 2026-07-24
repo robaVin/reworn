@@ -337,26 +337,30 @@ model Category {
 /// Increment 7, subscription/quota entitlement). RLS governs the READ path
 /// (public sees published; owner sees own; admin sees all).
 model Listing {
-  id         String @id @default(uuid()) @db.Uuid
-  sellerId   String @map("seller_id") @db.Uuid
-  categoryId String @map("category_id") @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
+  sellerId String  @map("seller_id") @db.Uuid
+  /// Nullable so a DRAFT can be saved incomplete; REQUIRED to publish
+  /// (enforced by the service's publishable validation + a DB CHECK in 0007).
+  categoryId String? @map("category_id") @db.Uuid
 
+  /// Title is the one field a draft always has (so it is listable in the seller
+  /// dashboard). All other content fields may be null on a draft.
   title       String
-  description  String
+  description String?
   brand       String?
-  size        String
+  size        String?
   color       String?
   material    String?
-  condition   ListingCondition
-  gender      ListingGender    @default(unisex)
+  condition   ListingCondition?
+  gender      ListingGender     @default(unisex)
 
   /// Asking price in MINOR units (e.g. deni) + ISO-4217 code. Informational.
-  priceMinor Int    @map("price_minor")
+  priceMinor Int?   @map("price_minor")
   currency   String @default("MKD") @db.Char(3)
   /// Optional original retail price (minor units), for reference/discount display.
   originalPriceMinor Int? @map("original_price_minor")
 
-  location String
+  location String?
 
   status      ListingStatus @default(draft)
   /// Set the first time the listing is published; retained thereafter.
@@ -366,7 +370,7 @@ model Listing {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  category Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category Category?     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   // Browse ordering/pagination and the common filter paths.
   @@index([status, createdAt])

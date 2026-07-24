@@ -2,7 +2,7 @@
 
 import { requireAnyRole } from '@/modules/auth/guards';
 import {
-  createListingSchema,
+  draftListingSchema,
   updateListingSchema,
   listingTransitionSchema,
 } from './schemas';
@@ -32,7 +32,7 @@ export async function createListingAction(
 ): Promise<ActionResult<{ id: string }>> {
   try {
     const ctx = await requireAnyRole(['seller', 'admin']);
-    const parsed = createListingSchema.safeParse(input);
+    const parsed = draftListingSchema.safeParse(input);
     if (!parsed.success) {
       return actionFail(400, 'validation', parsed.error.flatten().fieldErrors);
     }

@@ -12,8 +12,12 @@ import {
   type ListingTransition,
 } from './listing-status';
 import { assertCanCreateListing, assertCanPublishListing } from './entitlement';
-import { ListingConflictError } from './errors';
-import type { CreateListingInput, UpdateListingInput } from './schemas';
+import { ListingConflictError, ListingIncompleteError } from './errors';
+import {
+  publishableListingSchema,
+  type DraftListingInput,
+  type UpdateListingInput,
+} from './schemas';
 
 /**
  * Listing service — the ONLY sanctioned path for listing reads and writes.
@@ -41,6 +45,17 @@ export async function resolveSellerForUser(userId: string) {
   return prisma.sellerProfile.findUnique({ where: { profileId: userId } });
 }
 
+/** Active categories for selection UIs (public catalogue). */
+export async function listActiveCategories(): Promise<
+  Array<{ id: string; name: string }>
+> {
+  return prisma.category.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: { id: true, name: true },
+  });
+}
+
 function assertOwner(userId: string, listing: ListingWithOwner): void {
   if (listing.seller.profileId !== userId) {
     // 404 (not 403) to avoid disclosing that a listing exists to non-owners.
@@ -51,7 +66,7 @@ function assertOwner(userId: string, listing: ListingWithOwner): void {
 /** Create a DRAFT listing owned by the current user's seller profile. */
 export async function createDraftListing(
   userId: string,
-  input: CreateListingInput,
+  input: DraftListingInput,
 ): Promise<Listing> {
   const seller = await resolveSellerForUser(userId);
   if (!seller) {
@@ -61,22 +76,24 @@ export async function createDraftListing(
   }
   assertCanCreateListing(seller);
 
+  // A draft may be incomplete: only the title is guaranteed; the rest is
+  // whatever the seller has entered so far (null when absent).
   return prisma.listing.create({
     data: {
       sellerId: seller.id,
-      categoryId: input.categoryId,
+      categoryId: input.categoryId ?? null,
       title: input.title,
-      description: input.description,
+      description: input.description ?? null,
       brand: input.brand ?? null,
-      size: input.size,
+      size: input.size ?? null,
       color: input.color ?? null,
       material: input.material ?? null,
-      condition: input.condition,
+      condition: input.condition ?? null,
       gender: input.gender,
-      priceMinor: input.priceMinor,
+      priceMinor: input.priceMinor ?? null,
       currency: input.currency,
       originalPriceMinor: input.originalPriceMinor ?? null,
-      location: input.location,
+      location: input.location ?? null,
       status: 'draft',
     },
   });
@@ -193,9 +210,29 @@ export async function transitionListing(
 
   const nextStatus = applyTransition(listing.status, action);
 
-  // Publishing is the entitlement gate (subscription/quota join here at #7).
+  // Publishing is the entitlement gate (subscription/quota join here at #7)
+  // AND the completeness gate: a draft may be incomplete, but a published
+  // listing must have every mandatory field.
   if (nextStatus === 'published') {
     assertCanPublishListing(listing.seller);
+    const parsed = publishableListingSchema.safeParse({
+      title: listing.title,
+      description: listing.description ?? undefined,
+      categoryId: listing.categoryId ?? undefined,
+      brand: listing.brand ?? undefined,
+      size: listing.size ?? undefined,
+      color: listing.color ?? undefined,
+      material: listing.material ?? undefined,
+      condition: listing.condition ?? undefined,
+      gender: listing.gender,
+      priceMinor: listing.priceMinor ?? undefined,
+      currency: listing.currency,
+      originalPriceMinor: listing.originalPriceMinor ?? undefined,
+      location: listing.location ?? undefined,
+    });
+    if (!parsed.success) {
+      throw new ListingIncompleteError(parsed.error.flatten().fieldErrors);
+    }
   }
 
   return prisma.listing.update({
