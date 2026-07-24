@@ -108,6 +108,7 @@ model SellerProfile {
   subscriptions   Subscription[]
   paymentAttempts PaymentAttempt[]
   listingUsage    ListingUsage[]
+  listings        Listing[]
 
   @@index([status])
   @@map("seller_profiles")
@@ -314,9 +315,66 @@ model Category {
 
   parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children Category[] @relation("CategoryTree")
+  listings Listing[]
 
   @@index([parentId])
   @@map("categories")
+}
+
+// -----------------------------------------------------------------------------
+// Listings (the central domain entity)
+// -----------------------------------------------------------------------------
+
+/// A seller's classifieds listing.
+///
+/// Second-hand items are unique physical pieces, so size/condition/colour live
+/// directly on the listing — there is no variants table. The asking price is
+/// INFORMATIONAL only: payment and delivery are arranged directly between buyer
+/// and seller, never through ReWorn.
+///
+/// Ownership: a listing belongs to a SellerProfile. All writes go through the
+/// authorized listing service (privileged path with explicit ownership +, from
+/// Increment 7, subscription/quota entitlement). RLS governs the READ path
+/// (public sees published; owner sees own; admin sees all).
+model Listing {
+  id         String @id @default(uuid()) @db.Uuid
+  sellerId   String @map("seller_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  title       String
+  description  String
+  brand       String?
+  size        String
+  color       String?
+  material    String?
+  condition   ListingCondition
+  gender      ListingGender    @default(unisex)
+
+  /// Asking price in MINOR units (e.g. deni) + ISO-4217 code. Informational.
+  priceMinor Int    @map("price_minor")
+  currency   String @default("MKD") @db.Char(3)
+  /// Optional original retail price (minor units), for reference/discount display.
+  originalPriceMinor Int? @map("original_price_minor")
+
+  location String
+
+  status      ListingStatus @default(draft)
+  /// Set the first time the listing is published; retained thereafter.
+  publishedAt DateTime?     @map("published_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  // Browse ordering/pagination and the common filter paths.
+  @@index([status, createdAt])
+  @@index([sellerId, status])
+  @@index([categoryId, status])
+  @@index([status, gender])
+  @@index([status, priceMinor])
+  @@map("listings")
 }
 
 // -----------------------------------------------------------------------------
@@ -402,4 +460,34 @@ enum PaymentEventType {
   expired
 
   @@map("payment_event_type")
+}
+
+/// Listing lifecycle. Transitions are validated by the listing state machine
+/// (src/modules/catalog/listing-status.ts) and enforced server-side.
+enum ListingStatus {
+  draft
+  published
+  paused
+  archived
+
+  @@map("listing_status")
+}
+
+enum ListingCondition {
+  new
+  like_new
+  very_good
+  good
+  fair
+
+  @@map("listing_condition")
+}
+
+enum ListingGender {
+  women
+  men
+  kids
+  unisex
+
+  @@map("listing_gender")
 }
