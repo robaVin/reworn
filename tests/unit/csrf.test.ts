@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { verifyCsrf } from '@/lib/security/csrf';
+import { verifyCsrf, isExemptFromCsrf } from '@/lib/security/csrf';
 
 const APP = 'https://reworn.mk';
 const EVIL = 'https://evil.example';
@@ -58,6 +58,28 @@ describe('CSRF origin verification', () => {
     it('treats lower-case methods identically', () => {
       expect(verifyCsrf('post', '/api/x', EVIL, null, APP).ok).toBe(false);
       expect(verifyCsrf('get', '/api/x', EVIL, null, APP).ok).toBe(true);
+    });
+  });
+
+  describe('image upload route', () => {
+    const UPLOAD = '/api/seller/listings/1b2c/images';
+
+    it('is NOT exempt from origin checking', () => {
+      expect(isExemptFromCsrf(UPLOAD)).toBe(false);
+    });
+
+    it('rejects a cross-origin upload POST', () => {
+      const r = verifyCsrf('POST', UPLOAD, EVIL, null, APP);
+      expect(r.ok).toBe(false);
+      expect(r.reason).toBe('origin_mismatch');
+    });
+
+    it('rejects an upload POST with no Origin/Referer', () => {
+      expect(verifyCsrf('POST', UPLOAD, null, null, APP).ok).toBe(false);
+    });
+
+    it('allows a same-origin upload POST', () => {
+      expect(verifyCsrf('POST', UPLOAD, APP, null, APP).ok).toBe(true);
     });
   });
 });

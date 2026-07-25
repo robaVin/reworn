@@ -15,11 +15,14 @@ Verified from the codebase at the current HEAD. Updated per increment.
   later). **Node 20** (`.nvmrc`, `engines`, and a `preinstall` guard in
   `scripts/check-node.mjs` that fails a fresh install on Node < 20).
 
-### Node version (required: 20+)
+### Node version (required: 20.9+)
 
-Node 18 is End-of-Life and unsupported (`@supabase/supabase-js` drops it). A
-fresh `npm install` on Node < 20 fails with upgrade instructions. To upgrade on
-Windows (recommended, nvm-windows):
+Node 18 is End-of-Life and unsupported (`@supabase/supabase-js` drops it), and
+`sharp` (listing-image processing) requires **Node ≥ 20.9**. A fresh `npm
+install`/`npm ci` on an older Node fails at the `preinstall` guard
+(`scripts/check-node.mjs`) with upgrade instructions. **Deployment targets
+(Vercel/containers) must run Node 20.9 or later.** To upgrade on Windows
+(recommended, nvm-windows):
 
 ```powershell
 # install nvm-windows from https://github.com/coreybutler/nvm-windows/releases

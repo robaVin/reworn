@@ -41,7 +41,6 @@ async function main(): Promise<void> {
     await grantRole(prisma, user.id, 'seller');
     await ensureSellerProfile(prisma, user.id, shopName);
 
-    // eslint-disable-next-line no-console
     console.log(
       `[dev] Provisioned seller for ${maskEmail(email)} (user ${user.id}): ` +
         `roles include seller, active seller profile "${shopName}".`,

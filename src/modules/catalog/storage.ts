@@ -8,10 +8,21 @@ import { IMAGE_BUCKET } from './image-config';
  * automated tests inject a fake in-memory adapter instead of live Supabase
  * Storage (see `setStorageAdapter`).
  */
+/** Metadata for an object enumerated during reconciliation. */
+export interface StorageObjectInfo {
+  key: string;
+  createdAt: Date | null;
+}
+
 export interface StorageAdapter {
   upload(key: string, body: Buffer, contentType: string): Promise<void>;
   remove(keys: string[]): Promise<void>;
   createSignedUrl(key: string, expiresInSeconds: number): Promise<string>;
+  /**
+   * Enumerates stored objects (recursively, one level of `<listingId>/<file>`).
+   * Used only by the reconciliation command; keys are non-sensitive.
+   */
+  list(prefix?: string): Promise<StorageObjectInfo[]>;
 }
 
 export class StorageError extends Error {
@@ -51,6 +62,54 @@ export class SupabaseStorageAdapter implements StorageAdapter {
       throw new StorageError(`sign_failed:${error?.message ?? 'no_url'}`);
     }
     return data.signedUrl;
+  }
+
+  async list(prefix = ''): Promise<StorageObjectInfo[]> {
+    const bucket = getPrivilegedClient().storage.from(this.bucket);
+    const out: StorageObjectInfo[] = [];
+
+    // Object keys are `<listingId>/<uuid>.webp`, so we enumerate the listingId
+    // "folders" at the root, then the files inside each. Supabase paginates.
+    const pageSize = 100;
+    const listPage = async (path: string, offset: number) => {
+      const { data, error } = await bucket.list(path, {
+        limit: pageSize,
+        offset,
+      });
+      if (error) throw new StorageError(`list_failed:${error.message}`);
+      return data ?? [];
+    };
+    const listAll = async (path: string) => {
+      const acc: Awaited<ReturnType<typeof listPage>> = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const page = await listPage(path, offset);
+        acc.push(...page);
+        if (page.length < pageSize) break;
+      }
+      return acc;
+    };
+
+    const folders = await listAll(prefix);
+    for (const folder of folders) {
+      // Folders have a null `id`; a file at the root would have an id.
+      if (folder.id === null) {
+        const base = prefix ? `${prefix}/${folder.name}` : folder.name;
+        const files = await listAll(base);
+        for (const file of files) {
+          if (file.id === null) continue; // ignore nested folders (not expected)
+          out.push({
+            key: `${base}/${file.name}`,
+            createdAt: file.created_at ? new Date(file.created_at) : null,
+          });
+        }
+      } else {
+        out.push({
+          key: prefix ? `${prefix}/${folder.name}` : folder.name,
+          createdAt: folder.created_at ? new Date(folder.created_at) : null,
+        });
+      }
+    }
+    return out;
   }
 }
 

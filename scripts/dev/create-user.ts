@@ -46,7 +46,6 @@ async function main(): Promise<void> {
       user = { id: data.user.id, email };
     }
     await ensureProfileAndBuyer(prisma, user.id);
-    // eslint-disable-next-line no-console
     console.log(
       `[dev] User ready: ${maskEmail(email)} (user ${user.id}), buyer role provisioned.`,
     );

@@ -73,11 +73,14 @@ export function ImageManager({ listingId }: { listingId: string }) {
             break;
           }
           setStatus(`Uploading ${file.name}…`);
-          const body = new FormData();
-          body.append('file', file);
+          // Raw body upload: the file bytes ARE the request body and its type is
+          // the Content-Type. No multipart, no filename sent (server ignores it).
           const res = await fetch(`/api/seller/listings/${listingId}/images`, {
             method: 'POST',
-            body,
+            headers: {
+              'content-type': file.type || 'application/octet-stream',
+            },
+            body: file,
           });
           if (!res.ok) {
             const payload = (await res.json().catch(() => null)) as {

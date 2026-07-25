@@ -88,6 +88,13 @@ const config = [
     },
   },
   {
+    // Operational/CLI scripts: stdout IS the interface, so console is allowed.
+    files: ['scripts/**/*.ts', 'scripts/**/*.mjs'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     ignores: [
       'node_modules/**',
       '.next/**',

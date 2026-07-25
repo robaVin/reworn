@@ -41,7 +41,6 @@ async function main(): Promise<void> {
     }
     await ensureProfileAndBuyer(prisma, user.id);
     await grantRole(prisma, user.id, role);
-    // eslint-disable-next-line no-console
     console.log(
       `[dev] Granted role "${role}" to ${maskEmail(email)} (user ${user.id}).`,
     );

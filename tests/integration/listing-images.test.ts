@@ -64,6 +64,9 @@ class FakeStorage implements StorageAdapter {
   async createSignedUrl(key: string, ttl: number): Promise<string> {
     return `signed://${key}?ttl=${ttl}`;
   }
+  async list(): Promise<{ key: string; createdAt: Date | null }[]> {
+    return [...this.objects.keys()].map((key) => ({ key, createdAt: null }));
+  }
 }
 
 let fakeStorage: FakeStorage;

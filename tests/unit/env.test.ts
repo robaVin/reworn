@@ -138,6 +138,22 @@ describe('environment validation', () => {
       expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
     });
 
+    it('permits the bypass ONLY during `next build`, not at production runtime', async () => {
+      // Build phase: NODE_ENV=production but NEXT_PHASE marks the build. The
+      // module must load so `next build` can statically render pages.
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('NEXT_PHASE', 'phase-production-build');
+      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
+      const { env } = await loadEnvModule();
+      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
+
+      // Same config WITHOUT the build phase = a real production server boot.
+      // It must throw so a server can never start with the bypass on.
+      vi.stubEnv('NEXT_PHASE', undefined);
+      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
+      await expect(loadEnvModule()).rejects.toThrow(/forbidden in production/i);
+    });
+
     it('defaults to enforced (true) when unset', async () => {
       setEnv({ PAYMENT_PROVIDER: 'none' });
       const { env } = await loadEnvModule();
