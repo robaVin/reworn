@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Field, TextInput, Textarea, Select } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
@@ -11,6 +12,10 @@ import {
   updateListingAction,
   transitionListingAction,
 } from '@/modules/catalog/actions';
+import {
+  DraftController,
+  type SaveState,
+} from '@/components/seller/draft-controller';
 
 interface CategoryOption {
   id: string;
@@ -32,6 +37,12 @@ const GENDER_LABELS: Record<(typeof LISTING_GENDERS)[number], string> = {
   unisex: 'Unisex',
 };
 
+/** Placeholder title so a draft can be bootstrapped before the user types one. */
+const DEFAULT_DRAFT_TITLE = 'Untitled listing';
+
+/** Debounce window for autosaving text edits (ms). */
+const AUTOSAVE_DELAY = 900;
+
 /** Parse a human price like "240" / "240.50" into integer minor units. */
 function toMinorUnits(major: string): number | undefined {
   const trimmed = major.trim();
@@ -41,9 +52,38 @@ function toMinorUnits(major: string): number | undefined {
   return Math.round(value * 100);
 }
 
+/** A random session id used to make draft bootstrap idempotent server-side. */
+function makeBootstrapKey(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 type FieldErrors = Record<string, string[]>;
 
-const initialFields = {
+type Fields = {
+  title: string;
+  description: string;
+  categoryId: string;
+  brand: string;
+  condition: string;
+  size: string;
+  color: string;
+  material: string;
+  gender: string;
+  price: string;
+  currency: string;
+  location: string;
+};
+
+const emptyFields: Fields = {
   title: '',
   description: '',
   categoryId: '',
@@ -58,116 +98,164 @@ const initialFields = {
   location: '',
 };
 
+export interface CreateListingFormProps {
+  categories: CategoryOption[];
+  /** Present in EDIT mode: an existing draft to continue. */
+  initial?: {
+    id: string;
+    status: 'draft' | 'published';
+    fields: Partial<Fields>;
+  };
+}
+
 export function CreateListingForm({
   categories,
-}: {
-  categories: CategoryOption[];
-}) {
-  const [fields, setFields] = useState(initialFields);
-  const [listingId, setListingId] = useState<string | null>(null);
-  const [status, setStatus] = useState<'draft' | 'published'>('draft');
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [notice, setNotice] = useState<{
-    tone: 'info' | 'success';
-    text: string;
-  } | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  initial,
+}: CreateListingFormProps) {
+  const router = useRouter();
 
-  const busy = saving || publishing;
+  const [fields, setFields] = useState<Fields>({
+    ...emptyFields,
+    ...initial?.fields,
+  });
+  const [status, setStatus] = useState<'draft' | 'published'>(
+    initial?.status ?? 'draft',
+  );
+  const [publishing, setPublishing] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [publishFieldErrors, setPublishFieldErrors] = useState<FieldErrors>({});
+  const [, forceRender] = useState(0);
+
+  const fieldsRef = useRef(fields);
+  fieldsRef.current = fields;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Assemble a payload; on create the title falls back to a placeholder. */
+  const buildPayload = useCallback((forCreate: boolean) => {
+    const f = fieldsRef.current;
+    const p: Record<string, unknown> = {
+      currency: f.currency,
+      gender: f.gender,
+    };
+    const t = f.title.trim();
+    if (t) p.title = t;
+    else if (forCreate) p.title = DEFAULT_DRAFT_TITLE;
+    if (f.description.trim()) p.description = f.description;
+    if (f.categoryId) p.categoryId = f.categoryId;
+    if (f.brand.trim()) p.brand = f.brand;
+    if (f.condition) p.condition = f.condition;
+    if (f.size.trim()) p.size = f.size;
+    if (f.color.trim()) p.color = f.color;
+    if (f.material.trim()) p.material = f.material;
+    if (f.location.trim()) p.location = f.location;
+    const minor = toMinorUnits(f.price);
+    if (minor !== undefined) p.priceMinor = minor;
+    return p;
+  }, []);
+
+  // One controller per form session — owns all the save/bootstrap concurrency.
+  const controllerRef = useRef<DraftController | null>(null);
+  if (!controllerRef.current) {
+    controllerRef.current = new DraftController(
+      {
+        createDraft: (payload, key) =>
+          createListingAction(payload, key).then((r) =>
+            r.ok
+              ? { ok: true as const, id: r.data.id }
+              : { ok: false as const, fieldErrors: r.fieldErrors },
+          ),
+        updateDraft: (id, payload) =>
+          updateListingAction(id, payload).then((r) =>
+            r.ok
+              ? { ok: true as const }
+              : { ok: false as const, fieldErrors: r.fieldErrors },
+          ),
+        buildPayload,
+        bootstrapKey: makeBootstrapKey(),
+        onChange: () => forceRender((n) => n + 1),
+      },
+      initial?.id ?? null,
+    );
+  }
+  const controller = controllerRef.current;
+
+  const scheduleSave = useCallback(() => {
+    controller.markUnsaved();
+    forceRender((n) => n + 1);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      void controller.save();
+    }, AUTOSAVE_DELAY);
+  }, [controller]);
+
+  /** Flush any pending debounced save and wait for the queue to settle. */
+  const flush = useCallback(async () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    await controller.save();
+  }, [controller]);
 
   const set = useCallback(
-    (key: keyof typeof initialFields) =>
+    (key: keyof Fields) =>
       (
         e: React.ChangeEvent<
           HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
         >,
       ) => {
         setFields((f) => ({ ...f, [key]: e.target.value }));
-        setDirty(true);
-        setNotice(null);
+        setFormError(null);
+        setPublishFieldErrors({});
+        scheduleSave(); // first field edit bootstraps + autosaves
       },
-    [],
+    [scheduleSave],
   );
 
-  // Warn before leaving with unsaved edits (tab close / refresh / back).
+  // Warn before leaving with changes that are unsaved, in-flight, or failed.
   useEffect(() => {
-    if (!dirty || status === 'published') return;
+    const risky =
+      controller.state === 'unsaved' ||
+      controller.state === 'saving' ||
+      controller.state === 'error';
+    if (!risky || status === 'published') return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty, status]);
+  }, [controller.state, status]);
 
-  /** Assemble the draft payload (omit empty values; price → minor units). */
-  const buildPayload = useCallback(() => {
-    const p: Record<string, unknown> = {
-      title: fields.title,
-      currency: fields.currency,
-    };
-    if (fields.description.trim()) p.description = fields.description;
-    if (fields.categoryId) p.categoryId = fields.categoryId;
-    if (fields.brand.trim()) p.brand = fields.brand;
-    if (fields.condition) p.condition = fields.condition;
-    if (fields.size.trim()) p.size = fields.size;
-    if (fields.color.trim()) p.color = fields.color;
-    if (fields.material.trim()) p.material = fields.material;
-    if (fields.gender) p.gender = fields.gender;
-    if (fields.location.trim()) p.location = fields.location;
-    const minor = toMinorUnits(fields.price);
-    if (minor !== undefined) p.priceMinor = minor;
-    return p;
-  }, [fields]);
-
-  /** Create or update the draft; returns the listing id or null on failure. */
-  const persistDraft = useCallback(async (): Promise<string | null> => {
-    setFormError(null);
-    setFieldErrors({});
-    if (!fields.title.trim()) {
-      setFieldErrors({ title: ['A title is required to save a draft.'] });
-      return null;
-    }
-    const payload = buildPayload();
-    const res = listingId
-      ? await updateListingAction(listingId, payload)
-      : await createListingAction(payload);
-
-    if (!res.ok) {
-      if (res.fieldErrors) setFieldErrors(res.fieldErrors);
-      setFormError(
-        res.error === 'validation'
-          ? 'Please fix the highlighted fields.'
-          : 'Could not save the draft. Please try again.',
-      );
-      return null;
-    }
-    setListingId(res.data.id);
-    setDirty(false);
-    return res.data.id;
-  }, [buildPayload, fields.title, listingId]);
-
-  async function onSaveDraft() {
-    setSaving(true);
-    try {
-      const id = await persistDraft();
-      if (id) setNotice({ tone: 'success', text: 'Draft saved.' });
-    } finally {
-      setSaving(false);
-    }
-  }
+  // Clear a pending timer on unmount.
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   async function onPublish() {
     setPublishing(true);
+    setFormError(null);
     try {
-      const id = await persistDraft();
-      if (!id) return;
+      // Flush pending autosave and WAIT so publish can't race it.
+      await flush();
+      const id = controller.listingId;
+      if (!id) {
+        setFormError('Could not save your listing. Please try again.');
+        return;
+      }
+      if (controller.state === 'error') {
+        setFormError(
+          'Your latest changes could not be saved. Fix the highlighted fields, then publish.',
+        );
+        return;
+      }
       const res = await transitionListingAction(id, 'publish');
       if (!res.ok) {
-        if (res.fieldErrors) setFieldErrors(res.fieldErrors);
+        if (res.fieldErrors) setPublishFieldErrors(res.fieldErrors);
         setFormError(
           res.error === 'listing_incomplete'
             ? 'A published listing needs all required fields. Complete the highlighted fields.'
@@ -180,17 +268,27 @@ export function CreateListingForm({
         return;
       }
       setStatus('published');
-      setDirty(false);
-      setNotice({ tone: 'success', text: 'Your listing is live.' });
     } finally {
       setPublishing(false);
     }
   }
 
-  const err = useMemo(
-    () => (key: string) => fieldErrors[key]?.[0] ?? null,
-    [fieldErrors],
-  );
+  async function onSaveAndExit() {
+    await flush();
+    if (controller.state === 'error' || !controller.listingId) {
+      setFormError('Could not save your draft. Please try again.');
+      return;
+    }
+    router.push('/seller/listings');
+  }
+
+  const err = useMemo(() => {
+    const merged = { ...controller.fieldErrors, ...publishFieldErrors };
+    return (key: string) => merged[key]?.[0] ?? null;
+    // controller.fieldErrors is read fresh on every render (forceRender bumps).
+  }, [controller.fieldErrors, publishFieldErrors]);
+
+  const busy = publishing;
 
   if (status === 'published') {
     return (
@@ -210,15 +308,7 @@ export function CreateListingForm({
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Button href="/seller/listings">View my listings</Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setFields(initialFields);
-              setListingId(null);
-              setStatus('draft');
-              setNotice(null);
-            }}
-          >
+          <Button href="/seller/listings/new" variant="outline">
             Create another
           </Button>
         </div>
@@ -232,11 +322,6 @@ export function CreateListingForm({
       className="space-y-8"
       aria-describedby={formError ? 'form-error' : undefined}
     >
-      {notice && (
-        <Alert tone={notice.tone === 'success' ? 'success' : 'info'}>
-          {notice.text}
-        </Alert>
-      )}
       {formError && (
         <div id="form-error">
           <Alert tone="danger" title="Please review">
@@ -379,32 +464,66 @@ export function CreateListingForm({
         </div>
       </fieldset>
 
-      {listingId ? (
-        <div className="border-t border-line pt-6">
-          <ImageManager listingId={listingId} />
-        </div>
-      ) : (
-        <p className="rounded-card border border-dashed border-line bg-sand/50 px-4 py-3 text-xs text-muted">
-          Save a draft first to add photos. You can publish without photos, or
-          add up to 8 once the draft is saved.
-        </p>
-      )}
+      {/* Photos are available immediately; picking one auto-creates the draft. */}
+      <div className="border-t border-line pt-6">
+        <ImageManager
+          listingId={controller.listingId}
+          ensureListingId={() => controller.ensureDraft()}
+        />
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <Button onClick={onPublish} disabled={busy}>
           {publishing ? 'Publishing…' : 'Publish listing'}
         </Button>
-        <Button variant="outline" onClick={onSaveDraft} disabled={busy}>
-          {saving ? 'Saving…' : 'Save draft'}
+        <Button variant="outline" onClick={onSaveAndExit} disabled={busy}>
+          Save and exit
         </Button>
-        <p className="text-xs text-muted" role="status">
-          {listingId
-            ? dirty
-              ? 'Unsaved changes'
-              : 'Draft saved'
-            : 'Not saved yet'}
-        </p>
+        <SaveIndicator
+          state={controller.state}
+          onRetry={() => void controller.save()}
+        />
       </div>
     </form>
+  );
+}
+
+/** Restrained autosave status — no intrusive banners. */
+function SaveIndicator({
+  state,
+  onRetry,
+}: {
+  state: SaveState;
+  onRetry: () => void;
+}) {
+  if (state === 'error') {
+    return (
+      <span
+        className="flex items-center gap-2 text-xs text-danger"
+        role="status"
+      >
+        Save failed
+        <button
+          type="button"
+          onClick={onRetry}
+          className="font-semibold underline underline-offset-2"
+        >
+          Retry
+        </button>
+      </span>
+    );
+  }
+  const label =
+    state === 'saving'
+      ? 'Saving…'
+      : state === 'saved'
+        ? 'Saved'
+        : state === 'unsaved'
+          ? 'Unsaved changes'
+          : 'Not saved yet';
+  return (
+    <span className="text-xs text-muted" role="status" aria-live="polite">
+      {label}
+    </span>
   );
 }

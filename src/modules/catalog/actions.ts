@@ -29,6 +29,7 @@ import {
 
 export async function createListingAction(
   input: unknown,
+  bootstrapKey?: string,
 ): Promise<ActionResult<{ id: string }>> {
   try {
     const ctx = await requireAnyRole(['seller', 'admin']);
@@ -36,7 +37,15 @@ export async function createListingAction(
     if (!parsed.success) {
       return actionFail(400, 'validation', parsed.error.flatten().fieldErrors);
     }
-    const listing = await createDraftListing(ctx.userId, parsed.data);
+    // The bootstrap key is an opaque UUID from the form session; validate its
+    // shape and ignore anything malformed (falls back to a plain create).
+    const key =
+      typeof bootstrapKey === 'string' && /^[0-9a-f-]{36}$/i.test(bootstrapKey)
+        ? bootstrapKey
+        : undefined;
+    const listing = await createDraftListing(ctx.userId, parsed.data, {
+      bootstrapKey: key,
+    });
     return actionOk({ id: listing.id });
   } catch (error) {
     return toActionError(error);

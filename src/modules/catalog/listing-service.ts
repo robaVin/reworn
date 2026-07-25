@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import type { Listing, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { AuthorizationError } from '@/modules/auth/errors';
@@ -18,6 +19,8 @@ import {
   canPublishListing,
 } from './entitlement';
 import { ListingConflictError, ListingIncompleteError } from './errors';
+import { getStorageAdapter } from './storage';
+import { SIGNED_URL_TTL_SECONDS } from './image-config';
 import {
   publishableListingSchema,
   type DraftListingInput,
@@ -45,10 +48,17 @@ export type ListingWithOwner = Prisma.ListingGetPayload<
   typeof listingWithOwner
 >;
 
-/** Resolves the seller profile owned by a user, or null if they have none. */
-export async function resolveSellerForUser(userId: string) {
+/**
+ * Resolves the seller profile owned by a user, or null if they have none.
+ * Request-memoized: the page guard and a subsequent service call in the same
+ * request share one lookup instead of re-querying `seller_profiles`.
+ */
+export const resolveSellerForUser = cache(async (userId: string) => {
   return prisma.sellerProfile.findUnique({ where: { profileId: userId } });
-}
+});
+
+/** Upper bound on a single seller-listings query (keeps it from being unbounded). */
+const SELLER_LISTINGS_MAX = 200;
 
 /** Active categories for selection UIs (public catalogue). */
 export async function listActiveCategories(): Promise<
@@ -106,10 +116,19 @@ function assertOwner(userId: string, listing: ListingWithOwner): void {
   }
 }
 
-/** Create a DRAFT listing owned by the current user's seller profile. */
+/**
+ * Create a DRAFT listing owned by the current user's seller profile.
+ *
+ * When `bootstrapKey` is supplied the create is IDEMPOTENT: the unique index on
+ * `bootstrap_key` (migration 0010) makes concurrent "first actions" from one
+ * form session converge on a single row. The race loser catches the unique
+ * violation and returns the winning listing (only if it belongs to the same
+ * seller). This does not rely on the client disabling a button.
+ */
 export async function createDraftListing(
   userId: string,
   input: DraftListingInput,
+  opts: { bootstrapKey?: string } = {},
 ): Promise<Listing> {
   const seller = await resolveSellerForUser(userId);
   if (!seller) {
@@ -121,25 +140,57 @@ export async function createDraftListing(
 
   // A draft may be incomplete: only the title is guaranteed; the rest is
   // whatever the seller has entered so far (null when absent).
-  return prisma.listing.create({
-    data: {
-      sellerId: seller.id,
-      categoryId: input.categoryId ?? null,
-      title: input.title,
-      description: input.description ?? null,
-      brand: input.brand ?? null,
-      size: input.size ?? null,
-      color: input.color ?? null,
-      material: input.material ?? null,
-      condition: input.condition ?? null,
-      gender: input.gender,
-      priceMinor: input.priceMinor ?? null,
-      currency: input.currency,
-      originalPriceMinor: input.originalPriceMinor ?? null,
-      location: input.location ?? null,
-      status: 'draft',
-    },
+  const data = {
+    sellerId: seller.id,
+    categoryId: input.categoryId ?? null,
+    title: input.title,
+    description: input.description ?? null,
+    brand: input.brand ?? null,
+    size: input.size ?? null,
+    color: input.color ?? null,
+    material: input.material ?? null,
+    condition: input.condition ?? null,
+    gender: input.gender,
+    priceMinor: input.priceMinor ?? null,
+    currency: input.currency,
+    originalPriceMinor: input.originalPriceMinor ?? null,
+    location: input.location ?? null,
+    status: 'draft' as const,
+    bootstrapKey: opts.bootstrapKey ?? null,
+  };
+
+  if (!opts.bootstrapKey) return prisma.listing.create({ data });
+
+  try {
+    return await prisma.listing.create({ data });
+  } catch (e) {
+    // P2002 = unique violation on bootstrap_key: another concurrent request won.
+    if ((e as { code?: string }).code === 'P2002') {
+      const existing = await prisma.listing.findUnique({
+        where: { bootstrapKey: opts.bootstrapKey },
+      });
+      if (existing && existing.sellerId === seller.id) return existing;
+      throw new ListingConflictError('bootstrap_conflict');
+    }
+    throw e;
+  }
+}
+
+/**
+ * Load a listing the user OWNS (for the seller edit surface). Returns null when
+ * it does not exist or belongs to someone else — the caller renders notFound(),
+ * so a non-owner cannot even tell the listing exists (IDOR-safe).
+ */
+export async function getOwnedListing(
+  userId: string,
+  id: string,
+): Promise<ListingWithOwner | null> {
+  const listing = await prisma.listing.findUnique({
+    where: { id },
+    ...listingWithOwner,
   });
+  if (!listing || listing.seller.profileId !== userId) return null;
+  return listing;
 }
 
 /** Read a single listing, applying the same visibility rules as RLS. */
@@ -169,6 +220,72 @@ export async function listSellerListings(
   return prisma.listing.findMany({
     where: { sellerId: seller.id, status: opts.status },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: SELLER_LISTINGS_MAX,
+  });
+}
+
+/** A seller-dashboard card: the essentials plus a signed cover-image URL. */
+export interface SellerListingCard {
+  id: string;
+  title: string;
+  status: Listing['status'];
+  priceMinor: number | null;
+  currency: string;
+  updatedAt: Date;
+  coverUrl: string | null;
+}
+
+/**
+ * The seller's own listings as dashboard cards, newest-updated first. Cover
+ * URLs for ALL rows are signed in a SINGLE batched request (not one per row).
+ */
+export async function listSellerListingCards(
+  userId: string,
+): Promise<SellerListingCard[]> {
+  const seller = await resolveSellerForUser(userId);
+  if (!seller) return [];
+
+  const rows = await prisma.listing.findMany({
+    where: { sellerId: seller.id },
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    take: SELLER_LISTINGS_MAX,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      priceMinor: true,
+      currency: true,
+      updatedAt: true,
+      images: {
+        orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+        take: 1,
+        select: { storageKey: true },
+      },
+    },
+  });
+
+  const coverKeys = rows
+    .map((r) => r.images[0]?.storageKey)
+    .filter((k): k is string => Boolean(k));
+  const signed =
+    coverKeys.length > 0
+      ? await getStorageAdapter().createSignedUrls(
+          coverKeys,
+          SIGNED_URL_TTL_SECONDS,
+        )
+      : new Map<string, string>();
+
+  return rows.map((r) => {
+    const key = r.images[0]?.storageKey;
+    return {
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      priceMinor: r.priceMinor,
+      currency: r.currency,
+      updatedAt: r.updatedAt,
+      coverUrl: key ? (signed.get(key) ?? null) : null,
+    };
   });
 }
 

@@ -19,6 +19,14 @@ export interface StorageAdapter {
   remove(keys: string[]): Promise<void>;
   createSignedUrl(key: string, expiresInSeconds: number): Promise<string>;
   /**
+   * Batch-signs many keys in ONE request (used for listing covers). Returns a
+   * key→URL map; keys that fail to sign are simply absent from the map.
+   */
+  createSignedUrls(
+    keys: string[],
+    expiresInSeconds: number,
+  ): Promise<Map<string, string>>;
+  /**
    * Enumerates stored objects (recursively, one level of `<listingId>/<file>`).
    * Used only by the reconciliation command; keys are non-sensitive.
    */
@@ -62,6 +70,24 @@ export class SupabaseStorageAdapter implements StorageAdapter {
       throw new StorageError(`sign_failed:${error?.message ?? 'no_url'}`);
     }
     return data.signedUrl;
+  }
+
+  async createSignedUrls(
+    keys: string[],
+    expiresInSeconds: number,
+  ): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    if (keys.length === 0) return out;
+    const { data, error } = await getPrivilegedClient()
+      .storage.from(this.bucket)
+      .createSignedUrls(keys, expiresInSeconds);
+    if (error || !data) {
+      throw new StorageError(`sign_failed:${error?.message ?? 'no_urls'}`);
+    }
+    for (const row of data) {
+      if (row.signedUrl && row.path) out.set(row.path, row.signedUrl);
+    }
+    return out;
   }
 
   async list(prefix = ''): Promise<StorageObjectInfo[]> {

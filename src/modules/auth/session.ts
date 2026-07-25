@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import {
   createSupabaseUserClient,
   type UserSupabaseClient,
@@ -63,12 +64,18 @@ export async function loadRoles(
 /**
  * Builds the full auth context (verified user + roles) for the current request,
  * or null if unauthenticated. This is the single entry point guards use.
+ *
+ * Wrapped in React `cache()` for REQUEST-SCOPED memoization: within one render
+ * (SiteHeader + a layout guard + a page guard all call this), the Supabase
+ * `getUser()` round-trip and the roles query run exactly ONCE instead of 3–4×.
+ * The cache lives for a single request only — it never persists an auth/z
+ * decision across requests, so this does not weaken authorization.
  */
-export async function getAuthContext(): Promise<AuthContext | null> {
+export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
   const supabase = await createSupabaseUserClient();
   const user = await getVerifiedUser(supabase);
   if (!user) return null;
 
   const roles = await loadRoles(supabase, user.id);
   return { userId: user.id, email: user.email, roles };
-}
+});

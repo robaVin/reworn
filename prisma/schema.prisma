@@ -339,6 +339,11 @@ model Category {
 model Listing {
   id       String  @id @default(uuid()) @db.Uuid
   sellerId String  @map("seller_id") @db.Uuid
+  /// Per-form-session idempotency key for the auto-draft bootstrap. A unique
+  /// constraint makes concurrent "first actions" converge on ONE listing
+  /// instead of creating duplicate empty drafts. Null for rows not created via
+  /// the bootstrap path (nullable + unique → Postgres allows many NULLs).
+  bootstrapKey String? @unique @map("bootstrap_key") @db.Uuid
   /// Nullable so a DRAFT can be saved incomplete; REQUIRED to publish
   /// (enforced by the service's publishable validation + a DB CHECK in 0007).
   categoryId String? @map("category_id") @db.Uuid

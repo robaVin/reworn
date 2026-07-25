@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import EmbeddedPostgres from 'embedded-postgres';
+import { randomUUID } from 'node:crypto';
+import { freePort } from '../helpers/free-port';
 import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -31,8 +33,8 @@ const OTHER_SELLER = 'a2222222-2222-2222-2222-222222222222';
 const BUYER = 'b1111111-1111-1111-1111-111111111111';
 const ADMIN = 'c1111111-1111-1111-1111-111111111111';
 
-const PORT = 54367;
-const url = `postgresql://postgres:postgres@localhost:${PORT}/reworn`;
+let PORT: number;
+let url: string;
 
 let server: EmbeddedPostgres;
 let dataDir: string;
@@ -63,6 +65,12 @@ class FakeStorage implements StorageAdapter {
   }
   async createSignedUrl(key: string, ttl: number): Promise<string> {
     return `signed://${key}?ttl=${ttl}`;
+  }
+  async createSignedUrls(
+    keys: string[],
+    ttl: number,
+  ): Promise<Map<string, string>> {
+    return new Map(keys.map((k) => [k, `signed://${k}?ttl=${ttl}`]));
   }
   async list(): Promise<{ key: string; createdAt: Date | null }[]> {
     return [...this.objects.keys()].map((key) => ({ key, createdAt: null }));
@@ -144,6 +152,8 @@ async function runAs(
 }
 
 beforeAll(async () => {
+  PORT = await freePort();
+  url = `postgresql://postgres:postgres@localhost:${PORT}/reworn`;
   dataDir = mkdtempSync(join(tmpdir(), 'rew-images-'));
   server = new EmbeddedPostgres({
     databaseDir: dataDir,
@@ -519,5 +529,107 @@ describe('direct DB write rejection (RLS)', () => {
       draft.id,
     );
     expect(adminView.length).toBe(1);
+  });
+});
+
+describe('draft bootstrap idempotency (2C-edit)', () => {
+  const key = () => randomUUID();
+
+  it('returns the SAME listing for a repeated bootstrap key (retry-safe)', async () => {
+    const k = key();
+    const first = await svc.createDraftListing(SELLER, baseInput(), {
+      bootstrapKey: k,
+    });
+    const second = await svc.createDraftListing(SELLER, baseInput(), {
+      bootstrapKey: k,
+    });
+    expect(second.id).toBe(first.id);
+    const rows = await prisma.listing.findMany({
+      where: { bootstrapKey: k },
+    });
+    expect(rows.length).toBe(1);
+  });
+
+  it('concurrent first actions with one key create exactly ONE listing', async () => {
+    const k = key();
+    const [a, b, c] = await Promise.all([
+      svc.createDraftListing(SELLER, baseInput(), { bootstrapKey: k }),
+      svc.createDraftListing(SELLER, baseInput(), { bootstrapKey: k }),
+      svc.createDraftListing(SELLER, baseInput(), { bootstrapKey: k }),
+    ]);
+    expect(a.id).toBe(b.id);
+    expect(b.id).toBe(c.id);
+    const rows = await prisma.listing.findMany({ where: { bootstrapKey: k } });
+    expect(rows.length).toBe(1);
+  });
+
+  it('different bootstrap keys create different listings', async () => {
+    const a = await svc.createDraftListing(SELLER, baseInput(), {
+      bootstrapKey: key(),
+    });
+    const b = await svc.createDraftListing(SELLER, baseInput(), {
+      bootstrapKey: key(),
+    });
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it('autosave updates the SAME draft (create then update)', async () => {
+    const draft = await svc.createDraftListing(
+      SELLER,
+      { title: 'Untitled listing', gender: 'unisex', currency: 'MKD' },
+      { bootstrapKey: key() },
+    );
+    const updated = await svc.updateListing(SELLER, draft.id, {
+      title: 'Renamed jacket',
+      priceMinor: 5000,
+    });
+    expect(updated.id).toBe(draft.id);
+    expect(updated.title).toBe('Renamed jacket');
+    expect(updated.priceMinor).toBe(5000);
+  });
+});
+
+describe('getOwnedListing — ownership (2C-edit)', () => {
+  it('returns the listing to its owner', async () => {
+    const draft = await newDraft(SELLER);
+    const got = await svc.getOwnedListing(SELLER, draft.id);
+    expect(got?.id).toBe(draft.id);
+  });
+
+  it('returns null for a different seller (IDOR-safe)', async () => {
+    const draft = await newDraft(SELLER);
+    expect(await svc.getOwnedListing(OTHER_SELLER, draft.id)).toBeNull();
+  });
+
+  it('returns null for a non-existent listing', async () => {
+    expect(
+      await svc.getOwnedListing(SELLER, '00000000-0000-4000-8000-000000000999'),
+    ).toBeNull();
+  });
+});
+
+describe('listSellerListingCards (2C-edit)', () => {
+  it('shows the seller a freshly-created draft', async () => {
+    const draft = await svc.createDraftListing(OTHER_SELLER, baseInput());
+    const cards = await svc.listSellerListingCards(OTHER_SELLER);
+    const card = cards.find((c) => c.id === draft.id);
+    expect(card).toBeTruthy();
+    expect(card!.status).toBe('draft');
+    expect(card!.coverUrl).toBeNull(); // no image yet
+  });
+
+  it('shows a published listing with a signed cover URL', async () => {
+    const draft = await newDraft(SELLER);
+    await images.addListingImage(SELLER, draft.id, {
+      bytes: jpegBytes(),
+      declaredMime: 'image/jpeg',
+    });
+    await svc.transitionListing(SELLER, draft.id, 'publish');
+
+    const cards = await svc.listSellerListingCards(SELLER);
+    const card = cards.find((c) => c.id === draft.id);
+    expect(card).toBeTruthy();
+    expect(card!.status).toBe('published');
+    expect(card!.coverUrl).toContain('signed://');
   });
 });

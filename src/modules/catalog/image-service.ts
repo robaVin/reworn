@@ -259,17 +259,19 @@ export async function getListingImagesForViewer(
     orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
   });
 
-  const storage = getStorageAdapter();
-  return Promise.all(
-    images.map(async (img) => ({
-      id: img.id,
-      position: img.position,
-      width: img.width,
-      height: img.height,
-      url: await storage.createSignedUrl(
-        img.storageKey,
-        SIGNED_URL_TTL_SECONDS,
-      ),
-    })),
+  if (images.length === 0) return [];
+
+  // Sign ALL keys in a single batched request (one round-trip, not N).
+  const signed = await getStorageAdapter().createSignedUrls(
+    images.map((img) => img.storageKey),
+    SIGNED_URL_TTL_SECONDS,
   );
+
+  return images.map((img) => ({
+    id: img.id,
+    position: img.position,
+    width: img.width,
+    height: img.height,
+    url: signed.get(img.storageKey) ?? '',
+  }));
 }

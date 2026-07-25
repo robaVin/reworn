@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import EmbeddedPostgres from 'embedded-postgres';
+import { freePort } from '../helpers/free-port';
 import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -29,8 +30,8 @@ const NEW_2 = '55555555-5555-5555-5555-555555555555';
 // the role-service tests (which promote USER_B), so assertions stay isolated.
 const USER_C = '66666666-6666-6666-6666-666666666666';
 
-const PORT = 54344;
-const url = `postgresql://postgres:postgres@localhost:${PORT}/reworn`;
+let PORT: number;
+let url: string;
 
 let server: EmbeddedPostgres;
 let dataDir: string;
@@ -69,6 +70,8 @@ async function runAs(
 }
 
 beforeAll(async () => {
+  PORT = await freePort();
+  url = `postgresql://postgres:postgres@localhost:${PORT}/reworn`;
   dataDir = mkdtempSync(join(tmpdir(), 'rew-auth-'));
   server = new EmbeddedPostgres({
     databaseDir: dataDir,

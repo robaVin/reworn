@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import EmbeddedPostgres from 'embedded-postgres';
+import { freePort } from '../helpers/free-port';
 import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,8 +29,8 @@ const FROZEN_SELLER = 'a3333333-3333-3333-3333-333333333333';
 const BUYER = 'b1111111-1111-1111-1111-111111111111';
 const ADMIN = 'c1111111-1111-1111-1111-111111111111';
 
-const PORT = 54366;
-const url = `postgresql://postgres:postgres@localhost:${PORT}/reworn`;
+let PORT: number;
+let url: string;
 
 let server: EmbeddedPostgres;
 let dataDir: string;
@@ -84,6 +85,8 @@ async function runAs(
 }
 
 beforeAll(async () => {
+  PORT = await freePort();
+  url = `postgresql://postgres:postgres@localhost:${PORT}/reworn`;
   dataDir = mkdtempSync(join(tmpdir(), 'rew-listings-'));
   server = new EmbeddedPostgres({
     databaseDir: dataDir,

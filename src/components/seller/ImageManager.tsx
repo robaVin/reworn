@@ -43,19 +43,34 @@ function humanizeError(code: string): string {
   return 'Something went wrong. Please try again.';
 }
 
-export function ImageManager({ listingId }: { listingId: string }) {
+export function ImageManager({
+  listingId,
+  ensureListingId,
+}: {
+  /** Known once a draft exists; may be null until the first interaction. */
+  listingId: string | null;
+  /** Bootstraps a draft on demand (e.g. when the user picks the first photo). */
+  ensureListingId?: () => Promise<string | null>;
+}) {
   const [images, setImages] = useState<Image[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(listingId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const refresh = useCallback(async () => {
-    const res = await listListingImagesAction(listingId);
-    if (res.ok) setImages(res.data);
-    setLoading(false);
-  }, [listingId]);
+  const refresh = useCallback(
+    async (id: string | null = listingId) => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      const res = await listListingImagesAction(id);
+      if (res.ok) setImages(res.data);
+      setLoading(false);
+    },
+    [listingId],
+  );
 
   useEffect(() => {
     void refresh();
@@ -67,6 +82,14 @@ export function ImageManager({ listingId }: { listingId: string }) {
       setError(null);
       setBusy(true);
       try {
+        // Picking a photo IS a meaningful interaction: create the draft now if
+        // one doesn't exist yet, so the user never has to "Save draft" first.
+        const targetId =
+          listingId ?? (ensureListingId ? await ensureListingId() : null);
+        if (!targetId) {
+          setError('Could not start your draft. Please try again.');
+          return;
+        }
         for (const file of Array.from(files)) {
           if (images.length >= MAX_LISTING_IMAGES) {
             setError(humanizeError(`image_limit:${MAX_LISTING_IMAGES}`));
@@ -75,7 +98,7 @@ export function ImageManager({ listingId }: { listingId: string }) {
           setStatus(`Uploading ${file.name}…`);
           // Raw body upload: the file bytes ARE the request body and its type is
           // the Content-Type. No multipart, no filename sent (server ignores it).
-          const res = await fetch(`/api/seller/listings/${listingId}/images`, {
+          const res = await fetch(`/api/seller/listings/${targetId}/images`, {
             method: 'POST',
             headers: {
               'content-type': file.type || 'application/octet-stream',
@@ -89,7 +112,7 @@ export function ImageManager({ listingId }: { listingId: string }) {
             setError(humanizeError(payload?.error ?? 'server_error'));
             break;
           }
-          await refresh();
+          await refresh(targetId);
         }
         setStatus('');
       } finally {
@@ -97,11 +120,12 @@ export function ImageManager({ listingId }: { listingId: string }) {
         if (inputRef.current) inputRef.current.value = '';
       }
     },
-    [images.length, listingId, refresh],
+    [images.length, listingId, ensureListingId, refresh],
   );
 
   const move = useCallback(
     async (index: number, dir: -1 | 1) => {
+      if (!listingId) return;
       const target = index + dir;
       if (target < 0 || target >= images.length) return;
       const next = [...images];
