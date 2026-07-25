@@ -16,33 +16,31 @@ import { createClient } from '@supabase/supabase-js';
 
 const IMAGE_BUCKET = 'listing-images';
 
-function stats(ms: number[]) {
-  const s = [...ms].sort((a, b) => a - b);
-  const median = s[Math.floor((s.length - 1) / 2)]!;
-  return { min: Math.round(s[0]!), median: Math.round(median) };
+const WARMUP = 5;
+const SAMPLES = 20;
+
+function pct(sorted: number[], p: number): number {
+  const idx = Math.min(sorted.length - 1, Math.ceil(p * sorted.length) - 1);
+  return sorted[Math.max(0, idx)]!;
 }
 
-/** Time `fn` n times; discard the first `warm` as cold (connect/pool). */
-async function bench(
-  name: string,
-  fn: () => Promise<unknown>,
-  n = 8,
-  warm = 2,
-): Promise<void> {
+/**
+ * Time `fn`: discard `WARMUP` samples (pool/plan warm-up), then measure
+ * `SAMPLES` sequential runs. Reports median + p95 (identical conditions).
+ */
+async function bench(name: string, fn: () => Promise<unknown>): Promise<void> {
+  for (let i = 0; i < WARMUP; i++) await fn();
   const runs: number[] = [];
-  let cold = 0;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < SAMPLES; i++) {
     const t = performance.now();
     await fn();
-    const dt = performance.now() - t;
-    if (i === 0) cold = dt;
-    if (i >= warm) runs.push(dt);
+    runs.push(performance.now() - t);
   }
-  const { min, median } = stats(runs);
+  const s = [...runs].sort((a, b) => a - b);
   console.log(
-    `  ${name.padEnd(22)} warm min=${String(min).padStart(4)}ms  median=${String(
-      median,
-    ).padStart(4)}ms   (cold first=${Math.round(cold)}ms)`,
+    `  ${name.padEnd(22)} n=${SAMPLES} median=${pct(s, 0.5).toFixed(
+      1,
+    )}ms p95=${pct(s, 0.95).toFixed(1)}ms min=${s[0]!.toFixed(1)}ms`,
   );
 }
 
@@ -70,51 +68,63 @@ async function main(): Promise<void> {
 
     console.log('Supabase latency probe (real infra)\n');
 
-    // --- Auth ---
     // getUser floor: no session → GoTrue round-trip only (auth server RTT).
     await bench('auth.getUser (anon)', () => anonClient.auth.getUser());
 
-    // --- DB (Prisma over the pooled DATABASE_URL) ---
-    await bench('db.roles', () =>
-      prisma.userRole.findMany({
-        where: { profileId: seller.profileId },
-        include: { role: true },
-      }),
-    );
-    await bench('db.seller', () =>
-      prisma.sellerProfile.findUnique({
-        where: { profileId: seller.profileId },
-      }),
-    );
-    await bench('db.subscription', () =>
-      prisma.subscription.findFirst({
-        where: {
-          sellerId: seller.id,
-          status: { in: ['active', 'grace_period'] },
-        },
-        select: { id: true },
-      }),
-    );
-    await bench('db.cards', () =>
-      prisma.listing.findMany({
-        where: { sellerId: seller.id },
-        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-        take: 200,
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          priceMinor: true,
-          currency: true,
-          updatedAt: true,
-          images: {
-            orderBy: [{ position: 'asc' }],
-            take: 1,
-            select: { storageKey: true },
+    // Run the SAME Prisma read queries through both endpoints to separate
+    // connection-mode overhead from query cost.
+    const directUrl = (process.env.DIRECT_URL ?? '').replace(/^"|"$/g, '');
+    const prismaDirect = new PrismaClient({ datasourceUrl: directUrl });
+
+    for (const [tag, client] of [
+      ['pooler :6543 pgbouncer', prisma],
+      ['direct :5432 session', prismaDirect],
+    ] as const) {
+      console.log(`\n  [${tag}]`);
+      for (let i = 0; i < 10; i++) await client.$queryRaw`SELECT 1`; // warm pool
+      await bench('db.roles', () =>
+        client.userRole.findMany({
+          where: { profileId: seller.profileId },
+          include: { role: true },
+        }),
+      );
+      await bench('db.seller', () =>
+        client.sellerProfile.findUnique({
+          where: { profileId: seller.profileId },
+        }),
+      );
+      await bench('db.subscription', () =>
+        client.subscription.findFirst({
+          where: {
+            sellerId: seller.id,
+            status: { in: ['active', 'grace_period'] },
           },
-        },
-      }),
-    );
+          select: { id: true },
+        }),
+      );
+      await bench('db.cards', () =>
+        client.listing.findMany({
+          where: { sellerId: seller.id },
+          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+          take: 200,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priceMinor: true,
+            currency: true,
+            updatedAt: true,
+            images: {
+              orderBy: [{ position: 'asc' }],
+              take: 1,
+              select: { storageKey: true },
+            },
+          },
+        }),
+      );
+    }
+    await prismaDirect.$disconnect();
+    console.log('');
 
     // --- Storage signing: single-per-key vs batched ---
     const someKeys = (
@@ -124,45 +134,34 @@ async function main(): Promise<void> {
       })
     ).map((r) => r.storageKey);
     if (someKeys.length > 0) {
-      await bench(
-        `storage.sign x${someKeys.length} (loop)`,
-        async () => {
-          for (const k of someKeys) {
-            await admin.storage.from(IMAGE_BUCKET).createSignedUrl(k, 3600);
-          }
-        },
-        6,
-      );
-      await bench(
-        `storage.sign x${someKeys.length} (batch)`,
-        () => admin.storage.from(IMAGE_BUCKET).createSignedUrls(someKeys, 3600),
-        6,
+      await bench(`storage.sign x${someKeys.length} (loop)`, async () => {
+        for (const k of someKeys) {
+          await admin.storage.from(IMAGE_BUCKET).createSignedUrl(k, 3600);
+        }
+      });
+      await bench(`storage.sign x${someKeys.length} (batch)`, () =>
+        admin.storage.from(IMAGE_BUCKET).createSignedUrls(someKeys, 3600),
       );
     } else {
       console.log('  (no images yet — skipping storage.sign)');
     }
 
-    // --- Writes: bootstrap + autosave on a temp draft, then delete ---
+    // --- Writes: bootstrap (create+delete) + autosave (single update) ---
     let tempId = '';
-    await bench(
-      'db.bootstrap (create)',
-      async () => {
-        const row = await prisma.listing.create({
-          data: {
-            sellerId: seller.id,
-            title: 'perf-probe (temp)',
-            gender: 'unisex',
-            currency: 'MKD',
-            status: 'draft',
-          },
-          select: { id: true },
-        });
-        // delete immediately so we measure create cost repeatedly & leave nothing
-        await prisma.listing.delete({ where: { id: row.id } });
-        tempId = row.id;
-      },
-      6,
-    );
+    await bench('db.bootstrap (create+del)', async () => {
+      const row = await prisma.listing.create({
+        data: {
+          sellerId: seller.id,
+          title: 'perf-probe (temp)',
+          gender: 'unisex',
+          currency: 'MKD',
+          status: 'draft',
+        },
+        select: { id: true },
+      });
+      await prisma.listing.delete({ where: { id: row.id } });
+      tempId = row.id;
+    });
     // one persistent temp for autosave timing
     const temp = await prisma.listing.create({
       data: {
@@ -176,14 +175,11 @@ async function main(): Promise<void> {
     });
     tempId = temp.id;
     let toggle = 0;
-    await bench(
-      'db.autosave (update)',
-      () =>
-        prisma.listing.update({
-          where: { id: tempId },
-          data: { description: `probe-${toggle++}` },
-        }),
-      8,
+    await bench('db.autosave (update)', () =>
+      prisma.listing.update({
+        where: { id: tempId },
+        data: { description: `probe-${toggle++}` },
+      }),
     );
     await prisma.listing.delete({ where: { id: tempId } });
     console.log('\n  (temp probe rows deleted)');
