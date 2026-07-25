@@ -42,7 +42,6 @@ let draftId: string;
 let prisma: typeof import('@/lib/db').prisma;
 let svc: typeof import('@/modules/catalog/listing-service');
 let AuthorizationError: typeof import('@/modules/auth/errors').AuthorizationError;
-let ListingConflictError: typeof import('@/modules/catalog/errors').ListingConflictError;
 let ListingIncompleteError: typeof import('@/modules/catalog/errors').ListingIncompleteError;
 let InvalidListingTransitionError: typeof import('@/modules/catalog/listing-status').InvalidListingTransitionError;
 
@@ -108,8 +107,7 @@ beforeAll(async () => {
   ({ prisma } = await import('@/lib/db'));
   svc = await import('@/modules/catalog/listing-service');
   ({ AuthorizationError } = await import('@/modules/auth/errors'));
-  ({ ListingConflictError, ListingIncompleteError } =
-    await import('@/modules/catalog/errors'));
+  ({ ListingIncompleteError } = await import('@/modules/catalog/errors'));
   ({ InvalidListingTransitionError } =
     await import('@/modules/catalog/listing-status'));
 
@@ -205,10 +203,12 @@ describe('listing service — lifecycle', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  it('cannot edit a published listing (409 conflict)', async () => {
+  it('cannot edit a published listing (404, no leak)', async () => {
+    // Single-write autosave (P1): a non-editable status collapses to 404 like
+    // wrong-owner/missing so the caller cannot tell which condition held.
     await expect(
       svc.updateListing(SELLER, publishedId, { title: 'x' }),
-    ).rejects.toBeInstanceOf(ListingConflictError);
+    ).rejects.toMatchObject({ status: 404 });
   });
 
   it('can edit after pausing, then republish', async () => {
@@ -216,7 +216,11 @@ describe('listing service — lifecycle', () => {
     const edited = await svc.updateListing(SELLER, publishedId, {
       title: 'Wool Overcoat (updated)',
     });
-    expect(edited.title).toBe('Wool Overcoat (updated)');
+    expect(edited.id).toBe(publishedId);
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: publishedId },
+    });
+    expect(row.title).toBe('Wool Overcoat (updated)');
     const republished = await svc.transitionListing(
       SELLER,
       publishedId,

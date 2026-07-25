@@ -63,6 +63,26 @@ export async function loadRoles(
 }
 
 /**
+ * Request-scoped, memoized Supabase user client. Wrapping in `cache()` means the
+ * cookie parse + client construction happen once per request even though several
+ * callers (getUser, roles) need it.
+ */
+const getRequestClient = cache(() => createSupabaseUserClient());
+
+/**
+ * The server-verified user for THIS request, memoized. Exposed so a page can
+ * learn the user id early and then fan out independent lookups (roles ∥ seller)
+ * WITHOUT triggering a second `getUser()` — `getAuthContext` reuses this exact
+ * cached result.
+ */
+export const getVerifiedUserForRequest = cache(
+  async (): Promise<VerifiedUser | null> => {
+    const supabase = await getRequestClient();
+    return timeSpan('auth.getUser', () => getVerifiedUser(supabase));
+  },
+);
+
+/**
  * Builds the full auth context (verified user + roles) for the current request,
  * or null if unauthenticated. This is the single entry point guards use.
  *
@@ -74,12 +94,10 @@ export async function loadRoles(
  */
 export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
   return timeSpan('auth.getAuthContext', async () => {
-    const supabase = await createSupabaseUserClient();
-    const user = await timeSpan('auth.getUser', () =>
-      getVerifiedUser(supabase),
-    );
+    const user = await getVerifiedUserForRequest();
     if (!user) return null;
 
+    const supabase = await getRequestClient();
     const roles = await timeSpan('auth.roles', () =>
       loadRoles(supabase, user.id),
     );

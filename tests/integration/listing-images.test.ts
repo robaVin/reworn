@@ -584,8 +584,56 @@ describe('draft bootstrap idempotency (2C-edit)', () => {
       priceMinor: 5000,
     });
     expect(updated.id).toBe(draft.id);
-    expect(updated.title).toBe('Renamed jacket');
-    expect(updated.priceMinor).toBe(5000);
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(row.title).toBe('Renamed jacket');
+    expect(row.priceMinor).toBe(5000);
+  });
+});
+
+describe('updateListing — single-write ownership (P1)', () => {
+  it('updates for the owner and returns the id', async () => {
+    const draft = await newDraft(SELLER);
+    const res = await svc.updateListing(SELLER, draft.id, {
+      title: 'Owner set',
+    });
+    expect(res.id).toBe(draft.id);
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(row.title).toBe('Owner set');
+  });
+
+  it('rejects a cross-seller write as 404 and does NOT mutate (IDOR)', async () => {
+    const draft = await newDraft(SELLER);
+    await expect(
+      svc.updateListing(OTHER_SELLER, draft.id, { title: 'hacked' }),
+    ).rejects.toMatchObject({ status: 404 });
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(row.title).not.toBe('hacked');
+  });
+
+  it('returns 404 for a missing listing', async () => {
+    await expect(
+      svc.updateListing(SELLER, '00000000-0000-4000-8000-0000000004ff', {
+        title: 'x',
+      }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('returns 404 for a non-editable (published) listing without mutating', async () => {
+    const draft = await newDraft(SELLER);
+    await svc.transitionListing(SELLER, draft.id, 'publish');
+    await expect(
+      svc.updateListing(SELLER, draft.id, { title: 'edit after publish' }),
+    ).rejects.toMatchObject({ status: 404 });
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(row.title).not.toBe('edit after publish');
   });
 });
 

@@ -2,9 +2,13 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { env } from '@/lib/env';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
-import { getAuthContext } from '@/modules/auth/session';
+import {
+  getAuthContext,
+  getVerifiedUserForRequest,
+} from '@/modules/auth/session';
 import { canActAsSeller } from '@/modules/auth/roles';
 import { getSellerAccess } from '@/modules/catalog/listing-service';
+import { resolveSellDestination } from '@/modules/catalog/sell-routing';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 
@@ -22,56 +26,57 @@ export default async function SellPage() {
     redirect(`/login?next=${encodeURIComponent('/sell')}`);
   }
 
-  const ctx = await getAuthContext();
-
-  // 1. Signed-out → real login, returning to /sell.
-  if (!ctx) {
+  // Establish the verified user first (one getUser). Signed-out → real login.
+  const user = await getVerifiedUserForRequest();
+  if (!user) {
     redirect(`/login?next=${encodeURIComponent('/sell')}`);
   }
 
-  // 2. Authenticated buyer (no seller role) → truthful onboarding.
-  if (!canActAsSeller(ctx.roles)) {
-    return (
-      <SellShell>
-        {devHint()}
-        <BuyerOnboarding />
-      </SellShell>
-    );
+  // Independent after the user id is known: roles (in getAuthContext) and the
+  // seller-access lookup run CONCURRENTLY. getUser is not repeated (both reuse
+  // the request-memoized result); the subscription lookup still waits for the
+  // seller identity inside getSellerAccess.
+  const [ctx, access] = await Promise.all([
+    getAuthContext(),
+    getSellerAccess(user.id),
+  ]);
+
+  const destination = resolveSellDestination({
+    canActAsSeller: ctx ? canActAsSeller(ctx.roles) : false,
+    seller: access.seller,
+    canPublish: access.canPublish,
+  });
+
+  switch (destination) {
+    case 'buyer_onboarding':
+      return (
+        <SellShell>
+          {devHint()}
+          <BuyerOnboarding />
+        </SellShell>
+      );
+    case 'profile_required':
+      return (
+        <SellShell>
+          {devHint()}
+          <SellerProfileRequired />
+        </SellShell>
+      );
+    case 'seller_not_active':
+      return (
+        <SellShell>
+          <SellerNotActive status={access.seller!.status} />
+        </SellShell>
+      );
+    case 'subscription_required':
+      return (
+        <SellShell>
+          <SubscriptionRequired />
+        </SellShell>
+      );
+    case 'create':
+      redirect('/seller/listings/new');
   }
-
-  const access = await getSellerAccess(ctx.userId);
-
-  // 3. Seller role but no seller profile → profile required.
-  if (!access.seller) {
-    return (
-      <SellShell>
-        {devHint()}
-        <SellerProfileRequired />
-      </SellShell>
-    );
-  }
-
-  // 4. Seller profile not active → truthful blocked state.
-  if (access.seller.status !== 'active') {
-    return (
-      <SellShell>
-        <SellerNotActive status={access.seller.status} />
-      </SellShell>
-    );
-  }
-
-  // 5. Active seller but not entitled to publish (enforcement on, no
-  //    subscription) → truthful subscription-required state.
-  if (!access.canPublish) {
-    return (
-      <SellShell>
-        <SubscriptionRequired />
-      </SellShell>
-    );
-  }
-
-  // 6. Entitled seller → straight to create-a-listing.
-  redirect('/seller/listings/new');
 }
 
 /** The development-testing hint is shown ONLY when the dev bridge is active. */

@@ -8,7 +8,6 @@ import type { AuthContext } from '@/modules/auth/authorization';
 import { isAdmin } from '@/modules/auth/roles';
 import {
   applyTransition,
-  isEditable,
   type ListingStatus,
   type ListingTransition,
 } from './listing-status';
@@ -332,45 +331,57 @@ export async function listPublishedListings(opts: {
   return { items, nextCursor };
 }
 
-/** Edit an owned listing. Only allowed while the listing is editable. */
+/**
+ * Edit an owned, editable listing in a SINGLE ownership-scoped write (P1).
+ *
+ * Ownership (`seller.profileId === userId`) AND the editable-status restriction
+ * live in the UPDATE predicate, so exactly one round-trip both authorizes and
+ * writes. `count === 0` means wrong owner, missing listing, OR a non-editable
+ * status — all collapse to 404 so the caller cannot tell which condition held
+ * (no information leak). Validation still happens upstream (Zod in the action);
+ * this does not touch RLS — the privileged path enforces ownership explicitly,
+ * exactly as the previous read-then-write did.
+ */
 export async function updateListing(
   userId: string,
   id: string,
   input: UpdateListingInput,
-): Promise<Listing> {
-  const listing = await prisma.listing.findUnique({
-    where: { id },
-    ...listingWithOwner,
-  });
-  if (!listing) throw new AuthorizationError(404, 'not_found');
-  assertOwner(userId, listing);
-
-  if (!isEditable(listing.status)) {
-    throw new ListingConflictError('listing_not_editable');
-  }
-
-  const data: Prisma.ListingUpdateInput = {};
+): Promise<{ id: string }> {
+  // Unchecked variant so the scalar FK `categoryId` is settable in updateMany.
+  const data: Prisma.ListingUncheckedUpdateManyInput = {};
   if (input.title !== undefined) data.title = input.title;
-  if (input.description !== undefined) data.description = input.description;
+  if (input.description !== undefined) {
+    data.description = input.description ?? null;
+  }
   if (input.brand !== undefined) data.brand = input.brand ?? null;
-  if (input.size !== undefined) data.size = input.size;
+  if (input.size !== undefined) data.size = input.size ?? null;
   if (input.color !== undefined) data.color = input.color ?? null;
   if (input.material !== undefined) data.material = input.material ?? null;
-  if (input.condition !== undefined) data.condition = input.condition;
+  if (input.condition !== undefined) data.condition = input.condition ?? null;
   if (input.gender !== undefined) data.gender = input.gender;
-  if (input.priceMinor !== undefined) data.priceMinor = input.priceMinor;
+  if (input.priceMinor !== undefined)
+    data.priceMinor = input.priceMinor ?? null;
   if (input.currency !== undefined) data.currency = input.currency;
   if (input.originalPriceMinor !== undefined) {
     data.originalPriceMinor = input.originalPriceMinor ?? null;
   }
-  if (input.location !== undefined) data.location = input.location;
-  if (input.categoryId !== undefined) {
-    data.category = { connect: { id: input.categoryId } };
-  }
+  if (input.location !== undefined) data.location = input.location ?? null;
+  if (input.categoryId !== undefined)
+    data.categoryId = input.categoryId ?? null;
 
-  return timeSpan('db.autosave', () =>
-    prisma.listing.update({ where: { id }, data }),
+  const res = await timeSpan('db.autosave', () =>
+    prisma.listing.updateMany({
+      where: {
+        id,
+        status: { in: ['draft', 'paused'] },
+        seller: { profileId: userId },
+      },
+      data,
+    }),
   );
+  // No row matched: wrong owner, missing, or non-editable — do not disclose which.
+  if (res.count === 0) throw new AuthorizationError(404, 'not_found');
+  return { id };
 }
 
 /** Apply a lifecycle transition to an owned listing. */

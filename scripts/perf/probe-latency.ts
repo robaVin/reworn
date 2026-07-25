@@ -175,10 +175,23 @@ async function main(): Promise<void> {
     });
     tempId = temp.id;
     let toggle = 0;
-    await bench('db.autosave (update)', () =>
-      prisma.listing.update({
+    await bench('autosave BEFORE (find+update)', async () => {
+      // Old path: read-for-ownership, then update = 2 round-trips.
+      await prisma.listing.findUnique({ where: { id: tempId } });
+      await prisma.listing.update({
         where: { id: tempId },
-        data: { description: `probe-${toggle++}` },
+        data: { description: `probe-a-${toggle++}` },
+      });
+    });
+    await bench('autosave AFTER P1 (updateMany+own)', () =>
+      // New path: single ownership-scoped write.
+      prisma.listing.updateMany({
+        where: {
+          id: tempId,
+          status: { in: ['draft', 'paused'] },
+          seller: { profileId: seller.profileId },
+        },
+        data: { description: `probe-b-${toggle++}` },
       }),
     );
     await prisma.listing.delete({ where: { id: tempId } });
