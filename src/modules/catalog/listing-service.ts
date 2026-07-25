@@ -21,6 +21,7 @@ import {
 import { ListingConflictError, ListingIncompleteError } from './errors';
 import { getStorageAdapter } from './storage';
 import { SIGNED_URL_TTL_SECONDS } from './image-config';
+import { timeSpan } from '@/lib/perf';
 import {
   publishableListingSchema,
   type DraftListingInput,
@@ -93,11 +94,15 @@ export interface SellerAccess {
 }
 
 export async function getSellerAccess(userId: string): Promise<SellerAccess> {
-  const seller = await resolveSellerForUser(userId);
+  const seller = await timeSpan('db.seller', () =>
+    resolveSellerForUser(userId),
+  );
   const subscriptionEnforced = env.SUBSCRIPTION_ENFORCEMENT;
   const hasActiveSubscription =
     seller && subscriptionEnforced
-      ? await sellerHasActiveSubscription(seller.id)
+      ? await timeSpan('db.subscription', () =>
+          sellerHasActiveSubscription(seller.id),
+        )
       : false;
   const canPublish = seller
     ? canPublishListing({
@@ -159,10 +164,14 @@ export async function createDraftListing(
     bootstrapKey: opts.bootstrapKey ?? null,
   };
 
-  if (!opts.bootstrapKey) return prisma.listing.create({ data });
+  if (!opts.bootstrapKey) {
+    return timeSpan('db.bootstrap', () => prisma.listing.create({ data }));
+  }
 
   try {
-    return await prisma.listing.create({ data });
+    return await timeSpan('db.bootstrap', () =>
+      prisma.listing.create({ data }),
+    );
   } catch (e) {
     // P2002 = unique violation on bootstrap_key: another concurrent request won.
     if ((e as { code?: string }).code === 'P2002') {
@@ -245,33 +254,40 @@ export async function listSellerListingCards(
   const seller = await resolveSellerForUser(userId);
   if (!seller) return [];
 
-  const rows = await prisma.listing.findMany({
-    where: { sellerId: seller.id },
-    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-    take: SELLER_LISTINGS_MAX,
-    select: {
-      id: true,
-      title: true,
-      status: true,
-      priceMinor: true,
-      currency: true,
-      updatedAt: true,
-      images: {
-        orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-        take: 1,
-        select: { storageKey: true },
+  const rows = await timeSpan('db.cards', () =>
+    prisma.listing.findMany({
+      where: { sellerId: seller.id },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      take: SELLER_LISTINGS_MAX,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        priceMinor: true,
+        currency: true,
+        updatedAt: true,
+        images: {
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+          take: 1,
+          select: { storageKey: true },
+        },
       },
-    },
-  });
+    }),
+  );
 
   const coverKeys = rows
     .map((r) => r.images[0]?.storageKey)
     .filter((k): k is string => Boolean(k));
   const signed =
     coverKeys.length > 0
-      ? await getStorageAdapter().createSignedUrls(
-          coverKeys,
-          SIGNED_URL_TTL_SECONDS,
+      ? await timeSpan(
+          'storage.sign',
+          () =>
+            getStorageAdapter().createSignedUrls(
+              coverKeys,
+              SIGNED_URL_TTL_SECONDS,
+            ),
+          { count: coverKeys.length },
         )
       : new Map<string, string>();
 
@@ -352,7 +368,9 @@ export async function updateListing(
     data.category = { connect: { id: input.categoryId } };
   }
 
-  return prisma.listing.update({ where: { id }, data });
+  return timeSpan('db.autosave', () =>
+    prisma.listing.update({ where: { id }, data }),
+  );
 }
 
 /** Apply a lifecycle transition to an owned listing. */

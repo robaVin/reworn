@@ -5,6 +5,7 @@ import {
   createSupabaseUserClient,
   type UserSupabaseClient,
 } from '@/lib/supabase/server';
+import { timeSpan } from '@/lib/perf';
 import { normalizeRoles, type Role } from './roles';
 import type { AuthContext } from './authorization';
 
@@ -72,10 +73,16 @@ export async function loadRoles(
  * decision across requests, so this does not weaken authorization.
  */
 export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
-  const supabase = await createSupabaseUserClient();
-  const user = await getVerifiedUser(supabase);
-  if (!user) return null;
+  return timeSpan('auth.getAuthContext', async () => {
+    const supabase = await createSupabaseUserClient();
+    const user = await timeSpan('auth.getUser', () =>
+      getVerifiedUser(supabase),
+    );
+    if (!user) return null;
 
-  const roles = await loadRoles(supabase, user.id);
-  return { userId: user.id, email: user.email, roles };
+    const roles = await timeSpan('auth.roles', () =>
+      loadRoles(supabase, user.id),
+    );
+    return { userId: user.id, email: user.email, roles };
+  });
 });

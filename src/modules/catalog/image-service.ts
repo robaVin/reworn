@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { ListingImage } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { timeSpan } from '@/lib/perf';
 import { isAdmin } from '@/modules/auth/roles';
 import type { AuthContext } from '@/modules/auth/authorization';
 import { AuthorizationError } from '@/modules/auth/errors';
@@ -262,9 +263,14 @@ export async function getListingImagesForViewer(
   if (images.length === 0) return [];
 
   // Sign ALL keys in a single batched request (one round-trip, not N).
-  const signed = await getStorageAdapter().createSignedUrls(
-    images.map((img) => img.storageKey),
-    SIGNED_URL_TTL_SECONDS,
+  const signed = await timeSpan(
+    'storage.sign',
+    () =>
+      getStorageAdapter().createSignedUrls(
+        images.map((img) => img.storageKey),
+        SIGNED_URL_TTL_SECONDS,
+      ),
+    { count: images.length },
   );
 
   return images.map((img) => ({
