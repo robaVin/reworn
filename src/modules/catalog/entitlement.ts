@@ -1,5 +1,6 @@
 import { AuthorizationError } from '@/modules/auth/errors';
 import type { SellerStatus } from '@prisma/client';
+import { canPublish } from '@/modules/subscription/feature-gating';
 
 /**
  * Listing entitlement — the SINGLE server-side authority for whether a seller
@@ -51,10 +52,15 @@ export function assertCanPublishListing(input: ListingEntitlementInput): void {
   }
 }
 
-/** Non-throwing predicate for UI/routing decisions. */
+/**
+ * Non-throwing publish predicate for UI/routing. Delegates to the subscription
+ * domain's feature-gate (the single source of the rule) so listing and
+ * subscription code can never diverge on what "may publish" means.
+ */
 export function canPublishListing(input: ListingEntitlementInput): boolean {
-  return (
-    input.sellerStatus === 'active' &&
-    (!input.subscriptionEnforced || input.hasActiveSubscription)
-  );
+  return canPublish({
+    sellerStatus: input.sellerStatus,
+    enforced: input.subscriptionEnforced,
+    hasActiveSubscription: input.hasActiveSubscription,
+  });
 }

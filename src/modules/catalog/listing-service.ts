@@ -17,6 +17,7 @@ import {
   assertCanPublishListing,
   canPublishListing,
 } from './entitlement';
+import { hasActiveSubscription } from '@/modules/subscription/subscription-service';
 import { ListingConflictError, ListingIncompleteError } from './errors';
 import { getStorageAdapter } from './storage';
 import { SIGNED_URL_TTL_SECONDS } from './image-config';
@@ -71,13 +72,14 @@ export async function listActiveCategories(): Promise<
   });
 }
 
-/** True if the seller currently holds an active/grace subscription. */
+/**
+ * True if the seller currently holds an entitling subscription. Delegates to the
+ * subscription domain (the single source of truth) rather than re-querying the
+ * subscription tables here — so listing publishing and the subscription service
+ * can never disagree about what "has a live subscription" means.
+ */
 async function sellerHasActiveSubscription(sellerId: string): Promise<boolean> {
-  const sub = await prisma.subscription.findFirst({
-    where: { sellerId, status: { in: ['active', 'grace_period'] } },
-    select: { id: true },
-  });
-  return sub !== null;
+  return hasActiveSubscription(sellerId);
 }
 
 /**

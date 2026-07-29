@@ -6,7 +6,11 @@ processes garment purchases** — no cart, checkout, order, payout, escrow, or
 platform shipping. The only platform payment is the seller's subscription.
 
 Canonical documentation lives in [`docs/`](docs/) — the **repository is the
-source of truth** (see [`docs/README.md`](docs/README.md)). Buyer↔seller
+source of truth** (see [`docs/README.md`](docs/README.md)). The **subscription
+domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
+source of truth for publishing limits and seller authorization — see
+[`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md); Stripe checkout/webhooks and
+billing UI are deferred to a later increment. Buyer↔seller
 **messaging** has a secure backend (domain, RLS, service, tests) as of Increment
 3A, a **conversation-creation Server Action** on the listing page (3B-A), an
 authenticated **inbox** at `/messages` (3B-B), and and a **conversation thread + composer** at `/messages/[conversationId]`
@@ -52,11 +56,11 @@ CI (`.github/workflows/ci.yml`) runs exactly this on Node 20.
 2. Apply migrations: `npm run db:migrate:deploy` (forward-only; uses
    `DIRECT_URL`). **Migrations `0011` and `0012` are required** for the public
    marketplace — `/browse` search/filter/sort and `/shop/[handle]` fail without
-   the `search_vector` column and the seller `handle`. Migrations **`0013`–`0015`** add
-   the messaging tables (buyer↔seller conversations, Increment 3A), their
-   listing-lifecycle hardening, and the compose idempotency token. Treat a
-   missing migration as a **deployment failure** even though `error.tsx` renders
-   cleanly.
+   the `search_vector` column and the seller `handle`. Migrations **`0013`–`0016`** add
+   the messaging tables (Increment 3A) + listing-lifecycle hardening + compose
+   idempotency token, and the subscription pending-uniqueness index (Increment
+   4A). Treat a missing migration as a **deployment failure** even though
+   `error.tsx` renders cleanly.
 3. Create the private `listing-images` Storage bucket (one-time).
 4. Set env: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`,
