@@ -15,6 +15,20 @@ export function formatPrice(
 }
 
 /**
+ * Compact, deterministic activity date (e.g. "29 Jul 2026"). Formatted in UTC
+ * so server render and tests do not depend on the host timezone; pair it with a
+ * machine-readable `<time dateTime={iso}>` for assistive tech.
+ */
+export function formatDate(date: Date, locale = 'en'): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
+/**
  * Parse a human major-unit price (e.g. "240", "240.5", "240.50") into an
  * INTEGER of minor units using string arithmetic — never floating point — so a
  * persisted/queried amount is always exact. Returns undefined for blanks or

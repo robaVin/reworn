@@ -178,6 +178,33 @@ A buyer starts (or reopens) a conversation from a **published** listing via a
   listing"; guest → a sign-in link that returns to the listing. The form is
   keyboard accessible with a pending state and submits only `listingId`.
 
+## Inbox (Increment 3B-B)
+
+The authenticated route **`/messages`** lists the current user's conversations,
+**newest activity first**, **keyset-paginated** (reusing the 3A summary cursor —
+no offset). Its ONLY data source is `listConversationSummariesForCurrentUser`
+(no duplicated queries): **one** summary query per page + **one** batched
+cover-signing round-trip. Rows show listing title (live or snapshot),
+thumbnail, counterparty public name (+ handle for a seller), latest-message
+preview and a machine-readable activity time — **no ids/emails**.
+
+- **Auth:** `requireUserPage('/messages')` → unauthenticated users are redirected
+  to `/login?next=/messages` (existing flow); fail-closed `AuthNotConfigured`
+  when Supabase env is absent.
+- **SEO:** `robots: noindex, nofollow` + bare `/messages` canonical, so private
+  content and `?cursor=` URLs are never indexed.
+- **States:** truthful empty inbox (no sample conversations), route-level
+  `loading.tsx` skeleton, and an `error.tsx` boundary.
+- **Removed listings & missing covers:** the snapshot title + a "no longer
+  available" note render; a missing cover shows a neutral placeholder.
+- **Deferred to 3B-C:** rows are **display-only** (the conversation thread route
+  `/messages/[conversationId]` and composer are not built yet).
+- **Accessibility:** single `<h1>`, semantic `<ul>`/`<li>`, per-card `<h2>`
+  counterparty name, `<time datetime>`, decorative thumbnail (`alt=""`), keyboard-
+  reachable pagination with a `#inbox` focus target. Real-browser screen-reader
+  spot-checks (SR announcement of the list + pagination focus move) are noted for
+  manual verification.
+
 ## Explicitly deferred
 
 Real-time messaging (WebSocket/Supabase Realtime subscriptions), inbox &
