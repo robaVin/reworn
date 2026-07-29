@@ -17,8 +17,19 @@ timezone-aware `timestamptz` (UTC); money as **integer minor units** + ISO-4217
 | 0007 | `listing_draft_nullable` | Makes non-title content columns nullable so incomplete drafts can be saved; publish-completeness enforced in the service |
 | 0008 | `listing_images` | `listing_images` table (unique `storage_key`, `(listing_id, position)` index, cascade FK) |
 | 0009 | `listing_images_rls_constraints` | Image CHECK constraints (positive dims/size, position≥0, MIME allow-list) + RLS read policies; **no write policies** (writes only via privileged service) |
+| 0010 | `listing_bootstrap_key` | `listings.bootstrap_key uuid` + **unique index** — per-form-session idempotency so concurrent auto-draft "first actions" converge on ONE draft |
+| 0011 | `seller_handle` | `seller_profiles.handle` (public URL slug for `/shop/[handle]`): deterministic collision-safe reserved-protected backfill, format + reserved-name CHECKs, unique index. Immutable once assigned |
+| 0012 | `listing_search_indexes` | Generated weighted `search_vector tsvector` (title A / brand B / material C / description D, `simple` config) + **GIN**; **published-only PARTIAL** btree indexes for keyset (`created_at,id`), (`price_minor,id`), (`category_id,created_at,id`) and a **functional normalized-location** index; drops the speculative 2A `status`-prefixed indexes |
 
 Clean-deploy and deploy-on-top-of-previous both verified; no drift.
+**`0011`/`0012` were applied to the production Supabase on 2026-07-29** — they are
+**required** before `/browse` search/filter/sort or `/shop/[handle]` work.
+
+The generated `search_vector` column + GIN + partial/functional indexes cannot be
+expressed in the Prisma schema (the column is declared `Unsupported("tsvector")`
+so Prisma never drops it). They are owned by the hand-written migration; the
+workflow is **`prisma migrate deploy` only — never `migrate dev`** (which would
+try to drop the GIN, as it would for the RLS/CHECK objects since 0002).
 
 ## Entities (current)
 

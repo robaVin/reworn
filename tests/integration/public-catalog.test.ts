@@ -662,3 +662,29 @@ describe('seller storefront (2D-D)', () => {
     expect(json).not.toContain('status');
   });
 });
+
+describe('home preview + categories (2D-E)', () => {
+  it('home preview lists only published, bounded to the requested size', async () => {
+    const page = await pub.listPublishedListings({ ...q({}), pageSize: 3 });
+    expect(page.items.length).toBe(3); // bounded
+    expect(page.items.every((i) => !i.title.startsWith('HIDDEN'))).toBe(true);
+    // (newest-first ordering itself is covered by the sorting suite above.)
+  });
+
+  it('draft/paused/archived never appear in the home preview', async () => {
+    const page = await pub.listPublishedListings({ ...q({}), pageSize: 50 });
+    for (const bad of ['HIDDEN draft', 'HIDDEN paused', 'HIDDEN archived']) {
+      expect(page.items.some((i) => i.title.startsWith(bad))).toBe(false);
+    }
+  });
+
+  it('listBrowseCategories returns real slug + name (no ids)', async () => {
+    const cats = await pub.listBrowseCategories();
+    expect(cats.length).toBeGreaterThan(0);
+    expect(cats.some((c) => c.slug === 'clothing')).toBe(true);
+    for (const c of cats) {
+      expect(typeof c.slug).toBe('string');
+      expect(Object.keys(c).sort()).toEqual(['name', 'slug']); // no id leaked
+    }
+  });
+});

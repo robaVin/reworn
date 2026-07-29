@@ -24,6 +24,10 @@ const body = Work_Sans({
 });
 
 export const metadata: Metadata = {
+  // Resolves relative canonical/OG URLs to absolute against the app origin.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  ),
   title: {
     default: 'ReWorn — Give great clothes a second life',
     template: '%s · ReWorn',
@@ -32,6 +36,12 @@ export const metadata: Metadata = {
     'Buy and sell pre-loved fashion. Browse thousands of second-hand ' +
     'clothes, shoes, bags, accessories and jewellery.',
   applicationName: 'ReWorn',
+  // Site-wide Open Graph defaults; listing/shop pages override title/image.
+  openGraph: {
+    siteName: 'ReWorn',
+    type: 'website',
+    locale: 'en',
+  },
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

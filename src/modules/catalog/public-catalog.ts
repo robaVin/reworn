@@ -353,17 +353,21 @@ interface ResolvedSeller {
  */
 export const resolvePublicSeller = cache(
   async (handle: string): Promise<ResolvedSeller | null> => {
-    const seller = await prisma.sellerProfile.findUnique({
-      where: { handle: normalizeHandle(handle) },
-      select: { id: true, handle: true, shopName: true, createdAt: true },
+    // Instrumented (PERF_TRACE): exactly ONE `db.sellerResolve` span per request
+    // proves generateMetadata + the page render share this memoized query.
+    return timeSpan('db.sellerResolve', async () => {
+      const seller = await prisma.sellerProfile.findUnique({
+        where: { handle: normalizeHandle(handle) },
+        select: { id: true, handle: true, shopName: true, createdAt: true },
+      });
+      if (!seller) return null;
+      return {
+        id: seller.id,
+        handle: seller.handle,
+        shopName: seller.shopName,
+        joinedAt: seller.createdAt,
+      };
     });
-    if (!seller) return null;
-    return {
-      id: seller.id,
-      handle: seller.handle,
-      shopName: seller.shopName,
-      joinedAt: seller.createdAt,
-    };
   },
 );
 

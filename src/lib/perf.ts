@@ -20,7 +20,14 @@ export function perfEnabled(): boolean {
   return ENABLED;
 }
 
-/** Times an async span and logs `{ span, ms }` when tracing is enabled. */
+/**
+ * Times an async span and logs `{ op, ms }` when tracing is enabled.
+ *
+ * The name is emitted under the key `op` (not `span`) deliberately: the logger's
+ * redaction deny-list matches key substrings, and `span` contains `pan` (the
+ * card-PAN pattern), so a `span` key would be masked to `[REDACTED]` and the
+ * trace would be useless for identifying which operation ran.
+ */
 export async function timeSpan<T>(
   name: string,
   fn: () => Promise<T>,
@@ -32,7 +39,7 @@ export async function timeSpan<T>(
     return await fn();
   } finally {
     logger.info('perf', {
-      span: name,
+      op: name,
       ms: Math.round(performance.now() - start),
       ...(meta?.count !== undefined ? { count: meta.count } : {}),
     });

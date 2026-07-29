@@ -32,6 +32,28 @@ describe('logger redaction', () => {
     });
   });
 
+  describe('deny-list is substring-based (documents known false positives)', () => {
+    // The deny-list matches key SUBSTRINGS, so `span` matches `pan` (card PAN)
+    // and would be masked. `src/lib/perf.ts` therefore emits the span name under
+    // the key `op`, which is NOT a denylisted substring and must survive — else
+    // PERF_TRACE output is useless for identifying which operation ran.
+    it('masks a `span` key (contains `pan`) — the reason perf uses `op`', () => {
+      const out = redact({ span: 'db.sellerResolve' }) as { span: string };
+      expect(out.span).toBe(REDACTED);
+    });
+
+    it('keeps the perf `op` key so timing spans stay identifiable', () => {
+      const out = redact({ op: 'db.sellerResolve', ms: 12, count: 1 }) as {
+        op: string;
+        ms: number;
+        count: number;
+      };
+      expect(out.op).toBe('db.sellerResolve');
+      expect(out.ms).toBe(12);
+      expect(out.count).toBe(1);
+    });
+  });
+
   it('masks PII rather than dropping it (email)', () => {
     const out = redact({ email: 'nikola@example.com' }) as { email: string };
     expect(out.email).not.toContain('nikola');

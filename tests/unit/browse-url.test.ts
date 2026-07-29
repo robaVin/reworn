@@ -4,6 +4,7 @@ import {
   buildBrowseHref,
   searchParamsToRaw,
   defaultSortFor,
+  storefrontRaw,
 } from '@/modules/catalog/browse-url';
 
 const parseUrl = (qs: string) => {
@@ -97,5 +98,40 @@ describe('URL round-trip (shared links reproduce state)', () => {
 
   it('clearing filters yields the bare /browse URL', () => {
     expect(buildBrowseHref(parseUrl(''))).toBe('/browse');
+  });
+});
+
+describe('storefrontRaw — /shop honors ONLY the cursor', () => {
+  it('drops browse-only params so storefront ordering is unaffected', () => {
+    const q = parseBrowseQuery(
+      storefrontRaw({
+        sort: 'price_asc',
+        q: 'wool',
+        category: 'shoes',
+        size: ['M', 'L'],
+        condition: ['good'],
+        minPrice: '100',
+        maxPrice: '9000',
+        gender: 'men',
+        location: 'skopje',
+        cursor: 'CUR',
+      }),
+    );
+    expect(q.sort).toBe('newest'); // ordering never changes
+    expect(q.q).toBeUndefined();
+    expect(q.categorySlug).toBeUndefined();
+    expect(q.sizes).toEqual([]);
+    expect(q.conditions).toEqual([]);
+    expect(q.gender).toBeUndefined();
+    expect(q.minPrice).toBeUndefined();
+    expect(q.maxPrice).toBeUndefined();
+    expect(q.location).toBeUndefined();
+    expect(q.cursor).toBe('CUR');
+  });
+
+  it('with no cursor yields an empty query', () => {
+    expect(
+      parseBrowseQuery(storefrontRaw({ sort: 'price_desc', q: 'x' })).cursor,
+    ).toBeUndefined();
   });
 });

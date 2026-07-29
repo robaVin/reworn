@@ -6,7 +6,7 @@ import {
   countSellerPublishedListings,
 } from '@/modules/catalog/public-catalog';
 import { parseBrowseQuery } from '@/modules/catalog/browse-query';
-import { searchParamsToRaw } from '@/modules/catalog/browse-url';
+import { searchParamsToRaw, storefrontRaw } from '@/modules/catalog/browse-url';
 import { isValidHandle, normalizeHandle } from '@/modules/catalog/handle';
 import {
   ListingGrid,
@@ -65,7 +65,10 @@ export default async function ShopPage({
   const seller = await resolvePublicSeller(handle);
   if (!seller) notFound();
 
-  const query = parseBrowseQuery(searchParamsToRaw(await searchParams));
+  // Storefront honors ONLY the cursor — sort/search/filter params are ignored.
+  const query = parseBrowseQuery(
+    storefrontRaw(searchParamsToRaw(await searchParams)),
+  );
   const [page, itemCount] = await Promise.all([
     listPublishedListings(query, { sellerId: seller.id }),
     countSellerPublishedListings(seller.id),

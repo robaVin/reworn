@@ -34,6 +34,17 @@ export function buildBrowseHref(
 }
 
 /**
+ * Storefront (/shop/[handle]) accepts ONLY its documented query state — the
+ * pagination cursor. Browse-only params (sort/search/filters) are deliberately
+ * dropped so a shared browse URL cannot change a storefront's ordering.
+ */
+export function storefrontRaw(
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  return typeof raw.cursor === 'string' ? { cursor: raw.cursor } : {};
+}
+
+/**
  * Read Next.js searchParams (values may be string | string[]) into the shape
  * `parseBrowseQuery` expects, preserving repeated multi-value params.
  */
