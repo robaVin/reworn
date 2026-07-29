@@ -4,6 +4,9 @@ import { defineConfig } from 'vitest/config';
 const srcPath = fileURLToPath(new URL('./src', import.meta.url));
 
 export default defineConfig({
+  // Use React's automatic JSX runtime so component modules render in tests
+  // (e.g. react-dom/server) without a manual `import React`.
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
       // Mirrors the `@/*` path mapping in tsconfig.json. Declared directly

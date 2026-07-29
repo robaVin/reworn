@@ -8,8 +8,10 @@ platform shipping. The only platform payment is the seller's subscription.
 Canonical documentation lives in [`docs/`](docs/) — the **repository is the
 source of truth** (see [`docs/README.md`](docs/README.md)). Buyer↔seller
 **messaging** has a secure backend (domain, RLS, service, tests) as of Increment
-3A — see [`docs/MESSAGING.md`](docs/MESSAGING.md); the inbox UI and real-time
-delivery are deferred to later increments.
+3A, and a **conversation-creation Server Action** on the listing page as of 3B-A
+(success redirects to `/messages/[conversationId]`, a route that ships in 3B-C) —
+see [`docs/MESSAGING.md`](docs/MESSAGING.md). The inbox / conversation UI and
+real-time delivery are deferred to later increments.
 
 ## Requirements
 

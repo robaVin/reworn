@@ -2,8 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicListing } from '@/modules/catalog/public-catalog';
+import { getAuthContext } from '@/modules/auth/session';
+import { resolveMessageCtaState } from '@/modules/messaging/conversation-actions';
 import { formatPrice } from '@/lib/format';
 import { ListingGallery } from '@/components/marketplace/ListingGallery';
+import { MessageSellerCta } from '@/components/marketplace/MessageSellerCta';
 import { Chip } from '@/components/ui/Chip';
 
 export const dynamic = 'force-dynamic';
@@ -64,6 +67,15 @@ export default async function ListingDetailPage({
   const { listingId } = await params;
   const listing = await getPublicListing(listingId);
   if (!listing) notFound();
+
+  // Auth-aware "Message seller" control. `getAuthContext` is request-memoized
+  // (shared with the header); the CTA-state lookup is one lightweight query and
+  // returns no ids to the page.
+  const auth = await getAuthContext();
+  const ctaState = await resolveMessageCtaState(
+    auth?.userId ?? null,
+    listing.id,
+  );
 
   const conditionLabel = listing.condition
     ? (CONDITION_LABELS[listing.condition] ?? listing.condition)
@@ -161,6 +173,7 @@ export default async function ListingDetailPage({
                 View seller’s items
               </Chip>
             </div>
+            <MessageSellerCta listingId={listing.id} state={ctaState} />
           </div>
         </div>
       </div>

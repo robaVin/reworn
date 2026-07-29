@@ -135,6 +135,49 @@ later increment.
   exists yet.
 - **Conversation delete**: cascades its messages. No user-facing delete in 3A.
 
+## Conversation creation (Increment 3B-A)
+
+A buyer starts (or reopens) a conversation from a **published** listing via a
+**Server Action** — `startConversationAction` (`src/modules/messaging/actions.ts`).
+
+- **Why a Server Action, not a Route Handler:** Next.js Server Actions are
+  POST-only, invoked through an encrypted per-build action id with framework
+  same-origin / CSRF protection, so there is **no GET mutation path** and no
+  client-forgeable endpoint. They give **progressive enhancement**
+  (`<form action>` works without JS), first-class `redirect()`, and the identity
+  comes from the **server auth context**. CSRF is therefore framework-provided;
+  we add nothing.
+- **Input contract:** the ONLY accepted field is `listingId` (a hidden input
+  mirroring the URL). Participant ids (`buyerProfileId` / `sellerProfileId` /
+  `senderProfileId`), a client-chosen `conversationId`, and arbitrary redirect
+  URLs are **never** accepted. The buyer is the verified user.
+- **Testable seam:** the action is a thin wrapper over
+  `resolveStartConversation(userId, listingId)` (`conversation-actions.ts`),
+  which returns a redirect target or a safe failure kind and performs no
+  redirect/side-effect — so the full behaviour matrix is unit/integration
+  tested without a request context.
+- **Idempotency & concurrency:** delegates to the 3A atomic
+  `getOrCreateConversationForListing`; there is **no** application-level
+  find-then-insert. Repeated and concurrent submissions resolve to one row.
+- **Authentication:** an unauthenticated submission creates **nothing** and
+  redirects to `/login?next=/listing/[id]` (a server-derived, `safeRedirectPath`-
+  validated internal path — no open redirect, no sensitive data in the URL).
+- **Self-message prevention:** a seller submitting for their own listing gets the
+  `ownListing` result (403 mapped), never a conversation.
+- **Non-disclosure:** draft / paused / archived / removed / malformed / unknown
+  listing ids all map to the same `notFound` — creation cannot probe existence.
+- **Result contract:** non-redirect outcomes are a small typed union
+  (`notFound | ownListing | validationError | unexpected`); the client renders a
+  generic message. Raw Prisma/SQL errors, stack traces, and any ids never reach
+  the client (`unexpected` is logged server-side through the redacting logger).
+- **Redirect contract:** on success the action redirects to
+  **`/messages/[conversationId]`**. That route is **not implemented in 3B-A** and
+  404s until the conversation UI ships in **3B-C**.
+- **Listing-page control** (`/listing/[listingId]`, published only): authenticated
+  non-owner → "Message seller" form; owner → non-interactive "This is your
+  listing"; guest → a sign-in link that returns to the listing. The form is
+  keyboard accessible with a pending state and submits only `listingId`.
+
 ## Explicitly deferred
 
 Real-time messaging (WebSocket/Supabase Realtime subscriptions), inbox &
