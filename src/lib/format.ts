@@ -29,6 +29,23 @@ export function formatDate(date: Date, locale = 'en'): string {
 }
 
 /**
+ * Compact, deterministic date + time for a message (e.g. "29 Jul 2026, 10:00").
+ * Formatted in UTC with a fixed `en-US`-style so server render and tests do not
+ * depend on the host timezone; pair with a machine-readable `<time dateTime>`.
+ */
+export function formatDateTime(date: Date, locale = 'en'): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
+/**
  * Parse a human major-unit price (e.g. "240", "240.5", "240.50") into an
  * INTEGER of minor units using string arithmetic — never floating point — so a
  * persisted/queried amount is always exact. Returns undefined for blanks or

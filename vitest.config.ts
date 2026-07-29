@@ -25,6 +25,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    // Bound worker concurrency: several integration files each start their own
+    // embedded PostgreSQL, and spinning up too many at once caused a rare
+    // startup-time flake on cold machines. Four keeps good parallelism while
+    // capping the number of simultaneous database servers.
+    poolOptions: { forks: { maxForks: 4, minForks: 1 } },
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     // Playwright owns tests/e2e.
     exclude: ['node_modules/**', 'tests/e2e/**', '.next/**'],

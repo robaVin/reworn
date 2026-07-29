@@ -359,6 +359,75 @@ export async function listConversationMessages(
   return { items: items.map((m) => messageDto(m, userId)), nextCursor };
 }
 
+/** A thread page: messages ASCENDING within the window, plus a cursor to load
+ * strictly-older history. `olderCursor` is null when the start of history is
+ * reached. */
+export interface ThreadMessagePage {
+  items: MessageDTO[];
+  olderCursor: string | null;
+}
+
+/**
+ * Messages for the conversation THREAD view. Pages backward from the newest:
+ * the first call returns the most recent {@link MESSAGES_PAGE_SIZE} messages,
+ * and `olderCursor` walks strictly-older history. Items are returned ASCENDING
+ * (oldest→newest) within each window so the thread reads top-to-bottom.
+ *
+ * Deterministic keyset on (created_at, id): the query orders DESC and compares
+ * strictly `< cursor`, so there are no duplicates or skips across pages (the
+ * boundary row is excluded, and equal timestamps break by id). Reuses the same
+ * conversation-bound cursor codec as {@link listConversationMessages} — a cursor
+ * minted for another conversation is rejected.
+ */
+export async function listRecentConversationMessages(
+  userId: string,
+  conversationId: string,
+  cursor?: string,
+): Promise<ThreadMessagePage> {
+  const access = await resolveConversationAccess(userId, conversationId);
+  if (!access) notFound();
+
+  const cur = decodeMessageCursor(cursor, conversationId);
+  const rows = await timeSpan('db.messagesRecent', () =>
+    prisma.message.findMany({
+      where: {
+        conversationId,
+        ...(cur
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(cur.createdAt) } },
+                { createdAt: new Date(cur.createdAt), id: { lt: cur.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: MESSAGES_PAGE_SIZE + 1,
+      select: {
+        id: true,
+        body: true,
+        createdAt: true,
+        senderProfileId: true,
+      },
+    }),
+  );
+
+  const hasOlder = rows.length > MESSAGES_PAGE_SIZE;
+  const pageDesc = rows.slice(0, MESSAGES_PAGE_SIZE); // newest → oldest
+  const oldestInPage = pageDesc[pageDesc.length - 1];
+  const olderCursor =
+    hasOlder && oldestInPage
+      ? encodeMessageCursor(conversationId, {
+          createdAt: oldestInPage.createdAt.toISOString(),
+          id: oldestInPage.id,
+        })
+      : null;
+
+  // Ascending for display (oldest at the top of the window, newest at the bottom).
+  const ascending = [...pageDesc].reverse();
+  return { items: ascending.map((m) => messageDto(m, userId)), olderCursor };
+}
+
 /**
  * Send a message as the current participant. Validates + normalises the body,
  * then inserts with the verified sender id. A DB trigger enforces that the

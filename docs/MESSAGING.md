@@ -197,13 +197,58 @@ preview and a machine-readable activity time — **no ids/emails**.
   `loading.tsx` skeleton, and an `error.tsx` boundary.
 - **Removed listings & missing covers:** the snapshot title + a "no longer
   available" note render; a missing cover shows a neutral placeholder.
-- **Deferred to 3B-C:** rows are **display-only** (the conversation thread route
-  `/messages/[conversationId]` and composer are not built yet).
+- **Rows link** to the conversation thread `/messages/[conversationId]` (3B-C) —
+  one primary link per row with an accessible name "Conversation with
+  <counterparty> about <listing title>", no nested interactive controls.
 - **Accessibility:** single `<h1>`, semantic `<ul>`/`<li>`, per-card `<h2>`
   counterparty name, `<time datetime>`, decorative thumbnail (`alt=""`), keyboard-
   reachable pagination with a `#inbox` focus target. Real-browser screen-reader
   spot-checks (SR announcement of the list + pagination focus move) are noted for
   manual verification.
+
+## Conversation thread (Increment 3B-C)
+
+The authenticated, **read-only** thread lives at **`/messages/[conversationId]`**.
+
+- **Access:** `requireUserPage('/messages/[id]')` (unauthenticated → `/login?next=…`),
+  then the 3A participant gate via `getConversationForCurrentUser` — a missing,
+  non-participant, or malformed conversation all resolve to the **same**
+  `notFound()` (no existence signal). Context comes from the **private
+  participant-authorized DTO**, never the public listing service, so paused /
+  archived / removed listings stay visible to the two participants.
+- **Context header:** counterparty public name (+ shop handle for a seller) and
+  the listing (live title/price/cover, or the immutable **snapshot** for a
+  removed listing). The listing links to `/listing/[id]` **only when published**
+  — a paused/archived/removed listing would 404 publicly, so it is shown as text
+  with an "unavailable" note. No ids are rendered.
+- **Message ordering & pagination direction:** messages read **oldest→newest**
+  within the visible window. The thread uses a NEW service function
+  `listRecentConversationMessages` that pages **backward** — the first view is the
+  most recent `MESSAGES_PAGE_SIZE` messages, and **"Load older messages"** walks
+  strictly-older history via the **same conversation-bound cursor codec**. The
+  keyset orders `(created_at, id)` DESC with a strict `<` comparison, so there are
+  **no duplicates or skips** (regression-tested with 31 messages + an equal-
+  timestamp tie-break). The original oldest-first `listConversationMessages` is
+  retained unchanged for chronological-from-start use.
+- **Message presentation:** plain text (React-escaped; **no**
+  `dangerouslySetInnerHTML`, no auto-linking), intentional newlines preserved
+  (`whitespace-pre-line`), sender shown as **"You"** or the counterparty's public
+  name (textual + alignment, never colour alone, never an id), `<time datetime>`
+  via the deterministic UTC formatter. Zero-message conversations show a truthful
+  "No messages yet." — no composer (deferred to **3B-D**).
+- **Images:** reuses the signed pipeline — **≤1** batch signing call for the
+  single listing cover, **0** when there is no eligible cover, fallback for
+  missing/removed covers (regression-tested).
+- **SEO/privacy:** generic static metadata `Conversation — ReWorn`,
+  `noindex,nofollow`, bare `/messages/[id]` canonical, **no** Open Graph. Metadata
+  never loads the private conversation, so it can't leak the counterparty, listing
+  title, bodies, or ids (and the private query is not duplicated).
+- **States:** route `loading.tsx`, a safe `error.tsx` (opaque digest only — no
+  bodies/ids/tokens), and a `not-found.tsx` shared by unknown and unauthorized.
+- **Accessibility:** one `<h1>`, `<ol>`/`<article>` messages, `<time datetime>`,
+  keyboard-reachable pagination with a `#thread` focus target. Real-browser
+  screen-reader + keyboard spot-checks (message order announcement, focus move on
+  "Load older") are noted for manual verification.
 
 ## Explicitly deferred
 
