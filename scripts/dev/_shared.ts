@@ -17,6 +17,7 @@
  */
 import { PrismaClient, type RoleName } from '@prisma/client';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { slugifyHandleBase, RESERVED_HANDLES } from '@/modules/catalog/handle';
 
 export function assertNotProduction(): void {
   if (process.env.NODE_ENV === 'production') {
@@ -132,15 +133,38 @@ export async function grantRole(
   });
 }
 
+/** Generates a unique, non-reserved public handle from a shop name. */
+async function uniqueHandle(
+  prisma: PrismaClient,
+  shopName: string,
+): Promise<string> {
+  let base = slugifyHandleBase(shopName);
+  if (RESERVED_HANDLES.has(base)) base = `${base}-shop`.slice(0, 30);
+  let handle = base;
+  let n = 1;
+  while (await prisma.sellerProfile.findUnique({ where: { handle } })) {
+    n += 1;
+    handle = `${base.slice(0, 30 - (String(n).length + 1))}-${n}`;
+  }
+  return handle;
+}
+
 /** Idempotently ensures an active seller profile exists. */
 export async function ensureSellerProfile(
   prisma: PrismaClient,
   userId: string,
   shopName: string,
 ): Promise<void> {
-  await prisma.sellerProfile.upsert({
+  const existing = await prisma.sellerProfile.findUnique({
     where: { profileId: userId },
-    update: {}, // never overwrite an existing seller profile
-    create: { profileId: userId, shopName, status: 'active' },
+  });
+  if (existing) return; // never overwrite an existing seller profile
+  await prisma.sellerProfile.create({
+    data: {
+      profileId: userId,
+      shopName,
+      status: 'active',
+      handle: await uniqueHandle(prisma, shopName),
+    },
   });
 }

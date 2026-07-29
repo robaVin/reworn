@@ -125,7 +125,7 @@ beforeAll(async () => {
     skipDuplicates: true,
   });
   const sellerA = await prisma.sellerProfile.create({
-    data: { profileId: USER_A, shopName: 'A Shop' },
+    data: { profileId: USER_A, shopName: 'A Shop', handle: 'a-shop' },
   });
   await prisma.subscription.create({
     data: { sellerId: sellerA.id, planId: starter.id, status: 'pending' },

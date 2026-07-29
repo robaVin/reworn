@@ -34,6 +34,7 @@
     "storage:verify-listing-images": "tsx scripts/storage/verify-listing-images.ts",
     "perf:probe": "tsx scripts/perf/probe-latency.ts",
     "perf:rtt": "tsx scripts/perf/probe-rtt.ts",
+    "perf:explain": "tsx scripts/perf/explain-browse.ts",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "prisma": {

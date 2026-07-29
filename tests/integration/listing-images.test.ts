@@ -212,8 +212,18 @@ beforeAll(async () => {
   });
   await prisma.sellerProfile.createMany({
     data: [
-      { profileId: SELLER, shopName: 'Seller Shop', status: 'active' },
-      { profileId: OTHER_SELLER, shopName: 'Other Shop', status: 'active' },
+      {
+        profileId: SELLER,
+        shopName: 'Seller Shop',
+        status: 'active',
+        handle: 'seller-shop',
+      },
+      {
+        profileId: OTHER_SELLER,
+        shopName: 'Other Shop',
+        status: 'active',
+        handle: 'other-shop',
+      },
     ],
     skipDuplicates: true,
   });

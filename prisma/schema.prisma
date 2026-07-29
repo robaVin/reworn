@@ -98,6 +98,10 @@ model UserRole {
 model SellerProfile {
   id           String   @id @default(uuid()) @db.Uuid
   profileId    String   @unique @map("profile_id") @db.Uuid
+  /// Public, immutable, lowercase URL slug for /shop/[handle]. Never encodes a
+  /// UUID and carries no authorization. Format/reserved-name rules are enforced
+  /// in the DB (CHECK, migration 0011) and the app layer (modules/catalog/handle).
+  handle       String   @unique @map("handle")
   shopName     String   @map("shop_name")
   isBusiness   Boolean  @default(false) @map("is_business")
   status       SellerStatus @default(active)
@@ -378,12 +382,11 @@ model Listing {
   category Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images   ListingImage[]
 
-  // Browse ordering/pagination and the common filter paths.
-  @@index([status, createdAt])
+  // Seller-dashboard path. The PUBLIC browse path (published-only keyset by
+  // created_at/price/category/location + a GIN full-text index and a generated
+  // `search_vector` column) is served by PARTIAL indexes created in migration
+  // 0012 — they cannot be expressed in Prisma schema and live in raw SQL.
   @@index([sellerId, status])
-  @@index([categoryId, status])
-  @@index([status, gender])
-  @@index([status, priceMinor])
   @@map("listings")
 }
 
