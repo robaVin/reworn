@@ -495,17 +495,27 @@ model Conversation {
 /// one of the conversation's two participants — enforced by a BEFORE INSERT
 /// trigger (migration 0013) as well as by the service.
 model Message {
-  id              String   @id @default(uuid()) @db.Uuid
-  conversationId  String   @map("conversation_id") @db.Uuid
-  senderProfileId String   @map("sender_profile_id") @db.Uuid
+  id                 String   @id @default(uuid()) @db.Uuid
+  conversationId     String   @map("conversation_id") @db.Uuid
+  senderProfileId    String   @map("sender_profile_id") @db.Uuid
   /// Plain text only. Normalised (LF line endings, trimmed, control chars
   /// rejected) and length-bounded by the service; a DB CHECK is the backstop.
-  body            String
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  body               String
+  /// Optional client-generated idempotency token (migration 0015). It is ONLY a
+  /// dedup key — it never determines sender identity or authorization. When
+  /// present, the unique index below makes a retry/replay of the same intended
+  /// message converge on ONE row (scoped by sender, so the two participants can
+  /// reuse the same token without colliding). Null for any non-composer path.
+  clientSubmissionId String?  @map("client_submission_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       Profile      @relation("MessageSender", fields: [senderProfileId], references: [id], onDelete: Cascade)
 
+  // Idempotency: at most one message per (conversation, sender, submission token).
+  // NULL tokens are exempt (SQL NULLs are distinct), so untokenised inserts are
+  // unaffected.
+  @@unique([conversationId, senderProfileId, clientSubmissionId], map: "messages_submission_key")
   // Deterministic chronological retrieval + keyset pagination within a conversation.
   @@index([conversationId, createdAt, id], map: "messages_conversation_chrono_idx")
   @@map("messages")

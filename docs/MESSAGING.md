@@ -250,6 +250,53 @@ The authenticated, **read-only** thread lives at **`/messages/[conversationId]`*
   screen-reader + keyboard spot-checks (message order announcement, focus move on
   "Load older") are noted for manual verification.
 
+## Message composer & sending (Increment 3B-D)
+
+The read-only thread now has a **composer** and a send **Server Action**
+(`sendMessageAction`) — a thin boundary over the 3A `sendConversationMessage`.
+
+- **Boundary vs service:** the action owns auth, form parsing, result mapping,
+  redirect, and observability; the service owns participant authorization,
+  **sender derivation from auth**, normalization, insertion, the trigger-driven
+  activity update, and idempotency. No participant/sender check is duplicated.
+- **Input:** only `conversationId`, `body`, and an opaque `clientSubmissionId`
+  token. The sender is **never** client-supplied. Third-user / unknown /
+  malformed conversations all map to the same `notFound`; an unauthenticated POST
+  creates nothing and bounces to `/login?next=/messages/[id]`.
+- **Validation:** reuses the single canonical `normalizeMessageBody()` (trim,
+  CRLF/CR→LF, internal newlines kept, reject empty/whitespace/control chars,
+  Unicode/emoji ok, **≤ 4000 code points**). The textarea sets `maxlength="4000"`
+  for convenience; the server is authoritative. HTML-like text is stored and
+  rendered **literally** (React-escaped).
+- **Success (PRG):** redirect to the **bare** `/messages/[conversationId]` — the
+  newest message is visible, any `?cursor=` is cleared, and the body is never in
+  the URL. On a historical (`?cursor=`) page the composer stays visible and a
+  "Back to latest messages" link is shown; a send always lands on the latest.
+- **Durable idempotency (migration 0015):** the composer generates a
+  `clientSubmissionId` UUID on the client after mount (fresh per successful send).
+  The service inserts it and, on the **sender-scoped unique** conflict, returns
+  the already-stored message — so sequential/concurrent retries and network
+  replays converge on **one** row, with **no double activity bump** (the trigger
+  only fires on a real insert). The token is only a dedup key — it never
+  determines sender or authorization, and the two participants can reuse the same
+  token value without colliding. Without JS (pre-hydration), the token is empty
+  and the insert is a plain, non-idempotent write.
+- **Result contract:** non-redirect failures are a typed union
+  (`empty | tooLong | controlChar | notFound | validationError | unexpected`)
+  mapped to safe copy; raw Prisma/SQL/Zod objects and ids never reach the client.
+  Expected validation/authorization outcomes are **not** logged as failures; only
+  `unexpected` is logged (redacting logger). The send log line carries the outcome
+  kind only — **no body, preview, ids, email, or tokens**; conversation UUIDs are
+  not logged.
+- **Accessibility:** persistent visible `<label>`, character limit announced,
+  `role="alert"` error associated via `aria-describedby` (never colour-only),
+  `useFormStatus` pending state disabling the button, multiline textarea (Enter =
+  newline, no custom key handler, submit via button). Real-browser screen-reader
+  spot-checks (error announcement, pending state, post-redirect heading) noted for
+  manual verification.
+- **Deferred:** real-time delivery, optimistic insertion, read receipts, unread
+  counts, typing, notifications, attachments, editing/deletion.
+
 ## Explicitly deferred
 
 Real-time messaging (WebSocket/Supabase Realtime subscriptions), inbox &

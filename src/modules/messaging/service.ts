@@ -432,11 +432,19 @@ export async function listRecentConversationMessages(
  * Send a message as the current participant. Validates + normalises the body,
  * then inserts with the verified sender id. A DB trigger enforces that the
  * sender is a participant and bumps the conversation's activity atomically.
+ *
+ * IDEMPOTENCY: pass a valid UUID `clientSubmissionId` (an opaque token — never
+ * an identity) to make retries/replays safe. The sender-scoped unique index
+ * (migration 0015) rejects a duplicate insert; on that conflict the already-
+ * stored participant-authorised message is returned instead, and no second
+ * activity bump occurs (the trigger only fires on a successful insert). A
+ * missing/malformed token falls back to a plain, non-idempotent insert.
  */
 export async function sendConversationMessage(
   userId: string,
   conversationId: string,
   body: unknown,
+  clientSubmissionId?: string,
 ): Promise<MessageDTO> {
   const access = await resolveConversationAccess(userId, conversationId);
   if (!access) notFound();
@@ -444,22 +452,48 @@ export async function sendConversationMessage(
   const parsed = normalizeMessageBody(body);
   if (!parsed.ok) throw new MessageRejectedError(parsed.reason);
 
-  const created = await timeSpan('db.messageCreate', () =>
-    prisma.message.create({
-      data: {
-        conversationId,
-        senderProfileId: userId,
-        body: parsed.value,
-      },
-      select: {
-        id: true,
-        body: true,
-        createdAt: true,
-        senderProfileId: true,
-      },
-    }),
-  );
-  return messageDto(created, userId);
+  // The token is ONLY a dedup key. Ignore anything that isn't a UUID.
+  const token =
+    typeof clientSubmissionId === 'string' && UUID_RE.test(clientSubmissionId)
+      ? clientSubmissionId
+      : null;
+
+  const select = {
+    id: true,
+    body: true,
+    createdAt: true,
+    senderProfileId: true,
+  } as const;
+
+  try {
+    const created = await timeSpan('db.messageCreate', () =>
+      prisma.message.create({
+        data: {
+          conversationId,
+          senderProfileId: userId,
+          body: parsed.value,
+          clientSubmissionId: token,
+        },
+        select,
+      }),
+    );
+    return messageDto(created, userId);
+  } catch (e) {
+    // P2002 on the submission index = a retry/replay of the same token by the
+    // same sender. Return the winning message; do NOT insert (so no double bump).
+    if (token && (e as { code?: string }).code === 'P2002') {
+      const existing = await prisma.message.findFirst({
+        where: {
+          conversationId,
+          senderProfileId: userId,
+          clientSubmissionId: token,
+        },
+        select,
+      });
+      if (existing) return messageDto(existing, userId);
+    }
+    throw e;
+  }
 }
 
 /* ------------------------------ summaries --------------------------------- */

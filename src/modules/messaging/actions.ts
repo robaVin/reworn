@@ -4,8 +4,14 @@ import { redirect } from 'next/navigation';
 import { getAuthContext } from '@/modules/auth/session';
 import { logger } from '@/lib/logger';
 import { timeSpan } from '@/lib/perf';
-import { resolveStartConversation } from './conversation-actions';
+import { safeRedirectPath } from '@/lib/safe-redirect';
+import {
+  resolveStartConversation,
+  resolveSendMessage,
+  sendErrorState,
+} from './conversation-actions';
 import type { StartConversationState } from './conversation-cta';
+import type { SendMessageState } from './compose-state';
 
 /**
  * Conversation-creation Server Action — the authenticated write boundary for
@@ -42,4 +48,45 @@ export async function startConversationAction(
   // propagates (a redirect is not an error).
   if (outcome.kind === 'redirect') redirect(outcome.to);
   return { status: 'error', error: outcome.error };
+}
+
+/**
+ * Message-send Server Action — a thin boundary over `sendConversationMessage`.
+ * The client submits only a conversationId, the body, and an opaque idempotency
+ * token; the SENDER is derived from the auth context (never the client). On
+ * success it redirects (PRG) to the bare latest thread `/messages/[id]` so the
+ * new message is visible, the cursor is cleared, and the body is not in the URL.
+ */
+export async function sendMessageAction(
+  _prev: SendMessageState,
+  formData: FormData,
+): Promise<SendMessageState> {
+  const conversationId = formData.get('conversationId');
+  if (typeof conversationId !== 'string' || conversationId.length === 0) {
+    return { status: 'error', error: 'validationError' };
+  }
+
+  const ctx = await getAuthContext();
+  if (!ctx) {
+    // Session expired: create nothing, bounce to sign-in with a safe return.
+    const next = safeRedirectPath(`/messages/${conversationId}`, '/messages');
+    redirect(`/login?next=${encodeURIComponent(next)}`);
+  }
+
+  const outcome = await timeSpan('action.sendMessage', () =>
+    resolveSendMessage(
+      ctx.userId,
+      conversationId,
+      formData.get('body'),
+      formData.get('clientSubmissionId'),
+    ),
+  );
+
+  // Safe observability: outcome kind only — never body, preview, or ids.
+  logger.info('conversation.send', {
+    outcome: outcome.kind === 'redirect' ? 'sent' : outcome.error,
+  });
+
+  if (outcome.kind === 'redirect') redirect(outcome.to);
+  return sendErrorState(outcome.error);
 }

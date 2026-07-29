@@ -9,6 +9,7 @@ import {
 import { AuthNotConfigured } from '@/components/shell/AuthNotConfigured';
 import { ConversationHeader } from '@/components/messaging/ConversationHeader';
 import { ConversationMessages } from '@/components/messaging/ConversationMessages';
+import { MessageComposer } from '@/components/messaging/MessageComposer';
 import { Button } from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
@@ -90,13 +91,23 @@ export default async function ConversationThreadPage({
           counterpartyName={context.counterparty.displayName}
         />
 
+        {/* On a historical (?cursor=) page, offer a clear return to the latest
+            thread. The composer stays visible on every page; a successful send
+            always redirects to the bare /messages/[id] (latest), so a new
+            message is never appended to an older window. */}
         {cursor && (
           <p className="mt-6 text-center">
-            <Button href="/messages" variant="ghost" size="sm">
-              Back to inbox
+            <Button
+              href={`/messages/${conversationId}#thread`}
+              variant="ghost"
+              size="sm"
+            >
+              Back to latest messages
             </Button>
           </p>
         )}
+
+        <MessageComposer conversationId={conversationId} />
       </div>
     </main>
   );
