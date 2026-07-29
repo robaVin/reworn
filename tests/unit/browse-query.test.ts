@@ -49,7 +49,7 @@ describe('parseBrowseQuery — validation', () => {
   });
 
   it('rejects negative prices, caps huge ones, drops reversed ranges', () => {
-    expect(parseBrowseQuery({ minPrice: '-5' }).minPrice).toBe(0);
+    expect(parseBrowseQuery({ minPrice: '-5' }).minPrice).toBeUndefined();
     expect(parseBrowseQuery({ maxPrice: '999999999999' }).maxPrice).toBe(
       MAX_PRICE_MINOR,
     );

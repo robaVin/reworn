@@ -44,6 +44,24 @@ describe('cursor codec', () => {
     expect(decodeCursor(wrongV, { sort: 'newest', fp: 'abc123' })).toBeNull();
   });
 
+  it('rejects a non-finite numeric sort value (price/relevance)', () => {
+    for (const sort of ['price_asc', 'relevance'] as const) {
+      for (const bad of ['NaN', 'Infinity', '-Infinity', 'abc']) {
+        const t = Buffer.from(
+          JSON.stringify({ ...base, sort, sortValue: bad }),
+        ).toString('base64url');
+        expect(decodeCursor(t, { sort, fp: 'abc123' })).toBeNull();
+      }
+    }
+  });
+
+  it('rejects an unparseable date sort value (newest)', () => {
+    const t = Buffer.from(
+      JSON.stringify({ ...base, sort: 'newest', sortValue: 'not-a-date' }),
+    ).toString('base64url');
+    expect(decodeCursor(t, { sort: 'newest', fp: 'abc123' })).toBeNull();
+  });
+
   it('rejects a tampered non-uuid id', () => {
     const bad = Buffer.from(
       JSON.stringify({ ...base, id: 'not-a-uuid' }),

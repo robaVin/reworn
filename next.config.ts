@@ -1,5 +1,29 @@
 import type { NextConfig } from 'next';
 
+/**
+ * Narrowly allow next/image to optimize ONLY the exact Supabase project host and
+ * the signed-object storage path — no wildcard hosts, no other paths. Derived
+ * from the configured project URL; empty (images unoptimized) if unset.
+ */
+function supabaseImagePatterns(): NonNullable<
+  NextConfig['images']
+>['remotePatterns'] {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return [];
+  try {
+    const host = new URL(url).hostname;
+    return [
+      {
+        protocol: 'https',
+        hostname: host,
+        pathname: '/storage/v1/object/sign/**',
+      },
+    ];
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
@@ -22,9 +46,9 @@ const nextConfig: NextConfig = {
   },
 
   images: {
-    // Product images (Stage 2) will be served from Supabase Storage / CDN.
-    // Remote patterns are added explicitly then — no wildcards.
-    remotePatterns: [],
+    // Listing images are served from Supabase Storage via signed URLs. Only the
+    // exact project host + signed-object path is allowed (see helper above).
+    remotePatterns: supabaseImagePatterns(),
   },
 };
 

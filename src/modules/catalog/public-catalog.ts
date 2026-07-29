@@ -69,6 +69,17 @@ interface Row {
   rank?: number;
 }
 
+/** Active categories (public slug + display name) for the browse filter. */
+export async function listBrowseCategories(): Promise<
+  { slug: string; name: string }[]
+> {
+  return prisma.category.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: { slug: true, name: true },
+  });
+}
+
 /** Batch-sign a set of storage keys (one round-trip); missing keys omitted. */
 async function signCovers(keys: string[]): Promise<Map<string, string>> {
   if (keys.length === 0) return new Map();
@@ -157,12 +168,15 @@ export async function listPublishedListings(
       }
       break;
     case 'relevance': {
-      const rank = Prisma.sql`ts_rank(l.search_vector, websearch_to_tsquery('simple', ${query.q ?? ''}))`;
+      // Cast to double precision so the rank carried in the cursor round-trips
+      // losslessly (ts_rank is float4; promoting to double is lossless and
+      // avoids truncation). Equal ranks fall through to the id tiebreaker.
+      const rank = Prisma.sql`ts_rank(l.search_vector, websearch_to_tsquery('simple', ${query.q ?? ''}))::double precision`;
       rankSelect = Prisma.sql`, ${rank} AS "rank"`;
       orderBy = Prisma.sql`"rank" DESC, l.id DESC`;
       if (cur) {
         conds.push(
-          Prisma.sql`(${rank}, l.id) < (${Number(cur.sortValue)}::real, ${cur.id}::uuid)`,
+          Prisma.sql`(${rank}, l.id) < (${Number(cur.sortValue)}::double precision, ${cur.id}::uuid)`,
         );
       }
       break;

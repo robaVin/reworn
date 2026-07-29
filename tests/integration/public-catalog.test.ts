@@ -11,6 +11,7 @@ import {
   parseBrowseQuery,
   type BrowseQuery,
 } from '@/modules/catalog/browse-query';
+import { RESERVED_HANDLES } from '@/modules/catalog/handle';
 
 /**
  * Public marketplace read layer — integration tests against REAL PostgreSQL
@@ -460,5 +461,121 @@ describe('seller public catalogue', () => {
   it('returns only that seller’s published listings', async () => {
     const res = await pub.getPublicSeller('bee-boutique', q({}, 50));
     expect(titles(res!.listings)).toEqual(['Summer dress']);
+  });
+});
+
+describe('schema drift guard (2D-B safeguard)', () => {
+  it('migrate deploy creates a GENERATED search_vector column', async () => {
+    const rows = await prisma.$queryRaw<{ attgenerated: string }[]>`
+      SELECT attgenerated FROM pg_attribute
+      WHERE attrelid = 'listings'::regclass AND attname = 'search_vector'`;
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.attgenerated).toBe('s'); // 's' = STORED generated column
+  });
+
+  it('creates all custom browse indexes', async () => {
+    const rows = await prisma.$queryRaw<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes WHERE tablename = 'listings'`;
+    const names = rows.map((r) => r.indexname);
+    for (const idx of [
+      'listings_search_gin',
+      'listings_pub_created_idx',
+      'listings_pub_price_idx',
+      'listings_pub_category_created_idx',
+      'listings_pub_location_idx',
+    ]) {
+      expect(names).toContain(idx);
+    }
+  });
+
+  it('prisma migrate diff does NOT drop the search_vector column or the partial/functional indexes', () => {
+    // Diff FROM the migrated DB TO the schema = what `migrate dev` WOULD do.
+    // Because the column is declared Unsupported, Prisma never DROPs it, and it
+    // cannot see WHERE-clause (partial/functional) indexes, so it never touches
+    // them. It DOES flag the GIN index + generated expression, but those (like
+    // RLS/CHECKs since 0002) are owned by the hand-written migration and the
+    // project's workflow is `migrate deploy` only (never `migrate dev`).
+    const diff = execSync(
+      `npx prisma migrate diff --from-url "${url}" --to-schema-datamodel prisma/schema.prisma --script`,
+      { env: { ...process.env, DATABASE_URL: url, DIRECT_URL: url } },
+    ).toString();
+    expect(diff).not.toMatch(/DROP\s+COLUMN[^;]*search_vector/i);
+    expect(diff).not.toMatch(/DROP\s+TABLE[^;]*listings/i);
+    for (const idx of [
+      'listings_pub_created_idx',
+      'listings_pub_price_idx',
+      'listings_pub_category_created_idx',
+      'listings_pub_location_idx',
+    ]) {
+      expect(diff).not.toContain(idx); // partial/functional indexes untouched
+    }
+  });
+});
+
+describe('reserved-handle DB/app parity (2D-B safeguard)', () => {
+  it('the DB CHECK rejects every app-reserved handle', async () => {
+    // Guarantees the database and application reserved lists cannot diverge:
+    // anything the app reserves must also be refused by the DB constraint.
+    for (const reserved of RESERVED_HANDLES) {
+      // Fresh profile per attempt so the ONLY possible violation is the handle
+      // CHECK (not the profile_id FK or its unique constraint).
+      const p = await prisma.profile.create({ data: { id: randomUUID() } });
+      await expect(
+        prisma.sellerProfile.create({
+          data: {
+            profileId: p.id,
+            shopName: 'X',
+            handle: reserved,
+            status: 'active',
+          },
+        }),
+      ).rejects.toThrow();
+    }
+    // A non-reserved, valid handle inserts fine (control) — proving the
+    // rejections above are specifically about the reserved name.
+    const ctl = await prisma.profile.create({ data: { id: randomUUID() } });
+    await prisma.sellerProfile.create({
+      data: {
+        profileId: ctl.id,
+        shopName: 'Control',
+        handle: 'control-shop',
+        status: 'active',
+      },
+    });
+  });
+});
+
+describe('pagination — equal ranks exercise the id tiebreaker (2D-B safeguard)', () => {
+  it('paginates deterministically when many listings share the same rank', async () => {
+    // All these titles contain "tiebreak" once → identical ts_rank; only the
+    // UUID tiebreaker separates them, so keyset pages must not dupe or skip.
+    const prof = await prisma.profile.create({ data: { id: randomUUID() } });
+    const seller = await prisma.sellerProfile.create({
+      data: {
+        profileId: prof.id,
+        shopName: 'Tie Shop',
+        handle: 'tie-shop',
+        status: 'active',
+      },
+      select: { id: true },
+    });
+    for (let i = 0; i < 7; i++) {
+      await mkListing({ title: `tiebreak item ${i}`, sellerId: seller.id });
+    }
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    for (let i = 0; i < 10; i++) {
+      const page = await pub.listPublishedListings(
+        q(
+          { q: 'tiebreak', sort: 'relevance', ...(cursor ? { cursor } : {}) },
+          3,
+        ),
+      );
+      seen.push(...page.items.map((x) => x.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(new Set(seen).size).toBe(seen.length); // no dupes
+    expect(seen.length).toBe(7); // all seven, no skips
   });
 });

@@ -50,6 +50,17 @@ export function decodeCursor(
   if (p.fp !== expected.fp) return null;
   if (typeof p.sortValue !== 'string') return null;
   if (typeof p.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(p.id)) return null;
+
+  // Validate the sort value for the active sort so a tampered/garbage cursor
+  // (NaN, Infinity, non-date) resets to page 1 rather than producing a broken
+  // keyset predicate. Numeric ranks/prices keep FULL precision (no rounding).
+  if (p.sort === 'newest') {
+    if (Number.isNaN(Date.parse(p.sortValue))) return null;
+  } else {
+    // price_asc | price_desc | relevance
+    if (!Number.isFinite(Number(p.sortValue))) return null;
+  }
+
   return {
     v: CURSOR_VERSION,
     sort: p.sort as BrowseSort,

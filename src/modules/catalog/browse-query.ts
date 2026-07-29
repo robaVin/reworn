@@ -91,15 +91,14 @@ export function parseBrowseQuery(raw: Record<string, unknown>): BrowseQuery {
       ? raw.gender
       : undefined;
 
-  // Price: non-negative integers, capped; drop the whole range if min > max.
-  let minPrice = intOrUndef(raw.minPrice);
-  let maxPrice = intOrUndef(raw.maxPrice);
-  if (minPrice !== undefined && (minPrice < 0 || minPrice > MAX_PRICE_MINOR)) {
-    minPrice = Math.min(Math.max(minPrice, 0), MAX_PRICE_MINOR);
-  }
-  if (maxPrice !== undefined && (maxPrice < 0 || maxPrice > MAX_PRICE_MINOR)) {
-    maxPrice = Math.min(Math.max(maxPrice, 0), MAX_PRICE_MINOR);
-  }
+  // Price: reject negatives (dropped), cap the maximum, drop a reversed range.
+  const boundPrice = (v: number | undefined): number | undefined => {
+    if (v === undefined) return undefined;
+    if (v < 0) return undefined; // reject negatives
+    return Math.min(v, MAX_PRICE_MINOR); // cap
+  };
+  let minPrice = boundPrice(intOrUndef(raw.minPrice));
+  let maxPrice = boundPrice(intOrUndef(raw.maxPrice));
   if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
     minPrice = undefined;
     maxPrice = undefined;

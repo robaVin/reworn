@@ -378,6 +378,12 @@ model Listing {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  /// Full-text search vector — a GENERATED column (migration 0012). Declared as
+  /// an ignored Unsupported field so Prisma is AWARE of the column (no
+  /// column-drop drift) but never reads or writes it; the weighted vector +
+  /// GIN index are owned entirely by the hand-written migration.
+  searchVector Unsupported("tsvector")? @map("search_vector")
+
   seller   SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   category Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images   ListingImage[]

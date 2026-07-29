@@ -1,32 +1,100 @@
 import type { Metadata } from 'next';
-import { Chip } from '@/components/ui/Chip';
+import type { ListingCardData } from '@/modules/catalog/types';
+import {
+  listPublishedListings,
+  listBrowseCategories,
+  type PublicListingCard,
+} from '@/modules/catalog/public-catalog';
+import { parseBrowseQuery } from '@/modules/catalog/browse-query';
+import {
+  buildBrowseHref,
+  searchParamsToRaw,
+} from '@/modules/catalog/browse-url';
+import { LISTING_CONDITIONS } from '@/modules/catalog/schemas';
+import {
+  ListingGrid,
+  ListingGridEmpty,
+} from '@/components/marketplace/ListingGrid';
+import { FilterBar } from '@/components/marketplace/FilterBar';
 import { Button } from '@/components/ui/Button';
-import { ListingGridEmpty } from '@/components/marketplace/ListingGrid';
-import { BROWSE_CATEGORIES } from '@/components/home/editorial-samples';
 
-export const metadata: Metadata = { title: 'Browse the edit' };
+export const dynamic = 'force-dynamic';
 
-/**
- * Browse — TRUTHFUL PLACEHOLDER until the catalog increment.
- *
- * The header search and category chips land here so navigation is never
- * broken. The query is acknowledged (React-escaped, never injected as HTML)
- * and no fake results are rendered. Real search/filtering connects to the
- * listing service in its scheduled increment.
- */
+const CONDITION_LABELS: Record<string, string> = {
+  new: 'New with tags',
+  like_new: 'Like new',
+  very_good: 'Very good',
+  good: 'Good',
+  fair: 'Fair',
+};
+// Keep the label map exhaustive with the enum (compile-time nudge).
+void (LISTING_CONDITIONS satisfies readonly (keyof typeof CONDITION_LABELS)[]);
+
+/** Deterministic 0–360 hue for the no-photo placeholder tint. */
+function hueFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+  return h;
+}
+
+function toCard(l: PublicListingCard): ListingCardData {
+  return {
+    id: l.id,
+    title: l.title,
+    brand: l.brand ?? '',
+    size: l.size ?? '',
+    category: l.categoryName ?? '',
+    condition: l.condition
+      ? (CONDITION_LABELS[l.condition] ?? l.condition)
+      : '',
+    priceMinor: l.priceMinor ?? 0,
+    currency: l.currency,
+    imageUrl: l.coverUrl,
+    tintHue: hueFromId(l.id),
+  };
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const query = parseBrowseQuery(searchParamsToRaw(await searchParams));
+  const title = query.q ? `“${query.q}” — Browse` : 'Browse the edit';
+  // Canonical intentionally OMITS the cursor so paginated pages don't become
+  // separate indexable URLs. Filtered/search pages are not promoted as landing
+  // pages (noindex,follow) — only the bare /browse is indexable.
+  const canonicalQuery = { ...query, cursor: undefined };
+  const isFiltered =
+    !!query.q ||
+    !!query.categorySlug ||
+    !!query.gender ||
+    !!query.location ||
+    query.sizes.length > 0 ||
+    query.conditions.length > 0 ||
+    query.minPrice !== undefined ||
+    query.maxPrice !== undefined;
+  return {
+    title,
+    alternates: { canonical: buildBrowseHref(canonicalQuery) },
+    robots: isFiltered ? { index: false, follow: true } : undefined,
+  };
+}
+
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
-  const query = typeof params.q === 'string' ? params.q.trim() : '';
-  const category = typeof params.category === 'string' ? params.category : '';
-  const knownCategory = (BROWSE_CATEGORIES as readonly string[]).includes(
-    category,
-  )
-    ? category
-    : null;
+  const query = parseBrowseQuery(searchParamsToRaw(await searchParams));
+  const [page, categories] = await Promise.all([
+    listPublishedListings(query),
+    listBrowseCategories(),
+  ]);
+
+  const cards = page.items.map(toCard);
+  const nextHref =
+    page.nextCursor && buildBrowseHref(query, { cursor: page.nextCursor });
 
   return (
     <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
@@ -34,38 +102,40 @@ export default async function BrowsePage({
         Browse the edit
       </h1>
 
-      <nav aria-label="Categories" className="my-6 flex flex-wrap gap-2">
-        <Chip href="/browse" selected={!knownCategory}>
-          All
-        </Chip>
-        {BROWSE_CATEGORIES.map((c) => (
-          <Chip
-            key={c}
-            href={`/browse?category=${encodeURIComponent(c)}`}
-            selected={knownCategory === c}
-          >
-            {c}
-          </Chip>
-        ))}
-      </nav>
+      <FilterBar query={query} categories={categories} />
 
-      <ListingGridEmpty
-        title={
-          query
-            ? `No results for “${query}” yet`
-            : knownCategory
-              ? `No ${knownCategory.toLowerCase()} yet`
-              : 'The catalogue is on its way'
-        }
-        action={
-          <Button href="/" variant="outline">
-            Back to the homepage
-          </Button>
-        }
-      >
-        Listings, search and filters arrive with the catalogue increment.
-        Nothing is live for browsing yet — check back soon.
-      </ListingGridEmpty>
+      {/* Results region is focusable and the pagination target for keyboard
+          users (the Next link points at #results). */}
+      <div id="results" tabIndex={-1} className="scroll-mt-24 outline-none">
+        {cards.length === 0 ? (
+          <ListingGridEmpty
+            title={
+              query.q ? `No results for “${query.q}”` : 'No listings match yet'
+            }
+            action={
+              <Button href="/browse" variant="outline">
+                Clear filters
+              </Button>
+            }
+          >
+            Try fewer or different filters — or check back soon as sellers add
+            more pieces.
+          </ListingGridEmpty>
+        ) : (
+          <>
+            <ListingGrid listings={cards} hrefFor={(l) => `/listing/${l.id}`} />
+            <nav aria-label="Pagination" className="mt-10 flex justify-center">
+              {nextHref ? (
+                <Button href={`${nextHref}#results`} variant="outline">
+                  Next page
+                </Button>
+              ) : (
+                <p className="text-sm text-muted">You’ve reached the end.</p>
+              )}
+            </nav>
+          </>
+        )}
+      </div>
     </main>
   );
 }

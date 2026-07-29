@@ -34,7 +34,11 @@ export function ListingCard({
         {listing.imageUrl ? (
           <Image
             src={listing.imageUrl}
-            alt=""
+            alt={
+              listing.brand
+                ? `${listing.brand} ${listing.title}`
+                : listing.title
+            }
             fill
             sizes="(max-width: 380px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
