@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { timeSpan } from '@/lib/perf';
@@ -259,75 +260,78 @@ export async function listPublishedListings(
   return { items: cards, nextCursor };
 }
 
-/** A single published listing (else null → caller renders not-found). */
-export async function getPublicListing(
-  id: string,
-): Promise<PublicListingDetail | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+/**
+ * A single published listing (else null -> caller renders not-found).
+ * Request-memoized so generateMetadata + the page render share ONE query.
+ */
+export const getPublicListing = cache(
+  async (id: string): Promise<PublicListingDetail | null> => {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
-  const listing = await prisma.listing.findFirst({
-    where: { id, status: 'published' },
-    select: {
-      id: true,
-      title: true,
-      brand: true,
-      size: true,
-      color: true,
-      material: true,
-      condition: true,
-      gender: true,
-      priceMinor: true,
-      originalPriceMinor: true,
-      currency: true,
-      description: true,
-      location: true,
-      createdAt: true,
-      category: { select: { slug: true, name: true } },
-      seller: { select: { handle: true, shopName: true, createdAt: true } },
-      images: {
-        orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-        select: { storageKey: true, width: true, height: true },
+    const listing = await prisma.listing.findFirst({
+      where: { id, status: 'published' },
+      select: {
+        id: true,
+        title: true,
+        brand: true,
+        size: true,
+        color: true,
+        material: true,
+        condition: true,
+        gender: true,
+        priceMinor: true,
+        originalPriceMinor: true,
+        currency: true,
+        description: true,
+        location: true,
+        createdAt: true,
+        category: { select: { slug: true, name: true } },
+        seller: { select: { handle: true, shopName: true, createdAt: true } },
+        images: {
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+          select: { storageKey: true, width: true, height: true },
+        },
       },
-    },
-  });
-  if (!listing) return null;
+    });
+    if (!listing) return null;
 
-  const signed = await signCovers(listing.images.map((i) => i.storageKey));
+    const signed = await signCovers(listing.images.map((i) => i.storageKey));
 
-  return {
-    id: listing.id,
-    title: listing.title,
-    brand: listing.brand,
-    size: listing.size,
-    condition: listing.condition,
-    gender: listing.gender,
-    priceMinor: listing.priceMinor,
-    currency: listing.currency,
-    categorySlug: listing.category?.slug ?? null,
-    categoryName: listing.category?.name ?? null,
-    coverUrl: listing.images[0]
-      ? (signed.get(listing.images[0].storageKey) ?? null)
-      : null,
-    description: listing.description,
-    color: listing.color,
-    material: listing.material,
-    location: listing.location,
-    originalPriceMinor: listing.originalPriceMinor,
-    createdAt: listing.createdAt,
-    seller: {
-      handle: listing.seller.handle,
-      shopName: listing.seller.shopName,
-      joinedAt: listing.seller.createdAt,
-    },
-    images: listing.images
-      .map((i) => ({
-        url: signed.get(i.storageKey) ?? '',
-        width: i.width,
-        height: i.height,
-      }))
-      .filter((i) => i.url),
-  };
-}
+    return {
+      id: listing.id,
+      title: listing.title,
+      brand: listing.brand,
+      size: listing.size,
+      condition: listing.condition,
+      gender: listing.gender,
+      priceMinor: listing.priceMinor,
+      currency: listing.currency,
+      categorySlug: listing.category?.slug ?? null,
+      categoryName: listing.category?.name ?? null,
+      coverUrl: listing.images[0]
+        ? (signed.get(listing.images[0].storageKey) ?? null)
+        : null,
+      description: listing.description,
+      color: listing.color,
+      material: listing.material,
+      location: listing.location,
+      originalPriceMinor: listing.originalPriceMinor,
+      createdAt: listing.createdAt,
+      seller: {
+        handle: listing.seller.handle,
+        shopName: listing.seller.shopName,
+        joinedAt: listing.seller.createdAt,
+      },
+      images: listing.images
+        .map((i) => ({
+          url: signed.get(i.storageKey) ?? '',
+          width: i.width,
+          height: i.height,
+        }))
+        .filter((i) => i.url),
+    };
+  },
+);
 
 export interface PublicSellerPage {
   profile: PublicSellerProfile;

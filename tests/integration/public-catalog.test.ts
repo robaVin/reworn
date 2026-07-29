@@ -287,6 +287,21 @@ describe('visibility', () => {
     const detail = await pub.getPublicListing(row.id);
     expect(detail?.title).toBe('Wool overcoat');
   });
+
+  it('detail includes signed gallery images when present, empty when not (2D-C)', async () => {
+    const withImg = await prisma.listing.findFirstOrThrow({
+      where: { status: 'published', title: 'Photographed coat' },
+    });
+    const d1 = await pub.getPublicListing(withImg.id);
+    expect(d1!.images.length).toBe(1);
+    expect(d1!.images[0]!.url).toMatch(/^signed:\/\//);
+
+    const noImg = await prisma.listing.findFirstOrThrow({
+      where: { status: 'published', title: 'Wool overcoat' },
+    });
+    const d2 = await pub.getPublicListing(noImg.id);
+    expect(d2!.images).toEqual([]);
+  });
 });
 
 describe('privacy (DTO shape)', () => {
