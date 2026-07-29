@@ -338,6 +338,49 @@ export interface PublicSellerPage {
   listings: PublicListingPage;
 }
 
+/** Internal seller row (includes the id used only to scope queries). */
+interface ResolvedSeller {
+  id: string;
+  handle: string;
+  shopName: string;
+  joinedAt: Date;
+}
+
+/**
+ * Resolve a seller by public handle. Request-MEMOIZED so a page and its
+ * `generateMetadata` share ONE seller query. The internal id is used only to
+ * scope listing/count queries and is NEVER returned to a client surface.
+ */
+export const resolvePublicSeller = cache(
+  async (handle: string): Promise<ResolvedSeller | null> => {
+    const seller = await prisma.sellerProfile.findUnique({
+      where: { handle: normalizeHandle(handle) },
+      select: { id: true, handle: true, shopName: true, createdAt: true },
+    });
+    if (!seller) return null;
+    return {
+      id: seller.id,
+      handle: seller.handle,
+      shopName: seller.shopName,
+      joinedAt: seller.createdAt,
+    };
+  },
+);
+
+/** Public-safe projection (drops the internal id). */
+export function toPublicSellerProfile(s: ResolvedSeller): PublicSellerProfile {
+  return { handle: s.handle, shopName: s.shopName, joinedAt: s.joinedAt };
+}
+
+/** Count of a seller's PUBLISHED listings (for the storefront statistics). */
+export async function countSellerPublishedListings(
+  sellerId: string,
+): Promise<number> {
+  return prisma.listing.count({
+    where: { sellerId, status: 'published' },
+  });
+}
+
 /**
  * A public seller profile by handle + their published catalogue. Returns null
  * if the handle is unknown. The seller's internal id is used only to scope the
@@ -347,21 +390,11 @@ export async function getPublicSeller(
   handle: string,
   query: BrowseQuery,
 ): Promise<PublicSellerPage | null> {
-  const seller = await prisma.sellerProfile.findUnique({
-    where: { handle: normalizeHandle(handle) },
-    select: { id: true, handle: true, shopName: true, createdAt: true },
-  });
+  const seller = await resolvePublicSeller(handle);
   if (!seller) return null;
 
   const listings = await listPublishedListings(query, {
     sellerId: seller.id,
   });
-  return {
-    profile: {
-      handle: seller.handle,
-      shopName: seller.shopName,
-      joinedAt: seller.createdAt,
-    },
-    listings,
-  };
+  return { profile: toPublicSellerProfile(seller), listings };
 }

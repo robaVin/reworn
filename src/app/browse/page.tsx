@@ -1,58 +1,22 @@
 import type { Metadata } from 'next';
-import type { ListingCardData } from '@/modules/catalog/types';
 import {
   listPublishedListings,
   listBrowseCategories,
-  type PublicListingCard,
 } from '@/modules/catalog/public-catalog';
 import { parseBrowseQuery } from '@/modules/catalog/browse-query';
 import {
   buildBrowseHref,
   searchParamsToRaw,
 } from '@/modules/catalog/browse-url';
-import { LISTING_CONDITIONS } from '@/modules/catalog/schemas';
 import {
   ListingGrid,
   ListingGridEmpty,
 } from '@/components/marketplace/ListingGrid';
+import { publicCardToListingCard } from '@/components/marketplace/listing-card-data';
 import { FilterBar } from '@/components/marketplace/FilterBar';
 import { Button } from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
-
-const CONDITION_LABELS: Record<string, string> = {
-  new: 'New with tags',
-  like_new: 'Like new',
-  very_good: 'Very good',
-  good: 'Good',
-  fair: 'Fair',
-};
-// Keep the label map exhaustive with the enum (compile-time nudge).
-void (LISTING_CONDITIONS satisfies readonly (keyof typeof CONDITION_LABELS)[]);
-
-/** Deterministic 0–360 hue for the no-photo placeholder tint. */
-function hueFromId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
-  return h;
-}
-
-function toCard(l: PublicListingCard): ListingCardData {
-  return {
-    id: l.id,
-    title: l.title,
-    brand: l.brand ?? '',
-    size: l.size ?? '',
-    category: l.categoryName ?? '',
-    condition: l.condition
-      ? (CONDITION_LABELS[l.condition] ?? l.condition)
-      : '',
-    priceMinor: l.priceMinor ?? 0,
-    currency: l.currency,
-    imageUrl: l.coverUrl,
-    tintHue: hueFromId(l.id),
-  };
-}
 
 export async function generateMetadata({
   searchParams,
@@ -92,7 +56,7 @@ export default async function BrowsePage({
     listBrowseCategories(),
   ]);
 
-  const cards = page.items.map(toCard);
+  const cards = page.items.map(publicCardToListingCard);
   const nextHref =
     page.nextCursor && buildBrowseHref(query, { cursor: page.nextCursor });
 

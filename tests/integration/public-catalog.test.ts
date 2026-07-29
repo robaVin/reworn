@@ -594,3 +594,71 @@ describe('pagination — equal ranks exercise the id tiebreaker (2D-B safeguard)
     expect(seen.length).toBe(7); // all seven, no skips
   });
 });
+
+describe('seller storefront (2D-D)', () => {
+  it('resolves a seller by valid handle and counts published listings', async () => {
+    const res = await pub.getPublicSeller('aurora-vintage', q({}, 50));
+    expect(res?.profile.shopName).toBe('Aurora Vintage');
+    // Seller A has 6 published listings (dress belongs to seller B).
+    expect(res!.listings.items.length).toBe(6);
+    const count = await pub.countSellerPublishedListings(sellerAId);
+    expect(count).toBe(6);
+  });
+
+  it('returns null for unknown and reserved handles', async () => {
+    expect(await pub.getPublicSeller('no-such-shop', q({}, 50))).toBeNull();
+    expect(await pub.getPublicSeller('admin', q({}, 50))).toBeNull();
+    expect(await pub.resolvePublicSeller('shop')).toBeNull();
+  });
+
+  it('excludes unpublished listings and reports zero for an empty seller', async () => {
+    const prof = await prisma.profile.create({ data: { id: randomUUID() } });
+    const empty = await prisma.sellerProfile.create({
+      data: {
+        profileId: prof.id,
+        shopName: 'Empty Shop',
+        handle: 'empty-shop',
+        status: 'active',
+      },
+      select: { id: true },
+    });
+    // Only a draft — nothing public.
+    await mkListing({
+      title: 'private draft',
+      status: 'draft',
+      sellerId: empty.id,
+    });
+    const res = await pub.getPublicSeller('empty-shop', q({}, 50));
+    expect(res?.listings.items).toEqual([]);
+    expect(await pub.countSellerPublishedListings(empty.id)).toBe(0);
+  });
+
+  it('paginates a seller catalogue with no dupes or skips (keyset)', async () => {
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    for (let i = 0; i < 10; i++) {
+      const res = await pub.getPublicSeller(
+        'aurora-vintage',
+        q({ ...(cursor ? { cursor } : {}) }, 2),
+      );
+      seen.push(...res!.listings.items.map((x) => x.id));
+      if (!res!.listings.nextCursor) break;
+      cursor = res!.listings.nextCursor;
+    }
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(seen.length).toBe(6);
+  });
+
+  it('profile serialization exposes no internal id / private fields', async () => {
+    const res = await pub.getPublicSeller('aurora-vintage', q({}, 50));
+    expect(Object.keys(res!.profile).sort()).toEqual([
+      'handle',
+      'joinedAt',
+      'shopName',
+    ]);
+    const json = JSON.stringify(res!.profile);
+    expect(json).not.toContain(sellerAId);
+    expect(json).not.toContain('profileId');
+    expect(json).not.toContain('status');
+  });
+});
