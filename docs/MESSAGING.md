@@ -73,12 +73,17 @@ Keyset (never offset), with opaque versioned base64url cursors:
 
 Malformed / wrong-version / mismatched cursors reset to the first page.
 
-## Activity update (trigger, not app step)
+## Activity update (trigger, not app step) — monotonic
 
-An `AFTER INSERT` trigger bumps `conversations.last_message_at`/`updated_at` to the
-new message's timestamp, so the two writes commit **atomically**. This is chosen
-over a second application write (which could fail after the insert) and over a
-plain transaction (which would not protect a future direct write path).
+An `AFTER INSERT` trigger advances `conversations.last_message_at`/`updated_at`
+so the two writes commit **atomically**. This is chosen over a second application
+write (which could fail after the insert) and over a plain transaction (which
+would not protect a future direct write path).
+
+The bump uses `last_message_at = GREATEST(last_message_at, NEW.created_at)`
+(migration 0014), so it is **monotonic**: a concurrent or out-of-order insert of
+an older-timestamped message can **never move `last_message_at` backwards**. It
+therefore always reflects the newest message actually inserted.
 
 ## RLS assumptions
 
@@ -112,15 +117,22 @@ later increment.
 
 ## Deletion lifecycle
 
-All messaging FKs are `ON DELETE CASCADE`, consistent with the existing
-`profile → seller_profile → listing` cascade policy:
-
-- **Listing status change** (pause/archive): conversation preserved and reachable.
-- **Listing row hard-delete**: its conversations + messages cascade away (no such
-  path is exposed by any current increment; listings are archived, not deleted).
-- **Profile / seller hard-delete**: that user's conversations + messages cascade
-  away — privacy-preserving (a removed account leaves no orphaned private
-  messages). No account-deletion path exists yet.
+- **Listing status change** (pause/archive): conversation preserved and reachable
+  (access is participant-based, independent of status).
+- **Listing row hard-delete** — `listing_id` FK is **`ON DELETE SET NULL`**
+  (migration 0014). Conversation **history must survive listing removal**, so a
+  deleted listing nulls the reference and the conversation + its messages remain.
+  An **immutable listing snapshot** (`listing_title_snapshot`,
+  `listing_price_minor_snapshot`, `listing_currency_snapshot`), captured at
+  creation, preserves what the conversation was about; the DTO shows the live
+  listing while it exists and falls back to the snapshot (status `"removed"`) once
+  it is gone. *(RESTRICT was rejected — it would make the profile → seller →
+  listing CASCADE chain fail whenever a conversation referenced the listing;
+  SET NULL + snapshot preserves history without breaking that chain.)*
+- **Profile / seller hard-delete**: the participant FKs remain `ON DELETE CASCADE`,
+  so that user's conversations + messages cascade away — privacy-preserving (a
+  removed account leaves no orphaned private messages). No account-deletion path
+  exists yet.
 - **Conversation delete**: cascades its messages. No user-facing delete in 3A.
 
 ## Explicitly deferred

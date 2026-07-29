@@ -447,27 +447,42 @@ model ListingImage {
 /// be created from a currently-published listing. All writes go through the
 /// privileged messaging service; RLS is the read-path backstop.
 model Conversation {
-  id              String @id @default(uuid()) @db.Uuid
-  listingId       String @map("listing_id") @db.Uuid
+  id              String  @id @default(uuid()) @db.Uuid
+  /// The listing this conversation is about. NULLABLE with ON DELETE SET NULL
+  /// (migration 0014): conversation HISTORY must survive a listing being removed,
+  /// so a hard listing delete nulls this out rather than cascading the
+  /// conversation away. While the listing exists the live row is preferred; once
+  /// gone, the immutable snapshot below preserves what it was about.
+  listingId       String? @map("listing_id") @db.Uuid
   /// The buyer's Profile (auth) id. The user who started the conversation.
-  buyerProfileId  String @map("buyer_profile_id") @db.Uuid
+  buyerProfileId  String  @map("buyer_profile_id") @db.Uuid
   /// The seller's Profile (auth) id == the listing owner's SellerProfile.profileId.
-  sellerProfileId String @map("seller_profile_id") @db.Uuid
+  sellerProfileId String  @map("seller_profile_id") @db.Uuid
+
+  /// Immutable point-in-time snapshot of the listing, captured at conversation
+  /// creation (migration 0014). Only surfaced after the live listing is deleted;
+  /// while the listing exists, the live values are shown instead.
+  listingTitleSnapshot      String @map("listing_title_snapshot")
+  listingPriceMinorSnapshot Int?   @map("listing_price_minor_snapshot")
+  listingCurrencySnapshot   String @map("listing_currency_snapshot") @db.Char(3)
 
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   /// Latest-activity timestamp for inbox ordering. Seeded to created_at, then
-  /// bumped to the newest message's created_at by an AFTER INSERT trigger on
-  /// `messages` (migration 0013) so it updates ATOMICALLY with the insert — never
-  /// a separate application step that could fail after the message is written.
+  /// advanced to the newest message's created_at by an AFTER INSERT trigger on
+  /// `messages`. The trigger uses GREATEST (migration 0014) so it is MONOTONIC —
+  /// a concurrent or out-of-order insert can never move it backwards. Updates
+  /// ATOMICALLY with the insert; never a separate application step.
   lastMessageAt DateTime @default(now()) @map("last_message_at") @db.Timestamptz(6)
 
-  listing  Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing  Listing?  @relation(fields: [listingId], references: [id], onDelete: SetNull)
   buyer    Profile   @relation("BuyerConversations", fields: [buyerProfileId], references: [id], onDelete: Cascade)
   seller   Profile   @relation("SellerConversations", fields: [sellerProfileId], references: [id], onDelete: Cascade)
   messages Message[]
 
-  // Idempotent identity: one conversation per (listing, buyer, seller).
+  // Idempotent identity: one conversation per (listing, buyer, seller). NULL
+  // listing_id (a deleted listing) is exempt from the unique check by SQL NULL
+  // semantics, which is correct: identity only matters while the listing exists.
   @@unique([listingId, buyerProfileId, sellerProfileId], map: "conversations_identity_key")
   // Inbox keyset: a participant's conversations by latest activity (desc, desc).
   @@index([buyerProfileId, lastMessageAt(sort: Desc), id(sort: Desc)], map: "conversations_buyer_activity_idx")

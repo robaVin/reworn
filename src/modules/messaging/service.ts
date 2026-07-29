@@ -7,7 +7,7 @@ import { timeSpan } from '@/lib/perf';
 import { AuthorizationError } from '@/modules/auth/errors';
 import { getStorageAdapter } from '@/modules/catalog/storage';
 import { SIGNED_URL_TTL_SECONDS } from '@/modules/catalog/image-config';
-import { parseMessageBody } from './schemas';
+import { normalizeMessageBody } from './schemas';
 import { MessageRejectedError } from './errors';
 import {
   buildCounterparty,
@@ -52,7 +52,7 @@ const UUID_RE =
 
 interface ConversationAccess {
   id: string;
-  listingId: string;
+  listingId: string | null; // null once the listing has been removed (SET NULL)
   buyerProfileId: string;
   sellerProfileId: string;
   role: ParticipantRole;
@@ -116,6 +116,9 @@ export async function getOrCreateConversationForListing(
       select: {
         id: true,
         status: true,
+        title: true,
+        priceMinor: true,
+        currency: true,
         seller: { select: { profileId: true } },
       },
     }),
@@ -142,7 +145,16 @@ export async function getOrCreateConversationForListing(
   try {
     const created = await timeSpan('db.conversationCreate', () =>
       prisma.conversation.create({
-        data: { listingId, buyerProfileId: userId, sellerProfileId },
+        // Capture the immutable listing snapshot at creation, so the
+        // conversation still shows what it was about if the listing is deleted.
+        data: {
+          listingId,
+          buyerProfileId: userId,
+          sellerProfileId,
+          listingTitleSnapshot: listing.title,
+          listingPriceMinorSnapshot: listing.priceMinor,
+          listingCurrencySnapshot: listing.currency,
+        },
         select: { id: true },
       }),
     );
@@ -168,6 +180,10 @@ const richConversationSelect = {
   buyerProfileId: true,
   sellerProfileId: true,
   lastMessageAt: true,
+  // Immutable snapshot -- the fallback once the live listing is deleted.
+  listingTitleSnapshot: true,
+  listingPriceMinorSnapshot: true,
+  listingCurrencySnapshot: true,
   listing: {
     select: {
       id: true,
@@ -217,9 +233,22 @@ async function signCovers(keys: string[]): Promise<Map<string, string>> {
 }
 
 function listingDto(
-  listing: RichConversation['listing'],
+  row: RichConversation,
   signed: Map<string, string>,
 ): ConversationListingDTO {
+  // The live listing is preferred while it exists; once deleted (listing_id set
+  // to NULL by ON DELETE SET NULL), fall back to the immutable snapshot.
+  if (!row.listing) {
+    return {
+      id: null,
+      title: row.listingTitleSnapshot,
+      priceMinor: row.listingPriceMinorSnapshot,
+      currency: row.listingCurrencySnapshot,
+      status: 'removed',
+      coverUrl: null,
+    };
+  }
+  const listing = row.listing;
   const key = listing.images[0]?.storageKey;
   return {
     id: listing.id,
@@ -238,7 +267,7 @@ function baseConversationDto(
 ): ConversationDTO {
   return {
     id: row.id,
-    listing: listingDto(row.listing, signed),
+    listing: listingDto(row, signed),
     counterparty: buildCounterparty(role, row.buyer, row.seller),
     lastActivityAt: row.lastMessageAt,
   };
@@ -261,7 +290,7 @@ export async function getConversationForCurrentUser(
   });
   if (!row) return null;
 
-  const key = row.listing.images[0]?.storageKey;
+  const key = row.listing?.images[0]?.storageKey;
   const signed = await signCovers(key ? [key] : []);
   return baseConversationDto(row, access.role, signed);
 }
@@ -343,7 +372,7 @@ export async function sendConversationMessage(
   const access = await resolveConversationAccess(userId, conversationId);
   if (!access) notFound();
 
-  const parsed = parseMessageBody(body);
+  const parsed = normalizeMessageBody(body);
   if (!parsed.ok) throw new MessageRejectedError(parsed.reason);
 
   const created = await timeSpan('db.messageCreate', () =>
@@ -405,7 +434,7 @@ export async function listConversationSummariesForCurrentUser(
 
   const page = rows.slice(0, SUMMARIES_PAGE_SIZE);
   const coverKeys = page
-    .map((r) => r.listing.images[0]?.storageKey)
+    .map((r) => r.listing?.images[0]?.storageKey)
     .filter((k): k is string => Boolean(k));
   const signed = await signCovers(coverKeys);
 

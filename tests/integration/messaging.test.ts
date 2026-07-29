@@ -395,9 +395,108 @@ describe('DB-level backstops (independent of the service)', () => {
           listingId: publishedId,
           buyerProfileId: SELLER,
           sellerProfileId: SELLER,
+          listingTitleSnapshot: 'x',
+          listingCurrencySnapshot: 'MKD',
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it('the sender trigger rejects a non-participant EVEN via the privileged/superuser connection', async () => {
+    // `sql` is the raw postgres superuser client (BYPASSRLS). The BEFORE INSERT
+    // trigger must still reject a sender who is neither buyer nor seller -- this
+    // proves the guarantee does not depend on RLS or the app-role grants.
+    await expect(
+      sql.query(
+        `INSERT INTO messages (id, conversation_id, sender_profile_id, body, created_at)
+         VALUES (gen_random_uuid(), $1, $2, 'privileged sneak', now())`,
+        [convId, OTHER],
+      ),
+    ).rejects.toMatchObject({ code: '23514' }); // check_violation from the trigger
+  });
+});
+
+describe('monotonic activity: last_message_at never moves backwards (GREATEST)', () => {
+  // Each test uses its OWN fresh listing/conversation so the far-future/past
+  // timestamps below cannot pollute other tests' conversations.
+  const freshConversation = async (buyer: string, title: string) => {
+    const listing = await prisma.listing.create({
+      data: {
+        sellerId: sellerProfileId,
+        categoryId,
+        title,
+        description: 'A test listing.',
+        size: 'M',
+        condition: 'good',
+        gender: 'unisex',
+        location: 'Skopje',
+        status: 'published',
+        publishedAt: new Date(),
+        priceMinor: 3000,
+        currency: 'MKD',
+      },
+      select: { id: true },
+    });
+    return (await svc.getOrCreateConversationForListing(buyer, listing.id)).id;
+  };
+
+  it('an out-of-order (older) insert does not move last_message_at backwards', async () => {
+    const convId = await freshConversation(BUYER, 'monotonic-1');
+    const newer = new Date('2026-08-01T00:00:00.000Z');
+    const older = new Date('2026-07-01T00:00:00.000Z');
+
+    // Insert the NEWER message first, then an OLDER-timestamped one.
+    await prisma.message.create({
+      data: {
+        conversationId: convId,
+        senderProfileId: BUYER,
+        body: 'newer',
+        createdAt: newer,
+      },
+    });
+    await prisma.message.create({
+      data: {
+        conversationId: convId,
+        senderProfileId: BUYER,
+        body: 'older',
+        createdAt: older,
+      },
+    });
+
+    const conv = await prisma.conversation.findUniqueOrThrow({
+      where: { id: convId },
+      select: { lastMessageAt: true },
+    });
+    // GREATEST kept the newer timestamp; the older insert did NOT regress it.
+    expect(conv.lastMessageAt.getTime()).toBe(newer.getTime());
+  });
+
+  it('concurrent inserts leave last_message_at at the newest, regardless of order', async () => {
+    const convId = await freshConversation(BUYER2, 'monotonic-2');
+    const base = Date.parse('2026-09-01T00:00:00.000Z');
+    // Timestamps spread over a minute, inserted CONCURRENTLY in arbitrary order.
+    const offsets = [30, 5, 55, 10, 40, 0, 25, 50, 15, 45];
+    const stamps = offsets.map((s) => new Date(base + s * 1000));
+    const newest = Math.max(...stamps.map((d) => d.getTime()));
+
+    await Promise.all(
+      stamps.map((createdAt, i) =>
+        prisma.message.create({
+          data: {
+            conversationId: convId,
+            senderProfileId: BUYER2,
+            body: `m${i}`,
+            createdAt,
+          },
+        }),
+      ),
+    );
+
+    const conv = await prisma.conversation.findUniqueOrThrow({
+      where: { id: convId },
+      select: { lastMessageAt: true },
+    });
+    expect(conv.lastMessageAt.getTime()).toBe(newest);
   });
 });
 
@@ -512,6 +611,53 @@ describe('access persists across listing-status changes', () => {
     await expect(
       svc.getOrCreateConversationForListing(BUYER2, listing.id),
     ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('history SURVIVES a hard listing deletion (SET NULL + snapshot)', async () => {
+    const listing = await prisma.listing.create({
+      data: {
+        sellerId: sellerProfileId,
+        categoryId,
+        title: 'To be deleted',
+        description: 'A test listing.',
+        size: 'M',
+        condition: 'good',
+        gender: 'unisex',
+        location: 'Skopje',
+        status: 'published',
+        publishedAt: new Date(),
+        priceMinor: 9900,
+        currency: 'MKD',
+      },
+      select: { id: true },
+    });
+    const convId = (
+      await svc.getOrCreateConversationForListing(BUYER, listing.id)
+    ).id;
+    await svc.sendConversationMessage(BUYER, convId, 'before deletion');
+
+    // Hard-delete the listing row. With ON DELETE SET NULL the conversation and
+    // its messages must survive, not cascade away.
+    await prisma.listing.delete({ where: { id: listing.id } });
+
+    // Conversation still exists with listing_id nulled out.
+    const row = await prisma.conversation.findUniqueOrThrow({
+      where: { id: convId },
+      select: { listingId: true, listingTitleSnapshot: true },
+    });
+    expect(row.listingId).toBeNull();
+    expect(row.listingTitleSnapshot).toBe('To be deleted');
+
+    // Messages survive.
+    const msgs = await svc.listConversationMessages(BUYER, convId);
+    expect(msgs.items.some((m) => m.body === 'before deletion')).toBe(true);
+
+    // The DTO falls back to the snapshot and marks the listing 'removed'.
+    const view = await svc.getConversationForCurrentUser(BUYER, convId);
+    expect(view!.listing.id).toBeNull();
+    expect(view!.listing.status).toBe('removed');
+    expect(view!.listing.title).toBe('To be deleted');
+    expect(view!.listing.priceMinor).toBe(9900);
   });
 });
 
@@ -630,10 +776,10 @@ describe('schema drift + indexes (migration 0013 matches the models)', () => {
     );
     // Prisma may still want to drop the raw 0012 search indexes it does not know
     // about, but it must NOT propose any change to conversations/messages -- that
-    // would mean the hand-written 0013 diverged from the schema.
+    // would mean the hand-written 0013/0014 diverged from the schema.
     expect(diff).not.toMatch(/conversations/i);
     expect(diff).not.toMatch(/\bmessages\b/i);
-  });
+  }, 60_000); // `npx prisma migrate diff` spawns the engine; allow cold-start time
 
   it('the keyset indexes exist', async () => {
     const { rows } = await sql.query(

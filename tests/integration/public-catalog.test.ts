@@ -524,7 +524,7 @@ describe('schema drift guard (2D-B safeguard)', () => {
     ]) {
       expect(diff).not.toContain(idx); // partial/functional indexes untouched
     }
-  });
+  }, 60_000); // `npx prisma migrate diff` spawns the engine; allow cold-start time
 });
 
 describe('reserved-handle DB/app parity (2D-B safeguard)', () => {

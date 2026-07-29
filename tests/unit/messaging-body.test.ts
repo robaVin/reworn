@@ -1,34 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseMessageBody,
   normalizeMessageBody,
   codePointLength,
   MAX_MESSAGE_LENGTH,
 } from '@/modules/messaging/schemas';
 
+// The single canonical helper. `ok`/`reason` unwrap its discriminated result.
 const ok = (raw: string): string => {
-  const r = parseMessageBody(raw);
+  const r = normalizeMessageBody(raw);
   if (!r.ok) throw new Error(`expected ok, got ${r.reason}`);
   return r.value;
 };
 const reason = (raw: unknown): string | null => {
-  const r = parseMessageBody(raw);
+  const r = normalizeMessageBody(raw);
   return r.ok ? null : r.reason;
 };
 
-describe('normalizeMessageBody', () => {
+describe('normalizeMessageBody — normalization', () => {
   it('normalizes CRLF and lone CR to LF', () => {
-    expect(normalizeMessageBody('a\r\nb\rc')).toBe('a\nb\nc');
+    expect(ok('a\r\nb\rc')).toBe('a\nb\nc');
   });
 
   it('trims surrounding whitespace but preserves internal newlines', () => {
-    expect(normalizeMessageBody('  \n hello\n\nworld \n ')).toBe(
-      'hello\n\nworld',
-    );
+    expect(ok('  \n hello\n\nworld \n ')).toBe('hello\n\nworld');
   });
 });
 
-describe('parseMessageBody — rejects', () => {
+describe('normalizeMessageBody — rejects', () => {
   it('rejects a non-string', () => {
     expect(reason(42)).toBe('not_a_string');
     expect(reason(null)).toBe('not_a_string');
@@ -58,7 +56,7 @@ describe('parseMessageBody — rejects', () => {
   });
 });
 
-describe('parseMessageBody — accepts', () => {
+describe('normalizeMessageBody — accepts', () => {
   it('accepts a normal message and returns it normalized', () => {
     expect(ok('  Hello there  ')).toBe('Hello there');
   });

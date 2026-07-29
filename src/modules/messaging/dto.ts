@@ -26,12 +26,15 @@ export interface CounterpartyDTO {
 }
 
 export interface ConversationListingDTO {
-  id: string;
+  /** Live listing id, or null when the listing has been removed (SET NULL). */
+  id: string | null;
+  /** Live title while the listing exists; the snapshot title once it is gone. */
   title: string;
   priceMinor: number | null;
   currency: string;
   /** Listing lifecycle status — shown to participants so a paused/archived
-   * listing can be labelled. Not routed through the public listing service. */
+   * listing can be labelled — or 'removed' when the live listing is gone. Not
+   * routed through the public listing service. */
   status: string;
   coverUrl: string | null;
 }
