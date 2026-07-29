@@ -20,6 +20,7 @@ timezone-aware `timestamptz` (UTC); money as **integer minor units** + ISO-4217
 | 0010 | `listing_bootstrap_key` | `listings.bootstrap_key uuid` + **unique index** — per-form-session idempotency so concurrent auto-draft "first actions" converge on ONE draft |
 | 0011 | `seller_handle` | `seller_profiles.handle` (public URL slug for `/shop/[handle]`): deterministic collision-safe reserved-protected backfill, format + reserved-name CHECKs, unique index. Immutable once assigned |
 | 0012 | `listing_search_indexes` | Generated weighted `search_vector tsvector` (title A / brand B / material C / description D, `simple` config) + **GIN**; **published-only PARTIAL** btree indexes for keyset (`created_at,id`), (`price_minor,id`), (`category_id,created_at,id`) and a **functional normalized-location** index; drops the speculative 2A `status`-prefixed indexes |
+| 0013 | `messaging` | `conversations` + `messages` (Increment 3A). Unique conversation identity `(listing_id, buyer_profile_id, seller_profile_id)`; keyset activity indexes (buyer/seller) + message chronological index; CHECKs (distinct participants, body length 1–4000, non-blank, no control chars); BEFORE-INSERT sender-participant trigger + AFTER-INSERT activity-bump trigger; RLS **participant-only SELECT**, no write grants. FKs `ON DELETE CASCADE` |
 
 Clean-deploy and deploy-on-top-of-previous both verified; no drift.
 **`0011`/`0012` were applied to the production Supabase on 2026-07-29** — they are
@@ -37,7 +38,8 @@ try to drop the GIN, as it would for the RLS/CHECK objects since 0002).
 `listings`, `listing_images`, `listing_usage` (weekly quota counter),
 `subscription_plans`, `subscriptions`, `subscription_events` (immutable),
 `payment_attempts`, `payment_events` (immutable), `categories`, `audit_logs`
-(immutable).
+(immutable), `conversations`, `messages` (buyer↔seller messaging, Increment 3A —
+see `docs/MESSAGING.md`).
 
 Enums include the subscription lifecycle: `pending | active | grace_period |
 expired | cancelled | suspended`.
@@ -80,8 +82,8 @@ only write path is the privileged service. Bucket must be created as **private**
 
 ## Missing entities (arrive with their increments)
 
-`product_variants`, `conversations`, `messages`, `wishlists` (saved items),
-`recently_viewed`, `reviews`, `reports`, `notifications`.
+`product_variants`, `wishlists` (saved items), `recently_viewed`, `reviews`,
+`reports`, `notifications`.
 
 ## Seed
 

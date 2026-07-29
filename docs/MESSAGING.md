@@ -1,0 +1,131 @@
+# ReWorn — Messaging (Increment 3A)
+
+Secure backend for buyer ↔ seller conversations about a listing. **3A is domain,
+database, authorization, service-layer and tests only** — there is no inbox or
+conversation UI, and real-time delivery is explicitly deferred (see below).
+
+ReWorn never processes the garment payment or shipping; buyers and sellers
+arrange those directly. Messaging only carries their plain-text conversation.
+
+## Model
+
+Two tables (migration `0013_messaging`):
+
+- **`conversations`** — one row per `(listing, buyer, seller)`. `buyer_profile_id`
+  and `seller_profile_id` are both **Profile (auth) uuids**; the seller id is the
+  listing owner's `SellerProfile.profileId`, derived server-side. `last_message_at`
+  drives inbox ordering.
+- **`messages`** — `conversation_id`, `sender_profile_id`, plain-text `body`,
+  `created_at`. Append-only in 3A (no edit/delete).
+
+## Conversation uniqueness & idempotent creation
+
+Identity is a **database `UNIQUE (listing_id, buyer_profile_id, seller_profile_id)`**
+(`conversations_identity_key`), not an application check. `getOrCreateConversationForListing`
+inserts and, on the unique violation (`P2002`), returns the existing row — so
+concurrent "first message" requests converge on **one** conversation. A buyer may
+only start a conversation from a **currently-published** listing, and never with
+their own listing (`buyer <> seller` is also a `CHECK`).
+
+## Participant authorization
+
+The participant identity is always the **server-verified user id** (from
+`getAuthContext`); the client may supply only a `listingId`, a message body, and
+cursors — never a buyer/seller/sender id or conversation ownership. A single
+resolver, `resolveConversationAccess`, loads the conversation and confirms the
+user is the buyer or seller; **missing, non-participant, and malformed-id all
+return the same not-found**, so a third party gets no existence signal. Every
+service method funnels through this resolver (no duplicated checks).
+
+`sendConversationMessage` sets `sender_profile_id` to the verified user; a
+`BEFORE INSERT` trigger independently rejects any message whose sender is not a
+participant.
+
+## Listing-status behaviour
+
+- A **new** conversation requires the listing to be `published`.
+- An **existing** conversation stays reachable to its two participants regardless
+  of later status changes (paused / archived), because access is participant-based
+  and independent of listing status.
+- A now-private listing is shown to participants through a **participant-authorized
+  internal summary** on the conversation — it is **never** re-exposed through the
+  public listing service (`getPublicListing` still returns null for it).
+
+## Message rules
+
+Plain text only (no HTML is parsed or rendered). The service normalises and
+validates every body, with DB `CHECK`s as a backstop:
+
+- line endings normalised to `LF`; surrounding whitespace trimmed (internal
+  newlines preserved);
+- empty / whitespace-only rejected;
+- control characters rejected except TAB and LF;
+- **maximum length 4000** Unicode code points (agrees with Postgres `char_length`).
+
+## Pagination
+
+Keyset (never offset), with opaque versioned base64url cursors:
+
+- **Messages** — `created_at ASC, id ASC`; cursor bound to the `conversationId`
+  (a cursor from another conversation is rejected). Page size 30.
+- **Summaries** — `last_message_at DESC, id DESC`; cursor bound to the
+  authenticated participant. Page size 20.
+
+Malformed / wrong-version / mismatched cursors reset to the first page.
+
+## Activity update (trigger, not app step)
+
+An `AFTER INSERT` trigger bumps `conversations.last_message_at`/`updated_at` to the
+new message's timestamp, so the two writes commit **atomically**. This is chosen
+over a second application write (which could fail after the insert) and over a
+plain transaction (which would not protect a future direct write path).
+
+## RLS assumptions
+
+Both tables are `ENABLE`/`FORCE ROW LEVEL SECURITY`. Following the project's
+two-layer model:
+
+- **Grants:** `anon` gets nothing; `authenticated` gets `SELECT` only. There are
+  **no** INSERT/UPDATE/DELETE grants, so user-driven writes are impossible
+  regardless of policy.
+- **Policies:** participants-only `SELECT` on conversations and messages. No admin
+  policy (private correspondence; moderation is out of scope) and no write policy.
+- All writes go through the **privileged Prisma/service-role path** (BYPASSRLS),
+  which additionally enforces participant authorization in application code. RLS
+  is defence in depth, not a substitute for the service checks.
+
+## DTO privacy
+
+Public DTOs expose only what a participant needs — listing summary, counterparty
+(shop name + handle for a seller; self-chosen display name or a neutral fallback
+for a buyer), latest-message preview, and activity timestamp. They **never**
+expose profile ids (buyer/seller/sender), auth ids, emails, seller internal ids,
+subscription/payment data, or internal listing owner id. A message's authorship is
+conveyed by a boolean `sentByViewer`, not the sender's id.
+
+### Buyer identity limitation
+
+Buyers have no dedicated public profile yet. The counterparty display for a buyer
+uses `Profile.displayName` when set, else the neutral label **"ReWorn member"** —
+never an email or internal id. A richer buyer public profile can arrive with a
+later increment.
+
+## Deletion lifecycle
+
+All messaging FKs are `ON DELETE CASCADE`, consistent with the existing
+`profile → seller_profile → listing` cascade policy:
+
+- **Listing status change** (pause/archive): conversation preserved and reachable.
+- **Listing row hard-delete**: its conversations + messages cascade away (no such
+  path is exposed by any current increment; listings are archived, not deleted).
+- **Profile / seller hard-delete**: that user's conversations + messages cascade
+  away — privacy-preserving (a removed account leaves no orphaned private
+  messages). No account-deletion path exists yet.
+- **Conversation delete**: cascades its messages. No user-facing delete in 3A.
+
+## Explicitly deferred
+
+Real-time messaging (WebSocket/Supabase Realtime subscriptions), inbox &
+conversation UI, notifications (email/push), read receipts, typing indicators,
+reactions, message editing/deletion, attachments/images, blocking, reporting, and
+moderation tooling are **out of scope for 3A** and arrive in later increments.

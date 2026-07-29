@@ -42,17 +42,24 @@ datasource db {
 /// `id` IS the Supabase Auth user UUID (auth.users.id) — one row per account.
 /// No credentials are stored here; authentication is owned by Supabase Auth.
 model Profile {
-  id          String   @id @db.Uuid // == auth.users.id
-  displayName String?  @map("display_name")
-  avatarUrl   String?  @map("avatar_url")
-  locale      String   @default("mk")
+  id          String     @id @db.Uuid // == auth.users.id
+  displayName String?    @map("display_name")
+  avatarUrl   String?    @map("avatar_url")
+  locale      String     @default("mk")
   status      UserStatus @default(active)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   roles         UserRole[]
   sellerProfile SellerProfile?
   auditLogs     AuditLog[]     @relation("AuditActor")
+
+  // Messaging participation (Increment 3A). A profile is the BUYER in some
+  // conversations and the SELLER in others; both participant ids are Profile
+  // (auth) uuids, so authorization compares uniformly to the verified user id.
+  buyerConversations  Conversation[] @relation("BuyerConversations")
+  sellerConversations Conversation[] @relation("SellerConversations")
+  sentMessages        Message[]      @relation("MessageSender")
 
   @@index([status])
   @@map("profiles")
@@ -73,12 +80,12 @@ model Role {
 /// Assignment of a role to a profile (many-to-many).
 /// A user may hold several roles (a seller is also a buyer).
 model UserRole {
-  id         String   @id @default(uuid()) @db.Uuid
-  profileId  String   @map("profile_id") @db.Uuid
-  roleId     String   @map("role_id") @db.Uuid
-  grantedAt  DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  id        String   @id @default(uuid()) @db.Uuid
+  profileId String   @map("profile_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
   /// Nullable: the Supabase UUID of the admin who granted it (null = system/seed).
-  grantedBy  String?  @map("granted_by") @db.Uuid
+  grantedBy String?  @map("granted_by") @db.Uuid
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   role    Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
@@ -96,17 +103,17 @@ model UserRole {
 /// Extended profile for a user who sells. Created when a user opts to sell;
 /// seller *privileges* still depend on a server-verified active subscription.
 model SellerProfile {
-  id           String   @id @default(uuid()) @db.Uuid
-  profileId    String   @unique @map("profile_id") @db.Uuid
+  id         String       @id @default(uuid()) @db.Uuid
+  profileId  String       @unique @map("profile_id") @db.Uuid
   /// Public, immutable, lowercase URL slug for /shop/[handle]. Never encodes a
   /// UUID and carries no authorization. Format/reserved-name rules are enforced
   /// in the DB (CHECK, migration 0011) and the app layer (modules/catalog/handle).
-  handle       String   @unique @map("handle")
-  shopName     String   @map("shop_name")
-  isBusiness   Boolean  @default(false) @map("is_business")
-  status       SellerStatus @default(active)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  handle     String       @unique @map("handle")
+  shopName   String       @map("shop_name")
+  isBusiness Boolean      @default(false) @map("is_business")
+  status     SellerStatus @default(active)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   profile         Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subscriptions   Subscription[]
@@ -170,10 +177,10 @@ model SubscriptionPlan {
 /// A seller's subscription. Its lifecycle is governed by the state machine
 /// (pending → active → grace_period → expired, plus cancelled/suspended).
 model Subscription {
-  id        String   @id @default(uuid()) @db.Uuid
-  sellerId  String   @map("seller_id") @db.Uuid
-  planId    String   @map("plan_id") @db.Uuid
-  status    SubscriptionStatus @default(pending)
+  id       String             @id @default(uuid()) @db.Uuid
+  sellerId String             @map("seller_id") @db.Uuid
+  planId   String             @map("plan_id") @db.Uuid
+  status   SubscriptionStatus @default(pending)
 
   /// Current paid term window (UTC). Null until first activation.
   currentPeriodStart DateTime? @map("current_period_start") @db.Timestamptz(6)
@@ -185,7 +192,7 @@ model Subscription {
 
   /// Whether a free trial applied to this subscription (trial disabled by
   /// default at the platform level; modelled for forward compatibility).
-  isTrial   Boolean  @default(false) @map("is_trial")
+  isTrial Boolean @default(false) @map("is_trial")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -207,16 +214,16 @@ model Subscription {
 /// A financial/lifecycle snapshot; never updated or deleted (enforced by the
 /// SQL migration's RLS + revoked UPDATE/DELETE).
 model SubscriptionEvent {
-  id             String   @id @default(uuid()) @db.Uuid
-  subscriptionId String   @map("subscription_id") @db.Uuid
-  fromStatus     SubscriptionStatus? @map("from_status")
-  toStatus       SubscriptionStatus  @map("to_status")
-  reason         String
+  id               String              @id @default(uuid()) @db.Uuid
+  subscriptionId   String              @map("subscription_id") @db.Uuid
+  fromStatus       SubscriptionStatus? @map("from_status")
+  toStatus         SubscriptionStatus  @map("to_status")
+  reason           String
   /// Frozen snapshot of relevant fields at event time (period, plan, amount…).
-  snapshot       Json?    @db.JsonB
+  snapshot         Json?               @db.JsonB
   /// The PaymentAttempt that caused this transition, when applicable.
-  paymentAttemptId String? @map("payment_attempt_id") @db.Uuid
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  paymentAttemptId String?             @map("payment_attempt_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
 
   subscription   Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   // Referential integrity for the causing attempt (added in migration 0003).
@@ -238,41 +245,41 @@ model SubscriptionEvent {
 /// unique — it is the idempotency key that guarantees a verified callback
 /// activates a subscription EXACTLY ONCE, even under concurrent callbacks.
 model PaymentAttempt {
-  id               String   @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
 
   /// Globally unique reference we send to the gateway and expect back.
-  merchantReference String  @unique @map("merchant_reference")
+  merchantReference String @unique @map("merchant_reference")
 
   /// Who is paying (the auth UUID) and their seller/plan/subscription context.
-  profileId        String   @map("profile_id") @db.Uuid
-  sellerId         String   @map("seller_id") @db.Uuid
-  planId           String   @map("plan_id") @db.Uuid
+  profileId      String  @map("profile_id") @db.Uuid
+  sellerId       String  @map("seller_id") @db.Uuid
+  planId         String  @map("plan_id") @db.Uuid
   /// Null until an activation binds the attempt to a concrete subscription.
-  subscriptionId   String?  @map("subscription_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
 
   /// Server-computed expected charge (minor units) + ISO currency. The gateway
   /// callback amount MUST match these — client-supplied amounts are ignored.
   expectedAmountMinor Int    @map("expected_amount_minor")
   expectedCurrency    String @map("expected_currency") @db.Char(3)
 
-  status           PaymentStatus @default(pending)
-  provider         String        // "mock" | "casys" | ...
+  status   PaymentStatus @default(pending)
+  provider String // "mock" | "casys" | ...
 
   /// Provider's own event/transaction id, when returned. Unique when present
   /// (partial unique index in SQL) — a second callback for the same provider
   /// event cannot be processed twice.
   providerReference String? @map("provider_reference")
 
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   /// Attempts expire if the user abandons the redirect.
-  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
   /// Set exactly once, when a terminal verified callback is processed.
-  processedAt      DateTime? @map("processed_at") @db.Timestamptz(6)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
 
-  seller        SellerProfile     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  plan          SubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Restrict)
-  subscription      Subscription?       @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-  events            PaymentEvent[]
+  seller             SellerProfile       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  plan               SubscriptionPlan    @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscription       Subscription?       @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  events             PaymentEvent[]
   subscriptionEvents SubscriptionEvent[]
 
   @@index([sellerId, status])
@@ -284,17 +291,17 @@ model PaymentAttempt {
 /// Immutable, append-only record of every callback/status change on an attempt.
 /// Reconciliation-ready. Never updated or deleted.
 model PaymentEvent {
-  id               String   @id @default(uuid()) @db.Uuid
-  paymentAttemptId String   @map("payment_attempt_id") @db.Uuid
+  id               String           @id @default(uuid()) @db.Uuid
+  paymentAttemptId String           @map("payment_attempt_id") @db.Uuid
   type             PaymentEventType
-  fromStatus       PaymentStatus? @map("from_status")
-  toStatus         PaymentStatus  @map("to_status")
+  fromStatus       PaymentStatus?   @map("from_status")
+  toStatus         PaymentStatus    @map("to_status")
   /// Provider's event id for this specific callback, when available.
-  providerEventId  String? @map("provider_event_id")
+  providerEventId  String?          @map("provider_event_id")
   /// Redacted, non-sensitive snapshot of the callback for audit/reconciliation.
   /// MUST NOT contain signatures, card data or provider secrets.
-  payloadSummary   Json?    @map("payload_summary") @db.JsonB
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  payloadSummary   Json?            @map("payload_summary") @db.JsonB
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
   attempt PaymentAttempt @relation(fields: [paymentAttemptId], references: [id], onDelete: Cascade)
 
@@ -341,8 +348,8 @@ model Category {
 /// Increment 7, subscription/quota entitlement). RLS governs the READ path
 /// (public sees published; owner sees own; admin sees all).
 model Listing {
-  id       String  @id @default(uuid()) @db.Uuid
-  sellerId String  @map("seller_id") @db.Uuid
+  id           String  @id @default(uuid()) @db.Uuid
+  sellerId     String  @map("seller_id") @db.Uuid
   /// Per-form-session idempotency key for the auto-draft bootstrap. A unique
   /// constraint makes concurrent "first actions" converge on ONE listing
   /// instead of creating duplicate empty drafts. Null for rows not created via
@@ -350,7 +357,7 @@ model Listing {
   bootstrapKey String? @unique @map("bootstrap_key") @db.Uuid
   /// Nullable so a DRAFT can be saved incomplete; REQUIRED to publish
   /// (enforced by the service's publishable validation + a DB CHECK in 0007).
-  categoryId String? @map("category_id") @db.Uuid
+  categoryId   String? @map("category_id") @db.Uuid
 
   /// Title is the one field a draft always has (so it is listable in the seller
   /// dashboard). All other content fields may be null on a draft.
@@ -364,10 +371,10 @@ model Listing {
   gender      ListingGender     @default(unisex)
 
   /// Asking price in MINOR units (e.g. deni) + ISO-4217 code. Informational.
-  priceMinor Int?   @map("price_minor")
-  currency   String @default("MKD") @db.Char(3)
+  priceMinor         Int?   @map("price_minor")
+  currency           String @default("MKD") @db.Char(3)
   /// Optional original retail price (minor units), for reference/discount display.
-  originalPriceMinor Int? @map("original_price_minor")
+  originalPriceMinor Int?   @map("original_price_minor")
 
   location String?
 
@@ -384,9 +391,10 @@ model Listing {
   /// GIN index are owned entirely by the hand-written migration.
   searchVector Unsupported("tsvector")? @map("search_vector")
 
-  seller   SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  category Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  images   ListingImage[]
+  seller        SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images        ListingImage[]
+  conversations Conversation[]
 
   // Seller-dashboard path. The PUBLIC browse path (published-only keyset by
   // created_at/price/category/location + a GIN full-text index and a generated
@@ -419,6 +427,73 @@ model ListingImage {
 
   @@index([listingId, position])
   @@map("listing_images")
+}
+
+// -----------------------------------------------------------------------------
+// Messaging (Increment 3A) — buyer ↔ seller conversations about a listing
+// -----------------------------------------------------------------------------
+
+/// A conversation between a buyer and a seller about ONE listing.
+///
+/// Identity is (listingId, buyerProfileId, sellerProfileId) — a database UNIQUE
+/// makes get-or-create idempotent and race-safe (the service catches the unique
+/// violation and returns the winner). Both participant ids are Profile (auth)
+/// uuids; `sellerProfileId` is the listing owner's Profile id, derived
+/// server-side at creation — never supplied by the client.
+///
+/// Access is participant-based and INDEPENDENT of listing status: a conversation
+/// started from a published listing stays reachable to its two participants even
+/// if the listing is later paused/archived. New conversations, however, may only
+/// be created from a currently-published listing. All writes go through the
+/// privileged messaging service; RLS is the read-path backstop.
+model Conversation {
+  id              String @id @default(uuid()) @db.Uuid
+  listingId       String @map("listing_id") @db.Uuid
+  /// The buyer's Profile (auth) id. The user who started the conversation.
+  buyerProfileId  String @map("buyer_profile_id") @db.Uuid
+  /// The seller's Profile (auth) id == the listing owner's SellerProfile.profileId.
+  sellerProfileId String @map("seller_profile_id") @db.Uuid
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// Latest-activity timestamp for inbox ordering. Seeded to created_at, then
+  /// bumped to the newest message's created_at by an AFTER INSERT trigger on
+  /// `messages` (migration 0013) so it updates ATOMICALLY with the insert — never
+  /// a separate application step that could fail after the message is written.
+  lastMessageAt DateTime @default(now()) @map("last_message_at") @db.Timestamptz(6)
+
+  listing  Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer    Profile   @relation("BuyerConversations", fields: [buyerProfileId], references: [id], onDelete: Cascade)
+  seller   Profile   @relation("SellerConversations", fields: [sellerProfileId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  // Idempotent identity: one conversation per (listing, buyer, seller).
+  @@unique([listingId, buyerProfileId, sellerProfileId], map: "conversations_identity_key")
+  // Inbox keyset: a participant's conversations by latest activity (desc, desc).
+  @@index([buyerProfileId, lastMessageAt(sort: Desc), id(sort: Desc)], map: "conversations_buyer_activity_idx")
+  @@index([sellerProfileId, lastMessageAt(sort: Desc), id(sort: Desc)], map: "conversations_seller_activity_idx")
+  @@map("conversations")
+}
+
+/// A single plain-text message in a conversation. Append-only in 3A (editing and
+/// deletion are deferred). `senderProfileId` is the verified author and MUST be
+/// one of the conversation's two participants — enforced by a BEFORE INSERT
+/// trigger (migration 0013) as well as by the service.
+model Message {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  senderProfileId String   @map("sender_profile_id") @db.Uuid
+  /// Plain text only. Normalised (LF line endings, trimmed, control chars
+  /// rejected) and length-bounded by the service; a DB CHECK is the backstop.
+  body            String
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       Profile      @relation("MessageSender", fields: [senderProfileId], references: [id], onDelete: Cascade)
+
+  // Deterministic chronological retrieval + keyset pagination within a conversation.
+  @@index([conversationId, createdAt, id], map: "messages_conversation_chrono_idx")
+  @@map("messages")
 }
 
 // -----------------------------------------------------------------------------
