@@ -9,8 +9,10 @@ Canonical documentation lives in [`docs/`](docs/) — the **repository is the
 source of truth** (see [`docs/README.md`](docs/README.md)). The **subscription
 domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
 source of truth for publishing limits and seller authorization — see
-[`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md); Stripe checkout/webhooks and
-billing UI are deferred to a later increment. Buyer↔seller
+[`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md). Stripe checkout/webhooks and
+billing UI are deferred; per the rollout policy `SUBSCRIPTION_ENFORCEMENT`
+**defaults to disabled** and stays off in production until billing is live (see
+the runbook in `docs/SUBSCRIPTIONS.md`). Buyer↔seller
 **messaging** has a secure backend (domain, RLS, service, tests) as of Increment
 3A, a **conversation-creation Server Action** on the listing page (3B-A), an
 authenticated **inbox** at `/messages` (3B-B), and and a **conversation thread + composer** at `/messages/[conversationId]`

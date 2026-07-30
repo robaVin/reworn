@@ -122,42 +122,39 @@ describe('environment validation', () => {
     });
   });
 
-  describe('subscription enforcement bypass', () => {
-    it('FORBIDS disabling enforcement in production', async () => {
+  describe('subscription enforcement rollout policy', () => {
+    it('ALLOWS enforcement disabled in production (rollout: never block existing sellers)', async () => {
       vi.stubEnv('NODE_ENV', 'production');
       setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
-      await expect(loadEnvModule()).rejects.toThrow(
-        /SUBSCRIPTION_ENFORCEMENT.*forbidden in production|forbidden in production/i,
-      );
+      const { env } = await loadEnvModule();
+      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
     });
 
-    it('allows disabling enforcement outside production (dev bridge)', async () => {
+    it('defaults to DISABLED (false) when unset — enforcement stays off until billing is live', async () => {
+      setEnv({ PAYMENT_PROVIDER: 'none' });
+      const { env } = await loadEnvModule();
+      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
+    });
+
+    it('allows disabling enforcement outside production too', async () => {
       vi.stubEnv('NODE_ENV', 'development');
       setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
       const { env } = await loadEnvModule();
       expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
     });
 
-    it('permits the bypass ONLY during `next build`, not at production runtime', async () => {
-      // Build phase: NODE_ENV=production but NEXT_PHASE marks the build. The
-      // module must load so `next build` can statically render pages.
-      vi.stubEnv('NODE_ENV', 'production');
-      vi.stubEnv('NEXT_PHASE', 'phase-production-build');
-      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
-      const { env } = await loadEnvModule();
-      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(false);
-
-      // Same config WITHOUT the build phase = a real production server boot.
-      // It must throw so a server can never start with the bypass on.
-      vi.stubEnv('NEXT_PHASE', undefined);
-      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'false' });
-      await expect(loadEnvModule()).rejects.toThrow(/forbidden in production/i);
+    it('REFUSES to enable enforcement without a live payment provider', async () => {
+      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'true' });
+      await expect(loadEnvModule()).rejects.toThrow(
+        /requires a live PAYMENT_PROVIDER|payment provider/i,
+      );
     });
 
-    it('defaults to enforced (true) when unset', async () => {
-      setEnv({ PAYMENT_PROVIDER: 'none' });
-      const { env } = await loadEnvModule();
-      expect(env.SUBSCRIPTION_ENFORCEMENT).toBe(true);
+    it('rejects an unknown enforcement value (fail closed on misconfiguration)', async () => {
+      setEnv({ PAYMENT_PROVIDER: 'none', SUBSCRIPTION_ENFORCEMENT: 'maybe' });
+      await expect(loadEnvModule()).rejects.toThrow(
+        /Invalid environment configuration/,
+      );
     });
   });
 

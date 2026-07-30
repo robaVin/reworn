@@ -63,15 +63,20 @@ const schema = z
     SUBSCRIPTION_TRIAL_ENABLED: booleanish,
     SUBSCRIPTION_TRIAL_DAYS: z.coerce.number().int().min(0).default(0),
     /**
-     * Whether publishing a listing requires a valid seller subscription.
-     * Defaults to TRUE (enforce). Setting it to `false` is a NON-PRODUCTION
-     * development bridge that lets an active seller publish without a
-     * subscription (the bank gateway is not connected yet). It is refused in
-     * production (see superRefine) and is evaluated ONLY on the server.
+     * Whether publishing a listing requires a live seller subscription.
+     *
+     * ROLLOUT POLICY (Increment 4A follow-up): enforcement stays DISABLED until
+     * checkout + webhook activation are production-ready, so an incomplete
+     * billing rollout never blocks existing sellers. It therefore DEFAULTS to
+     * `false` and is permitted to be `false` in ANY environment, including
+     * production. To ENABLE it a live payment provider is required (see
+     * superRefine) — enforcing a paid subscription with no way to pay would lock
+     * every seller out. Only the enum is accepted, so an unknown value fails the
+     * build (fail closed on misconfiguration). Evaluated ONLY on the server.
      */
     SUBSCRIPTION_ENFORCEMENT: z
       .enum(['true', 'false'])
-      .default('true')
+      .default('false')
       .transform((s) => s === 'true'),
 
     // --- Monitoring / logging ---
@@ -115,17 +120,24 @@ const schema = z
       });
     }
 
-    // 1b. The subscription-enforcement bypass is a development bridge only.
-    //     In production it would let sellers publish without ever paying.
-    //     Refuse to boot.
-    if (isProdRuntime && v.SUBSCRIPTION_ENFORCEMENT === false) {
+    // 1b. Subscription-enforcement rollout coherence. Enforcement stays disabled
+    //     until billing is live (rollout policy), so `false` is permitted in
+    //     every environment — an incomplete rollout must never block existing
+    //     sellers. But ENABLING enforcement without a live payment provider would
+    //     lock every seller out (a paid subscription with no way to pay), so
+    //     `SUBSCRIPTION_ENFORCEMENT=true` requires a real provider. Since `mock`
+    //     is prod-forbidden and `casys` is hard-disabled (below), turning
+    //     enforcement on today is only possible once a real gateway is wired —
+    //     which is exactly the activation gate. Fail closed on this misconfig.
+    if (v.SUBSCRIPTION_ENFORCEMENT === true && v.PAYMENT_PROVIDER === 'none') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['SUBSCRIPTION_ENFORCEMENT'],
         message:
-          'SUBSCRIPTION_ENFORCEMENT="false" is forbidden in production. It is a ' +
-          'development-only bridge for testing listing publishing before the ' +
-          'bank gateway exists. Production must enforce subscriptions.',
+          'SUBSCRIPTION_ENFORCEMENT="true" requires a live PAYMENT_PROVIDER ' +
+          '(not "none"). Keep enforcement disabled until checkout and webhook ' +
+          'activation are live; enabling it with no payment provider would lock ' +
+          'every seller out.',
       });
     }
 

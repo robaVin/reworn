@@ -66,18 +66,53 @@ the state machine and the partial-unique backstops. Every status change writes a
   `createPendingSubscription` (idempotent), `activateSubscription`,
   `transitionSubscription`.
 
-### Idempotency & concurrency
+### Idempotency, plan-correctness & concurrency
 
-- **`createPendingSubscription`** is idempotent and race-safe via the new
-  **`ux_one_pending_subscription_per_seller`** partial unique (migration 0016):
-  two concurrent initiations cannot both create a pending row — the loser hits
-  the unique index and the existing pending subscription is returned. No
-  find-then-insert.
-- **Activation** is guarded by the Stage-1 **`ux_one_live_subscription_per_seller`**
-  partial unique: activating a second subscription while one is live rolls the
-  transaction back and raises `SubscriptionConflictError`. The two partial indexes
-  cover disjoint status sets, so a seller may hold a live subscription **and** one
-  pending (queued renewal) at once.
+**`createPendingSubscription(sellerId, planId)`** always returns a pending
+subscription **for the requested plan**:
+
+- existing pending, **same plan** → reuse it;
+- existing pending, **different plan** → atomically **supersede** the old pending
+  (`pending → cancelled` with an immutable `superseded_by_plan_change` event) and
+  create a fresh pending for the requested plan;
+- no pending → create one.
+
+It runs in **one transaction** that first takes a **per-seller advisory lock**
+(`pg_advisory_xact_lock`, released at commit/rollback), so concurrent requests for
+the same seller are fully serialized — no find-then-insert race and no ping-pong
+on the `ux_one_pending_subscription_per_seller` unique (migration 0016).
+Superseded rows are **never deleted**; they remain in history as `cancelled`.
+
+**Concurrency winner policy:** *last committed wins.* Each caller receives a
+subscription for its **own** requested plan (the returned row never has a
+different plan). If two different plans are requested simultaneously, exactly one
+pending row survives — the last transaction to commit — and the earlier one is
+left `cancelled` in history with the superseded event.
+
+**Activation** is guarded by the Stage-1 **`ux_one_live_subscription_per_seller`**
+partial unique: activating a second subscription while one is live rolls the
+transaction back and raises `SubscriptionConflictError`. The two partial indexes
+cover disjoint status sets, so a seller may hold a live subscription **and** one
+pending (queued renewal) at once.
+
+### Provider-event idempotency (webhook replay protection)
+
+The durable mechanism Increment **4C** will use to deduplicate repeated provider
+webhook deliveries already exists in the schema: **`payment_events.provider_event_id`**
+carries a global partial-unique index **`ux_payment_events_provider_event_id`**
+(migration 0002). `recordProviderEventOnce` (`provider-events.ts`, **provider-
+neutral** — no Stripe/CaSys logic, no handler) is the replay-safe primitive:
+
+- provider event identity is **unique** (the DB index);
+- a repeated delivery creates **no** duplicate `payment_events` row;
+- the optional domain transition (`apply`) runs **in the same transaction** as the
+  event insert, so a duplicate rolls **both** back — no duplicate domain
+  transition and no duplicate `subscription_events` row;
+- the processing result is **safely reusable**: a replay returns the already-
+  stored event with `isReplay: true`.
+
+No migration is needed — the schema already supports this. Tests prove the unique
+constraint, the exactly-once transition, and the transactional rollback on replay.
 
 ## Feature-gating (`feature-gating.ts`)
 
@@ -90,10 +125,8 @@ rules, so call sites cannot diverge:
   (quota is 0 when publishing is gated off).
 - `canUse(access, feature)` — named-feature gate (`publish_listing` today).
 
-**Enforcement modes** (env `SUBSCRIPTION_ENFORCEMENT`): `true` (production
-default, forced by env validation) requires a live subscription to publish;
-`false` (dev bridge, forbidden in production) lets an active seller publish
-without one so the flow is testable before checkout ships.
+**Enforcement modes** (env `SUBSCRIPTION_ENFORCEMENT`): see the rollout policy
+below. Default **`false`** (disabled); `true` requires a live payment provider.
 
 ## Single-source integration
 
@@ -117,6 +150,64 @@ references, or event snapshots (asserted).
 Seller-facing reads are owner-scoped in the service and backstopped by RLS
 (migration 0004: a seller reads only their own subscriptions; no user write
 grants). System lifecycle writes go through the privileged service.
+
+## Entitlement matrix
+
+`isEntitling(sub, now)` — the single predicate behind `hasActiveSubscription`
+and all publishing/authorization:
+
+| status | entitles? |
+|---|---|
+| `pending` | no |
+| `active` | **only inside** the effective window (`now ≤ period end`) |
+| `grace_period` | **only inside** the grace window (`now ≤ grace end`) |
+| `suspended` | no |
+| `cancelled` | no |
+| `expired` | no |
+
+Boundary rules (tested): entitlement holds at `now == effectiveEnd` and is lost
+at `effectiveEnd + 1 ms`. A **delayed lifecycle sweep cannot extend entitlement**
+— a row still stamped `active`/`grace_period` whose window has elapsed does **not**
+entitle. When entitlement is denied, the **plan quota is 0** (`resolveFeatureAccess`).
+
+## Production rollout & runbook
+
+**Policy A (approved): keep enforcement DISABLED until checkout, webhook
+processing, and seller recovery paths are live.** Production currently has
+existing published listings and **no** subscriptions (verified via aggregate,
+non-identifying counts), so immediate hard enforcement would strand existing
+sellers — it must stay off during the incomplete billing rollout.
+
+`SUBSCRIPTION_ENFORCEMENT` now **defaults to `false`** and is permitted to be
+`false` in **every** environment (including production). Enabling it
+(`=true`) **requires a live `PAYMENT_PROVIDER`** (not `none`) — env validation
+refuses `true` + `none` (fail closed), so enforcement literally cannot be turned
+on until a real gateway is wired. An unknown value fails the build.
+
+| environment | behavior |
+|---|---|
+| development | `false` (default) — active sellers publish without a subscription; `mock` provider allowed for testing |
+| test | `false` (set in `tests/setup.ts`) |
+| staging | `false` until a staging gateway is live; then `true` to rehearse enforcement |
+| production | `false` (rollout) — existing sellers keep publishing; flip to `true` only after the activation checklist |
+
+**Activation checklist (before setting `SUBSCRIPTION_ENFORCEMENT=true` in prod):**
+1. a real `PAYMENT_PROVIDER` is implemented, configured, and verified (checkout
+   creates a `pending` subscription; a verified webhook activates it);
+2. webhook processing uses `recordProviderEventOnce` (replay-safe);
+3. the lifecycle sweep (grace → expired) runs on a schedule;
+4. a seller **recovery/renewal** path exists (a lapsed seller can re-subscribe);
+5. sellers are notified ahead of enforcement.
+Then set `SUBSCRIPTION_ENFORCEMENT=true` in the production environment.
+
+**Rollback:** set `SUBSCRIPTION_ENFORCEMENT=false` (or unset) and redeploy —
+publishing is immediately un-gated again; no data changes are required.
+
+**Entitlement loss & already-published listings:** losing entitlement blocks
+**new** publish/republish transitions only. Already-`published` listings are
+**never silently unpublished** by this domain — an explicit, seller-visible
+lifecycle policy (with notice) would own any future takedown, and is out of scope
+here.
 
 ## Explicitly deferred
 

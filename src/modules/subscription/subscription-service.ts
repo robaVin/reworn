@@ -189,32 +189,61 @@ async function recordEvent(
 }
 
 /**
- * Get-or-create the seller's single PENDING subscription for a plan. Idempotent
- * and race-safe via `ux_one_pending_subscription_per_seller`: a concurrent
- * duplicate loses on the unique index and the existing pending row is returned
- * (no find-then-insert). Records a `created` event only for a genuine insert.
+ * Get-or-create the seller's single PENDING subscription **for the requested
+ * plan**. The returned subscription ALWAYS matches `planId`:
+ *
+ *   - existing pending, SAME plan      -> reuse it,
+ *   - existing pending, DIFFERENT plan -> atomically supersede it (cancel +
+ *     immutable `superseded_by_plan_change` event) and create a fresh pending
+ *     for the requested plan,
+ *   - no pending                       -> create one.
+ *
+ * All of this runs in ONE transaction that first takes a per-seller advisory
+ * lock (`pg_advisory_xact_lock`, released at commit/rollback), so concurrent
+ * requests for the same seller are fully serialized and deterministic — no
+ * find-then-insert race and no ping-pong on the `ux_one_pending_subscription_per_seller`
+ * unique. Superseded rows are never deleted; they remain in history as
+ * `cancelled`. Concurrency winner policy: **last committed wins** — each caller
+ * receives a subscription for its own requested plan, and if two different plans
+ * are requested simultaneously the pending that ultimately survives is the last
+ * transaction to commit (the earlier one is left cancelled in history).
  */
 export async function createPendingSubscription(
   sellerId: string,
   planId: string,
 ): Promise<Subscription> {
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const sub = await tx.subscription.create({
-        data: { sellerId, planId, status: 'pending' },
-      });
-      await recordEvent(tx, sub.id, null, 'pending', 'created');
-      return sub;
+  return prisma.$transaction(async (tx) => {
+    // Serialize all pending-intent changes for this seller.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${sellerId})::bigint)`;
+
+    const existing = await tx.subscription.findFirst({
+      where: { sellerId, status: 'pending' },
     });
-  } catch (e) {
-    if ((e as { code?: string }).code === 'P2002') {
-      const existing = await prisma.subscription.findFirst({
-        where: { sellerId, status: 'pending' },
+
+    if (existing) {
+      if (existing.planId === planId) return existing; // same plan -> reuse
+      // Different plan: supersede the old pending (a valid pending -> cancelled
+      // transition), then fall through to create the requested one.
+      const superseded = applySubscriptionTransition(existing.status, 'cancel');
+      await tx.subscription.update({
+        where: { id: existing.id },
+        data: { status: superseded },
       });
-      if (existing) return existing;
+      await recordEvent(
+        tx,
+        existing.id,
+        existing.status,
+        superseded,
+        'superseded_by_plan_change',
+      );
     }
-    throw e;
-  }
+
+    const created = await tx.subscription.create({
+      data: { sellerId, planId, status: 'pending' },
+    });
+    await recordEvent(tx, created.id, null, 'pending', 'created');
+    return created;
+  });
 }
 
 interface ActivationInput {

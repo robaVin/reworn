@@ -22,11 +22,14 @@ let sql: pg.Client;
 
 let prisma: typeof import('@/lib/db').prisma;
 let svc: typeof import('@/modules/subscription/subscription-service');
+let providerEvents: typeof import('@/modules/subscription/provider-events');
 let InvalidSubscriptionTransitionError: typeof import('@/modules/subscription/subscription-status').InvalidSubscriptionTransitionError;
 let SubscriptionConflictError: typeof import('@/modules/subscription/errors').SubscriptionConflictError;
 
 let planId: string;
+let planId2: string;
 let seq = 0;
+let mref = 0;
 
 /** Create an isolated active seller (own profile + seller profile). */
 async function makeSeller(): Promise<{ profileId: string; sellerId: string }> {
@@ -103,6 +106,7 @@ beforeAll(async () => {
 
   ({ prisma } = await import('@/lib/db'));
   svc = await import('@/modules/subscription/subscription-service');
+  providerEvents = await import('@/modules/subscription/provider-events');
   ({ InvalidSubscriptionTransitionError } =
     await import('@/modules/subscription/subscription-status'));
   ({ SubscriptionConflictError } =
@@ -111,9 +115,34 @@ beforeAll(async () => {
   sql = new pg.Client({ connectionString: url });
   await sql.connect();
 
-  const plan = await prisma.subscriptionPlan.findFirstOrThrow();
-  planId = plan.id;
+  const plans = await prisma.subscriptionPlan.findMany({
+    orderBy: { code: 'asc' },
+  });
+  planId = plans[0]!.id;
+  planId2 = plans[1]!.id; // a DIFFERENT plan for replacement tests
 }, 180_000);
+
+/** Minimal payment attempt to attach provider events to. */
+async function makePaymentAttempt(
+  sellerId: string,
+  profileId: string,
+): Promise<string> {
+  mref += 1;
+  const a = await prisma.paymentAttempt.create({
+    data: {
+      merchantReference: `mref-${mref}`,
+      profileId,
+      sellerId,
+      planId,
+      expectedAmountMinor: 30000,
+      expectedCurrency: 'MKD',
+      provider: 'mock',
+      expiresAt: new Date(Date.now() + 3600_000),
+    },
+    select: { id: true },
+  });
+  return a.id;
+}
 
 afterAll(async () => {
   await sql?.end();
@@ -366,5 +395,163 @@ describe('RLS reads', () => {
         [owner.sellerId, planId],
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('pending-plan replacement (plan-correct + deterministic)', () => {
+  it('same plan sequential + concurrent requests reuse ONE pending row', async () => {
+    const { sellerId } = await makeSeller();
+    const a = await svc.createPendingSubscription(sellerId, planId);
+    const b = await svc.createPendingSubscription(sellerId, planId);
+    expect(b.id).toBe(a.id);
+    expect(b.planId).toBe(planId);
+
+    const [c, d] = await Promise.all([
+      svc.createPendingSubscription(sellerId, planId),
+      svc.createPendingSubscription(sellerId, planId),
+    ]);
+    expect(c.id).toBe(a.id);
+    expect(d.id).toBe(a.id);
+    expect(
+      await prisma.subscription.count({
+        where: { sellerId, status: 'pending' },
+      }),
+    ).toBe(1);
+  });
+
+  it('a DIFFERENT plan supersedes the old pending and returns the requested plan', async () => {
+    const { sellerId } = await makeSeller();
+    const first = await svc.createPendingSubscription(sellerId, planId);
+    const second = await svc.createPendingSubscription(sellerId, planId2);
+
+    expect(second.id).not.toBe(first.id);
+    expect(second.planId).toBe(planId2); // returned matches requested plan
+    // Exactly one pending remains, for the requested plan.
+    const pendings = await prisma.subscription.findMany({
+      where: { sellerId, status: 'pending' },
+    });
+    expect(pendings).toHaveLength(1);
+    expect(pendings[0]!.id).toBe(second.id);
+    // The superseded row survives in history as cancelled.
+    const old = await prisma.subscription.findUniqueOrThrow({
+      where: { id: first.id },
+    });
+    expect(old.status).toBe('cancelled');
+    // Its cancellation event describes the outcome accurately.
+    const ev = await prisma.subscriptionEvent.findFirstOrThrow({
+      where: { subscriptionId: first.id, toStatus: 'cancelled' },
+    });
+    expect(ev.reason).toBe('superseded_by_plan_change');
+    expect(ev.fromStatus).toBe('pending');
+  });
+
+  it('concurrent requests for two DIFFERENT plans leave exactly one pending; each caller gets its requested plan', async () => {
+    const { sellerId } = await makeSeller();
+    const [a, b] = await Promise.all([
+      svc.createPendingSubscription(sellerId, planId),
+      svc.createPendingSubscription(sellerId, planId2),
+    ]);
+    // Each caller received a subscription for the plan it requested.
+    expect(a.planId).toBe(planId);
+    expect(b.planId).toBe(planId2);
+    // Deterministic invariant: exactly ONE pending row remains (last committed
+    // wins); the earlier one is cancelled in history.
+    const pendings = await prisma.subscription.findMany({
+      where: { sellerId, status: 'pending' },
+    });
+    expect(pendings).toHaveLength(1);
+    const cancelled = await prisma.subscription.count({
+      where: { sellerId, status: 'cancelled' },
+    });
+    expect(cancelled).toBeGreaterThanOrEqual(1);
+    // No pending row is ever for a plan nobody requested.
+    expect([planId, planId2]).toContain(pendings[0]!.planId);
+  });
+});
+
+describe('provider-event idempotency (webhook replay protection)', () => {
+  it('the provider_event_id unique index exists', async () => {
+    const { rows } = await sql.query(
+      `SELECT indexname FROM pg_indexes WHERE tablename='payment_events'`,
+    );
+    const names = rows.map((r: { indexname: string }) => r.indexname);
+    expect(names).toContain('ux_payment_events_provider_event_id');
+  });
+
+  it('records an event once and applies its transition; a replay is a no-op reuse', async () => {
+    const { sellerId, profileId } = await makeSeller();
+    const attempt = await makePaymentAttempt(sellerId, profileId);
+    const providerEventId = `evt_${randomUUID()}`;
+
+    // A side-effect that must run EXACTLY once (models a domain transition).
+    let applied = 0;
+    const apply = async () => {
+      applied += 1;
+    };
+
+    const first = await providerEvents.recordProviderEventOnce(
+      {
+        paymentAttemptId: attempt,
+        providerEventId,
+        type: 'verified',
+        toStatus: 'succeeded',
+      },
+      apply,
+    );
+    expect(first.isReplay).toBe(false);
+    expect(applied).toBe(1);
+
+    // Repeat delivery of the SAME provider event id.
+    const replay = await providerEvents.recordProviderEventOnce(
+      {
+        paymentAttemptId: attempt,
+        providerEventId,
+        type: 'verified',
+        toStatus: 'succeeded',
+      },
+      apply,
+    );
+    expect(replay.isReplay).toBe(true);
+    expect(replay.event.id).toBe(first.event.id); // reusable result
+    expect(applied).toBe(1); // transition did NOT run again
+
+    // No duplicate payment_event row.
+    expect(
+      await prisma.paymentEvent.count({ where: { providerEventId } }),
+    ).toBe(1);
+  });
+
+  it('a duplicate rolls back BOTH the event insert and the domain transition', async () => {
+    const { sellerId, profileId } = await makeSeller();
+    const attempt = await makePaymentAttempt(sellerId, profileId);
+    const providerEventId = `evt_${randomUUID()}`;
+    await providerEvents.recordProviderEventOnce({
+      paymentAttemptId: attempt,
+      providerEventId,
+      type: 'verified',
+      toStatus: 'succeeded',
+    });
+
+    const before = await prisma.subscriptionEvent.count();
+    // The replay's `apply` would write a subscription event; it must be rolled back.
+    const replay = await providerEvents.recordProviderEventOnce(
+      {
+        paymentAttemptId: attempt,
+        providerEventId,
+        type: 'verified',
+        toStatus: 'succeeded',
+      },
+      async (tx) => {
+        await tx.subscriptionEvent.create({
+          data: {
+            subscriptionId: randomUUID(),
+            toStatus: 'active',
+            reason: 'should_not_persist',
+          },
+        });
+      },
+    );
+    expect(replay.isReplay).toBe(true);
+    expect(await prisma.subscriptionEvent.count()).toBe(before); // no leak
   });
 });

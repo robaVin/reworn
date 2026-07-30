@@ -108,3 +108,26 @@ describe('entitlement predicates', () => {
     expect(hasGraceEnded(sub('grace_period', PAST, FUTURE), NOW)).toBe(false);
   });
 });
+
+describe('entitlement time boundaries (delayed sweep cannot extend entitlement)', () => {
+  const END = new Date('2026-08-01T00:00:00.000Z');
+
+  it('entitles at exactly the effective end, but not one millisecond after', () => {
+    // active, window ends at END (via period end)
+    expect(isEntitling(sub('active', END), END)).toBe(true); // now === end
+    expect(isEntitling(sub('active', END), new Date(END.getTime() + 1))).toBe(
+      false,
+    );
+    // grace window boundary
+    expect(isEntitling(sub('grace_period', PAST, END), END)).toBe(true);
+    expect(
+      isEntitling(sub('grace_period', PAST, END), new Date(END.getTime() + 1)),
+    ).toBe(false);
+  });
+
+  it('a still-"active" row whose window elapsed does not entitle (sweep lag is not a grace extension)', () => {
+    const elapsed = new Date(END.getTime() + 30 * 24 * 3600 * 1000);
+    expect(isEntitling(sub('active', END), elapsed)).toBe(false);
+    expect(isEntitling(sub('grace_period', PAST, END), elapsed)).toBe(false);
+  });
+});
