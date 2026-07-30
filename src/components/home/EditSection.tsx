@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import {
   ListingGrid,
   ListingGridEmpty,
+  ListingGridSkeleton,
 } from '@/components/marketplace/ListingGrid';
 import {
   listPublishedListings,
@@ -71,8 +72,34 @@ export async function EditSection() {
           here first.
         </ListingGridEmpty>
       ) : (
-        <ListingGrid listings={cards} hrefFor={productHref} />
+        <ListingGrid listings={cards} hrefFor={productHref} priorityCount={4} />
       )}
+    </section>
+  );
+}
+
+/**
+ * Layout-stable placeholder for "the edit" while its data streams in. Same shell
+ * (heading + category row + grid) with reserved dimensions, hidden from
+ * assistive tech behind a single polite status announced by the grid skeleton.
+ */
+export function EditSectionSkeleton() {
+  return (
+    <section
+      aria-hidden
+      className="mx-auto max-w-shell px-4 sm:px-8 lg:px-10"
+      data-testid="edit-skeleton"
+    >
+      <div className="mb-1 mt-12 flex items-baseline justify-between">
+        <div className="h-8 w-40 rounded-control bg-sand" />
+        <div className="h-6 w-16 rounded-control bg-sand" />
+      </div>
+      <div className="my-5 flex flex-wrap gap-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="h-8 w-20 rounded-control bg-sand" />
+        ))}
+      </div>
+      <ListingGridSkeleton count={8} />
     </section>
   );
 }

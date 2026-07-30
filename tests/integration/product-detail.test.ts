@@ -292,3 +292,109 @@ describe('legacy /listing/[id] redirect', () => {
     expect(String(draft.digest)).toMatch(/NOT_FOUND|404/);
   });
 });
+
+describe('optimized detail read parity', () => {
+  it('the raw single-query reader matches a Prisma nested read field-for-field', async () => {
+    const id = await mk({
+      title: 'Parity Coat',
+      brand: 'Zegna',
+      size: 'M',
+      priceMinor: 24000,
+      slug: 'parity-coat-dddd4444',
+    });
+    // Two images to exercise json_agg ordering (position, then created_at).
+    await prisma.listingImage.create({
+      data: {
+        listingId: id,
+        storageKey: 'key-b',
+        position: 1,
+        width: 700,
+        height: 900,
+        byteSize: 10,
+        mimeType: 'image/webp',
+      },
+    });
+    await prisma.listingImage.create({
+      data: {
+        listingId: id,
+        storageKey: 'key-a',
+        position: 0,
+        width: 800,
+        height: 800,
+        byteSize: 10,
+        mimeType: 'image/webp',
+      },
+    });
+
+    const rawDto = await pub.getPublicListingBySlug('parity-coat-dddd4444');
+
+    // Rebuild the DTO the OLD way (Prisma nested select) and compare.
+    const p = await prisma.listing.findFirstOrThrow({
+      where: { slug: 'parity-coat-dddd4444', status: 'published' },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        brand: true,
+        size: true,
+        color: true,
+        material: true,
+        condition: true,
+        gender: true,
+        priceMinor: true,
+        originalPriceMinor: true,
+        currency: true,
+        description: true,
+        location: true,
+        deliveryMethod: true,
+        deliveryNote: true,
+        createdAt: true,
+        category: { select: { slug: true, name: true } },
+        seller: { select: { handle: true, shopName: true, createdAt: true } },
+        images: {
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+          select: { storageKey: true, width: true, height: true },
+        },
+      },
+    });
+    const expected = {
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      brand: p.brand,
+      size: p.size,
+      condition: p.condition,
+      gender: p.gender,
+      priceMinor: p.priceMinor,
+      currency: p.currency,
+      categorySlug: p.category?.slug ?? null,
+      categoryName: p.category?.name ?? null,
+      coverUrl: `signed://${p.images[0]!.storageKey}`,
+      description: p.description,
+      color: p.color,
+      material: p.material,
+      location: p.location,
+      deliveryMethod: p.deliveryMethod,
+      deliveryNote: p.deliveryNote,
+      originalPriceMinor: p.originalPriceMinor,
+      createdAt: p.createdAt,
+      seller: {
+        handle: p.seller.handle,
+        shopName: p.seller.shopName,
+        joinedAt: p.seller.createdAt,
+      },
+      images: p.images.map((i) => ({
+        url: `signed://${i.storageKey}`,
+        width: i.width,
+        height: i.height,
+      })),
+    };
+
+    expect(rawDto).toEqual(expected);
+    // Cover is position 0 ("key-a"), proving json_agg honored the ordering.
+    expect(rawDto!.images.map((i) => i.url)).toEqual([
+      'signed://key-a',
+      'signed://key-b',
+    ]);
+  });
+});

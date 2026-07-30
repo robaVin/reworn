@@ -15,10 +15,13 @@ const gridClasses =
 export function ListingGrid({
   listings,
   hrefFor,
+  priorityCount = 0,
 }: {
   listings: ListingCardData[];
   /** Maps a listing to its detail URL; omit for non-interactive samples. */
   hrefFor?: (listing: ListingCardData) => string;
+  /** How many leading (above-the-fold) covers load with `priority`. */
+  priorityCount?: number;
 }) {
   return (
     <div className={gridClasses}>
@@ -28,7 +31,11 @@ export function ListingGrid({
           className="animate-rise"
           style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}
         >
-          <ListingCard listing={listing} href={hrefFor?.(listing)} />
+          <ListingCard
+            listing={listing}
+            href={hrefFor?.(listing)}
+            priority={i < priorityCount}
+          />
         </div>
       ))}
     </div>

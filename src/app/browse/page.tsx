@@ -90,7 +90,11 @@ export default async function BrowsePage({
           </ListingGridEmpty>
         ) : (
           <>
-            <ListingGrid listings={cards} hrefFor={productHref} />
+            <ListingGrid
+              listings={cards}
+              hrefFor={productHref}
+              priorityCount={4}
+            />
             <nav aria-label="Pagination" className="mt-10 flex justify-center">
               {nextHref ? (
                 <Button href={`${nextHref}#results`} variant="outline">

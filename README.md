@@ -11,8 +11,11 @@ source of truth** (see [`docs/README.md`](docs/README.md)). The canonical public
 skeleton shell; primary content, message CTA, and related products each in their
 own Suspense boundary) with full SEO metadata + `Product` JSON-LD; the legacy
 `/listing/[id]` route 308-redirects to it, so there is exactly one canonical URL
-per listing (see [`docs/PRODUCTS.md`](docs/PRODUCTS.md)). The **subscription
-domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
+per listing (see [`docs/PRODUCTS.md`](docs/PRODUCTS.md)). Public routes stream an
+instant shell and read through a short-lived, mutation-invalidated **catalog
+cache**; the product detail read is a single raw query — see the measured
+before/after, caching, and database-pooler decision in
+[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md). The **subscription domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
 source of truth for publishing limits and seller authorization — see
 [`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md). Server-side **checkout
 initiation** and **webhook processing** (signature-verified provider events →

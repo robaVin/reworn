@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '@/modules/catalog/storage';
 import { buildListingSlug } from '@/modules/catalog/listing-slug';
+import { invalidateCatalog } from '@/lib/catalog-cache';
 
 /**
  * UX-1.2A schema slice — against REAL PostgreSQL (embedded), exercising
@@ -196,6 +197,32 @@ describe('getPublicListingBySlug', () => {
     expect(detail!.slug).toBe(published.slug);
     expect(detail!.deliveryMethod).toBe('shipping');
     expect(detail!.deliveryNote).toBe('Tracked post only');
+  });
+
+  it('caches reads (stale after a raw write) and a service transition invalidates', async () => {
+    invalidateCatalog();
+    const draft = await svc.createDraftListing(
+      userId,
+      draftInput({ title: 'Cache One' }),
+    );
+    const published = await svc.transitionListing(userId, draft.id, 'publish');
+    const slug = published.slug!;
+
+    // MISS -> caches the DTO.
+    expect((await pub.getPublicListingBySlug(slug))!.title).toBe('Cache One');
+    // Mutate the row DIRECTLY (bypassing the service, so no invalidation).
+    await prisma.listing.update({
+      where: { id: draft.id },
+      data: { title: 'Cache Two' },
+    });
+    // HIT -> still the cached title, proving the read was served from cache.
+    expect((await pub.getPublicListingBySlug(slug))!.title).toBe('Cache One');
+
+    // A SERVICE transition invalidates: pausing makes it non-public, so a stale
+    // cache would still return the published DTO — returning null proves the
+    // cache was cleared by the mutation.
+    await svc.transitionListing(userId, draft.id, 'pause');
+    expect(await pub.getPublicListingBySlug(slug)).toBeNull();
   });
 
   it('returns null for an unknown slug and never leaks a draft', async () => {

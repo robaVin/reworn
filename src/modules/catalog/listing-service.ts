@@ -28,6 +28,7 @@ import {
   type UpdateListingInput,
 } from './schemas';
 import { buildListingSlug } from './listing-slug';
+import { invalidateCatalog } from '@/lib/catalog-cache';
 
 /**
  * Listing service — the ONLY sanctioned path for listing reads and writes.
@@ -395,8 +396,27 @@ export async function updateListing(
   return { id };
 }
 
-/** Apply a lifecycle transition to an owned listing. */
+/**
+ * Apply a lifecycle transition to an owned listing, then invalidate the public
+ * catalog cache. Every transition that changes public visibility runs through
+ * here — `publish` / `republish` (row becomes/returns public), `pause` /
+ * `archive` (row leaves public). A public-field edit is only ever visible after
+ * a `pause` → edit → `republish` cycle, so both ends invalidate; no separate
+ * hook on the draft/paused `updateListing` path is needed. Invalidation happens
+ * only on SUCCESS (a thrown transition/authorization error leaves the cache
+ * untouched, matching the unchanged data).
+ */
 export async function transitionListing(
+  userId: string,
+  id: string,
+  action: ListingTransition,
+): Promise<Listing> {
+  const result = await transitionListingInner(userId, id, action);
+  invalidateCatalog();
+  return result;
+}
+
+async function transitionListingInner(
   userId: string,
   id: string,
   action: ListingTransition,

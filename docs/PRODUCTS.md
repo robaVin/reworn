@@ -63,12 +63,12 @@ meets the "< 50 ms warm" target.
 - `auth.getUser` + `auth.getAuthContext` — ~3 ms warm, in the CTA boundary only,
   and only **after** the listing is proven public.
 
-**Known cost / Phase-3 target:** `db.listingBySlug` measured **~1.1–1.3 s** — the
-Prisma nested select pays the transaction-pooler penalty (~5× vs a raw query;
-`db.related`, a raw query, is ~0.5 s for comparison). Converting the detail read
-to a single raw query (as `listPublishedListings` already is) and/or the
-session-pooler experiment is the main Phase-3 lever. Streaming already removes the
-user-visible impact.
+**Optimized in Phase 3.** `db.listingBySlug` was **~1.1–1.3 s** (Prisma nested
+`findFirst` = two round-trips). It is now a **single raw `json_agg` query**
+(`fetchPublicDetail`) measured **~302 ms** (one round-trip), and the whole PDP is
+served from the catalog cache on a warm hit (**~27 ms** total). See
+[PERFORMANCE.md](PERFORMANCE.md) for the full before/after, caching, and pooler
+decision.
 
 ## Content
 

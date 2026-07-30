@@ -19,9 +19,12 @@ import { GarmentGlyph } from './GarmentGlyph';
 export function ListingCard({
   listing,
   href,
+  priority = false,
 }: {
   listing: ListingCardData;
   href?: string;
+  /** Above-the-fold cover: load eagerly with `priority` (skips lazy loading). */
+  priority?: boolean;
 }) {
   const body = (
     <>
@@ -41,6 +44,7 @@ export function ListingCard({
             }
             fill
             sizes="(max-width: 380px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            priority={priority}
             className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
           />
         ) : (

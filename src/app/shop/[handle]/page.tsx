@@ -119,7 +119,11 @@ export default async function ShopPage({
           </ListingGridEmpty>
         ) : (
           <>
-            <ListingGrid listings={cards} hrefFor={productHref} />
+            <ListingGrid
+              listings={cards}
+              hrefFor={productHref}
+              priorityCount={4}
+            />
             <nav aria-label="Pagination" className="mt-10 flex justify-center">
               {page.nextCursor ? (
                 <Button
