@@ -80,11 +80,67 @@ payment_attempts / subscriptions
   provider errors, API keys, customer ids, and payloads never reach the client,
   DTOs, or logs. The DTO carries only `checkoutUrl`.
 
-Still deferred to later increments: webhook handlers, activation, confirmation,
-customer portal, billing history/invoices/refunds, plan changes, cancellations,
-proration, retries, dunning, Stripe Elements, and the frontend billing UI (the
-button that calls `startCheckoutAction`). The end-to-end paid flow completes when
-webhook activation lands in 4C.
+Still deferred at 4B: webhook handlers, activation, confirmation, customer
+portal, billing history/invoices/refunds, plan changes, cancellations, proration,
+retries, dunning, Stripe Elements, and the frontend billing UI. Webhook
+activation lands in 4C (below).
+
+## Webhook processing (Increment 4C — IMPLEMENTED)
+
+The provider webhook is the **ONLY** path that activates a subscription
+(activation exists nowhere else). Endpoint: **`POST /api/payments/webhook`**
+(Route Handler, Node runtime). Security is the **signature**, not a session — the
+endpoint takes no auth and is POST-only; `GET` → 405.
+
+**Verification abstraction:** `PaymentProvider.verifyWebhook({ rawBody, header })`
+verifies the signature against the **raw body** and parses it into a normalised,
+provider-neutral `ProviderPaymentEvent` (`payment_succeeded | payment_failed |
+checkout_expired | unknown`), or throws `WebhookVerificationError`. The mock
+provider uses an HMAC-SHA256 over the raw body; a bad/absent signature → **400**
+(the reason is never echoed). Payments unavailable (`PAYMENT_PROVIDER="none"`)
+→ **503** (fail closed).
+
+**Processing** (`webhook-service.processWebhookEvent`):
+1. locate our `payment_attempt` (by merchant reference / session id); an unknown
+   attempt is ignored (still 2xx);
+2. **`recordProviderEventOnce`** dedups on `payment_events.provider_event_id`
+   (migration 0002) and runs the domain effect **in the same transaction** as the
+   event insert — so a duplicate rolls back attempt update + activation + event
+   together;
+3. on **success**: verify the amount matches (`amount_mismatch` → never
+   activates), mark the attempt `succeeded`, and — only from a `pending`
+   subscription and only if the seller has no other live subscription — activate
+   it (`pending → active`, stamping period + grace) with an immutable
+   `payment_verified` lifecycle event.
+
+**Idempotent & out-of-order safe** (all tested):
+- a **replay** (same event id) is a no-op;
+- a **different** event id for an already-succeeded attempt records the event but
+  does **not** re-activate (`already_active`);
+- a `payment_failed` **after** success does **not** downgrade
+  (`ignored_after_success`) — success is terminal for the attempt; a failure
+  before success marks the attempt `failed` and leaves the subscription
+  `pending`;
+- activating into an existing live subscription is **skipped**
+  (`conflict_existing_live`) — never two live subscriptions;
+- a `checkout_expired` marks a still-`pending` attempt `expired`.
+
+The endpoint returns **200** once an event is accepted (so the provider stops
+retrying), **500** on an unexpected error (the retry is deduplicated). No provider
+secret, raw payload, or customer id is ever logged — only the event **kind** and
+the processing **outcome**.
+
+### Checkout reuse now requires an unexpired session
+
+Checkout session reuse (4B) explicitly requires `expires_at > now`. An **expired**
+open attempt is no longer reused — it is marked `expired` (freeing the one-open
+slot) and a **fresh** session is created, so a seller is never redirected to a
+stale URL.
+
+Still deferred: customer portal, billing history/invoices/refunds, plan
+upgrades/downgrades, cancellations, dunning, Stripe Elements, and the frontend
+billing UI (the button that calls `startCheckoutAction`), plus the scheduled
+grace→expired lifecycle sweep.
 
 ## Configuration expected later (from the bank)
 

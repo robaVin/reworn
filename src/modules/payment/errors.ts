@@ -30,3 +30,13 @@ export class CheckoutRejectedError extends Error {
     this.name = 'CheckoutRejectedError';
   }
 }
+
+/** A webhook failed signature verification or could not be parsed (400). The
+ * endpoint maps this to a generic 400 — never echoing the reason to the caller. */
+export class WebhookVerificationError extends Error {
+  readonly status = 400 as const;
+  constructor(readonly reason: string) {
+    super(`webhook_verification:${reason}`);
+    this.name = 'WebhookVerificationError';
+  }
+}

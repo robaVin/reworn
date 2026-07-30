@@ -31,6 +31,29 @@ export interface ProviderCheckoutSession {
   checkoutUrl: string;
 }
 
+/** The raw inbound webhook, as received by the endpoint. */
+export interface WebhookRequest {
+  /** The EXACT request body bytes — required for signature verification. */
+  rawBody: string;
+  /** Lower-cased header lookup (e.g. for the provider's signature header). */
+  header(name: string): string | undefined;
+}
+
+/** Provider-neutral, normalised payment event parsed from a verified webhook. */
+export interface ProviderPaymentEvent {
+  /** The provider's stable event id — the durable replay-dedup key. */
+  providerEventId: string;
+  /** Normalised outcome. `unknown` events are ignored (still 2xx'd). */
+  kind: 'payment_succeeded' | 'payment_failed' | 'checkout_expired' | 'unknown';
+  /** Our merchant reference, echoed by the provider — locates the attempt. */
+  merchantReference?: string;
+  /** The provider session id (alternate attempt lookup / reconciliation). */
+  providerSessionId?: string;
+  /** Charged amount (minor units) + currency, when the event carries them. */
+  amountMinor?: number;
+  currency?: string;
+}
+
 export interface PaymentProvider {
   /** Stable provider id (e.g. 'mock', 'stripe'), persisted on the attempt. */
   readonly id: string;
@@ -47,4 +70,11 @@ export interface PaymentProvider {
   createCheckoutSession(
     request: CheckoutSessionRequest,
   ): Promise<ProviderCheckoutSession>;
+  /**
+   * Verify the webhook signature and parse it into a normalised event. Throws
+   * `WebhookVerificationError` on a bad/absent signature or an unparseable body.
+   * MUST verify against the raw body — the endpoint never trusts an unverified
+   * payload.
+   */
+  verifyWebhook(request: WebhookRequest): ProviderPaymentEvent;
 }

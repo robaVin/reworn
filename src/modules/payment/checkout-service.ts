@@ -72,6 +72,19 @@ export async function initiateCheckout(
   });
   if (reusable?.checkoutUrl) return { checkoutUrl: reusable.checkoutUrl };
 
+  // Reuse requires the session to be UNEXPIRED (`expires_at > now`). If an open
+  // attempt exists but has EXPIRED, mark it `expired` — this frees the one-open
+  // slot so a FRESH session is created below rather than redirecting to a stale
+  // URL (and avoids a create colliding with the expired-but-still-`pending` row).
+  await prisma.paymentAttempt.updateMany({
+    where: {
+      subscriptionId: pending.id,
+      status: 'pending',
+      expiresAt: { lte: now },
+    },
+    data: { status: 'expired' },
+  });
+
   // --- Create a new provider session -----------------------------------------
   const merchantReference = `chk_${randomUUID()}`;
   const expiresAt = new Date(
@@ -114,8 +127,13 @@ export async function initiateCheckout(
     return { checkoutUrl: session.checkoutUrl };
   } catch (e) {
     if ((e as { code?: string }).code === 'P2002') {
+      // A concurrent initiation won the one-open slot; reuse its UNEXPIRED session.
       const winner = await prisma.paymentAttempt.findFirst({
-        where: { subscriptionId: pending.id, status: 'pending' },
+        where: {
+          subscriptionId: pending.id,
+          status: 'pending',
+          expiresAt: { gt: now },
+        },
         select: { checkoutUrl: true },
       });
       if (winner?.checkoutUrl) return { checkoutUrl: winner.checkoutUrl };

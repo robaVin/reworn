@@ -27,6 +27,11 @@ function supabaseImagePatterns(): NonNullable<
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Allow the verification-gate build to use an isolated output directory so it
+  // never collides with a running `next dev` (which holds a lock on `.next`).
+  // Unset in normal use → defaults to `.next`.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+
   // Security: do not advertise the framework/version to attackers.
   poweredByHeader: false,
 

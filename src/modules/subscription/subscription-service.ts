@@ -260,39 +260,54 @@ interface ActivationInput {
  * subscription, the `ux_one_live_subscription_per_seller` backstop rolls the
  * transaction back and a {@link SubscriptionConflictError} is raised.
  */
-export async function activateSubscription(
+/**
+ * Activate a pending subscription (pending -> active) on the GIVEN transaction,
+ * stamping its paid period + recording the immutable event. Exposed so webhook
+ * processing can activate ATOMICALLY with the payment-event insert (a single
+ * transaction). The one-live partial unique still backstops it: activating a
+ * second live subscription rolls the whole transaction back.
+ */
+export async function activatePendingSubscriptionTx(
+  tx: Prisma.TransactionClient,
   subscriptionId: string,
   input: ActivationInput,
 ): Promise<Subscription> {
-  const sub = await prisma.subscription.findUnique({
+  const sub = await tx.subscription.findUnique({
     where: { id: subscriptionId },
   });
   if (!sub) throw new SubscriptionNotFoundError();
   const next = applySubscriptionTransition(sub.status, 'activate');
+  const updated = await tx.subscription.update({
+    where: { id: subscriptionId },
+    data: {
+      status: next,
+      currentPeriodStart: input.currentPeriodStart,
+      currentPeriodEnd: input.currentPeriodEnd,
+      graceEndsAt: input.graceEndsAt ?? null,
+    },
+  });
+  await recordEvent(
+    tx,
+    subscriptionId,
+    sub.status,
+    next,
+    input.reason ?? 'activated',
+    {
+      paymentAttemptId: input.paymentAttemptId,
+    },
+  );
+  return updated;
+}
 
+/** Activate a pending subscription in its own transaction. */
+export async function activateSubscription(
+  subscriptionId: string,
+  input: ActivationInput,
+): Promise<Subscription> {
   try {
-    return await prisma.$transaction(async (tx) => {
-      const updated = await tx.subscription.update({
-        where: { id: subscriptionId },
-        data: {
-          status: next,
-          currentPeriodStart: input.currentPeriodStart,
-          currentPeriodEnd: input.currentPeriodEnd,
-          graceEndsAt: input.graceEndsAt ?? null,
-        },
-      });
-      await recordEvent(
-        tx,
-        subscriptionId,
-        sub.status,
-        next,
-        input.reason ?? 'activated',
-        {
-          paymentAttemptId: input.paymentAttemptId,
-        },
-      );
-      return updated;
-    });
+    return await prisma.$transaction((tx) =>
+      activatePendingSubscriptionTx(tx, subscriptionId, input),
+    );
   } catch (e) {
     if ((e as { code?: string }).code === 'P2002') {
       throw new SubscriptionConflictError('already_live');

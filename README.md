@@ -10,9 +10,11 @@ source of truth** (see [`docs/README.md`](docs/README.md)). The **subscription
 domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
 source of truth for publishing limits and seller authorization — see
 [`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md). Server-side **checkout
-initiation** (create a provider session + redirect) is built behind a
-provider-neutral abstraction (see [`docs/PAYMENTS.md`](docs/PAYMENTS.md)); webhook
-activation and billing UI are deferred. Per the rollout policy
+initiation** and **webhook processing** (signature-verified provider events →
+subscription activation) are built behind a provider-neutral abstraction (see
+[`docs/PAYMENTS.md`](docs/PAYMENTS.md)); a subscription is activated **only** by a
+verified webhook. The billing UI, customer portal, and the lifecycle sweep are
+deferred. Per the rollout policy
 `SUBSCRIPTION_ENFORCEMENT` **defaults to disabled** and stays off in production
 until billing is live (see the runbook in `docs/SUBSCRIPTIONS.md`). Buyer↔seller
 **messaging** has a secure backend (domain, RLS, service, tests) as of Increment

@@ -49,6 +49,9 @@ class SpyProvider implements PaymentProvider {
     };
   }
   validateConfiguration(): void {}
+  verifyWebhook(): never {
+    throw new Error('not used in checkout tests');
+  }
 }
 
 class FailingProvider implements PaymentProvider {
@@ -58,6 +61,9 @@ class FailingProvider implements PaymentProvider {
     throw this.err;
   }
   validateConfiguration(): void {}
+  verifyWebhook(): never {
+    throw new Error('not used in checkout tests');
+  }
 }
 
 async function makeSeller(status = 'active'): Promise<string> {
@@ -312,5 +318,48 @@ describe('privacy', () => {
     for (const key of ['providerReference', 'apiKey', 'secret', 'customer']) {
       expect(blob).not.toContain(key);
     }
+  });
+});
+
+describe('reuse requires an UNEXPIRED session', () => {
+  it('an EXPIRED open attempt is not reused — a fresh session is created', async () => {
+    const userId = await makeSeller();
+    const spy = new SpyProvider();
+    const first = await core.resolveCheckout(userId, planId, spy);
+    expect(first.kind).toBe('redirect');
+
+    const seller = await prisma.sellerProfile.findUniqueOrThrow({
+      where: { profileId: userId },
+    });
+    const attemptA = await prisma.paymentAttempt.findFirstOrThrow({
+      where: { sellerId: seller.id, status: 'pending' },
+    });
+    // Force the open attempt to be expired (backdate created_at too, so the
+    // expires_at > created_at CHECK still holds).
+    await prisma.paymentAttempt.update({
+      where: { id: attemptA.id },
+      data: {
+        createdAt: new Date('2000-01-01T00:00:00.000Z'),
+        expiresAt: new Date('2000-01-02T00:00:00.000Z'),
+      },
+    });
+
+    const second = await core.resolveCheckout(userId, planId, spy);
+    expect(second.kind).toBe('redirect');
+    // A NEW session was created (not the stale URL reused).
+    expect(spy.calls).toBe(2);
+    if (first.kind === 'redirect' && second.kind === 'redirect') {
+      expect(second.to).not.toBe(first.to);
+    }
+    // The stale attempt is marked expired; exactly one open (pending) remains.
+    const stale = await prisma.paymentAttempt.findUniqueOrThrow({
+      where: { id: attemptA.id },
+    });
+    expect(stale.status).toBe('expired');
+    expect(
+      await prisma.paymentAttempt.count({
+        where: { sellerId: seller.id, status: 'pending' },
+      }),
+    ).toBe(1);
   });
 });

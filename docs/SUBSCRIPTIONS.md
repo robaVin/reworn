@@ -211,11 +211,20 @@ here.
 
 ## Checkout (Increment 4B)
 
-Checkout **initiation** is built (see [PAYMENTS.md](PAYMENTS.md)): an active
+Checkout **initiation** (4B) is built (see [PAYMENTS.md](PAYMENTS.md)): an active
 seller starts a checkout for a plan, which calls `createPendingSubscription`
 (reuse/supersede) and redirects to a provider session — creating a `pending`
 subscription and a reconciliation `payment_attempt`. Checkout **never activates**
-a subscription; activation stays the webhook's job (4C).
+a subscription.
+
+**Activation (4C)** happens **only** through webhook processing
+(`POST /api/payments/webhook`): a verified, deduplicated `payment_succeeded`
+event activates the pending subscription (`pending → active`) via
+`activatePendingSubscriptionTx`, atomically with the payment-event insert, with an
+immutable `payment_verified` lifecycle event. Processing is idempotent and
+out-of-order safe (replay / late-failure / amount-mismatch / existing-live are all
+handled without double-activation). No subscription is ever activated anywhere
+else.
 
 ## Explicitly deferred
 
