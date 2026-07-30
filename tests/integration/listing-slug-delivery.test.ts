@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '@/modules/catalog/storage';
 import { buildListingSlug } from '@/modules/catalog/listing-slug';
 import { invalidateCatalog } from '@/lib/catalog-cache';
+import { isEditable } from '@/modules/catalog/listing-status';
 
 /**
  * UX-1.2A schema slice — against REAL PostgreSQL (embedded), exercising
@@ -197,6 +198,36 @@ describe('getPublicListingBySlug', () => {
     expect(detail!.slug).toBe(published.slug);
     expect(detail!.deliveryMethod).toBe('shipping');
     expect(detail!.deliveryNote).toBe('Tracked post only');
+  });
+
+  it('a PUBLISHED listing rejects field edits without a transition (cache-invalidation invariant)', async () => {
+    // The catalog cache is invalidated on lifecycle TRANSITIONS only. That is
+    // sound *because* a published listing's public fields/images cannot be
+    // edited in place: `updateListing` is scoped to draft/paused, and every
+    // image mutation gates on `isEditable` (draft/paused only). Editing a
+    // published listing therefore always goes pause -> edit -> republish, and
+    // both ends invalidate. This test locks that invariant: if a future change
+    // ever lets a published row be edited directly, it fails here and forces a
+    // matching cache-invalidation hook.
+    const draft = await svc.createDraftListing(
+      userId,
+      draftInput({ title: 'Immutable Once Live' }),
+    );
+    await svc.transitionListing(userId, draft.id, 'publish');
+
+    await expect(
+      svc.updateListing(userId, draft.id, { title: 'Sneaky Edit' }),
+    ).rejects.toThrow();
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(row.title).toBe('Immutable Once Live'); // unchanged
+
+    // The image mutations share the same `isEditable` guard.
+    expect(isEditable('published')).toBe(false);
+    expect(isEditable('archived')).toBe(false);
+    expect(isEditable('draft')).toBe(true);
+    expect(isEditable('paused')).toBe(true);
   });
 
   it('caches reads (stale after a raw write) and a service transition invalidates', async () => {
