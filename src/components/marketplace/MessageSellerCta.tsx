@@ -14,9 +14,13 @@ import type { MessageCtaState } from '@/modules/messaging/conversation-actions';
 export function MessageSellerCta({
   listingId,
   state,
+  returnPath,
 }: {
   listingId: string;
   state: MessageCtaState;
+  /** Where a signed-out visitor returns after logging in (the canonical PDP
+   * URL). Falls back to the legacy id route, which redirects to canonical. */
+  returnPath?: string;
 }) {
   if (state === 'owner') {
     return (
@@ -30,7 +34,7 @@ export function MessageSellerCta({
   }
 
   if (state === 'guest') {
-    const next = encodeURIComponent(`/listing/${listingId}`);
+    const next = encodeURIComponent(returnPath ?? `/listing/${listingId}`);
     return (
       <Button
         href={`/login?next=${next}`}

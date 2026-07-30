@@ -9,6 +9,8 @@
  */
 export interface ListingCardData {
   id: string;
+  /** Canonical product slug (null only for legacy rows without one). */
+  slug: string | null;
   title: string;
   brand: string;
   size: string;

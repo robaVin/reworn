@@ -12,7 +12,10 @@ import {
   ListingGrid,
   ListingGridEmpty,
 } from '@/components/marketplace/ListingGrid';
-import { publicCardToListingCard } from '@/components/marketplace/listing-card-data';
+import {
+  publicCardToListingCard,
+  productHref,
+} from '@/components/marketplace/listing-card-data';
 import { Button } from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
@@ -116,7 +119,7 @@ export default async function ShopPage({
           </ListingGridEmpty>
         ) : (
           <>
-            <ListingGrid listings={cards} hrefFor={(l) => `/listing/${l.id}`} />
+            <ListingGrid listings={cards} hrefFor={productHref} />
             <nav aria-label="Pagination" className="mt-10 flex justify-center">
               {page.nextCursor ? (
                 <Button

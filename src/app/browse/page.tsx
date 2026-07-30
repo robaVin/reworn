@@ -12,7 +12,10 @@ import {
   ListingGrid,
   ListingGridEmpty,
 } from '@/components/marketplace/ListingGrid';
-import { publicCardToListingCard } from '@/components/marketplace/listing-card-data';
+import {
+  publicCardToListingCard,
+  productHref,
+} from '@/components/marketplace/listing-card-data';
 import { FilterBar } from '@/components/marketplace/FilterBar';
 import { Button } from '@/components/ui/Button';
 
@@ -87,7 +90,7 @@ export default async function BrowsePage({
           </ListingGridEmpty>
         ) : (
           <>
-            <ListingGrid listings={cards} hrefFor={(l) => `/listing/${l.id}`} />
+            <ListingGrid listings={cards} hrefFor={productHref} />
             <nav aria-label="Pagination" className="mt-10 flex justify-center">
               {nextHref ? (
                 <Button href={`${nextHref}#results`} variant="outline">

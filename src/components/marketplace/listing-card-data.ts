@@ -22,9 +22,19 @@ export function hueFromId(id: string): number {
   return h;
 }
 
+/**
+ * The canonical public URL for a listing card. Prefers the stable product slug
+ * (`/products/[slug]`); falls back to the legacy id route (which 308-redirects
+ * to the canonical URL) only if a slug is somehow absent.
+ */
+export function productHref(l: Pick<ListingCardData, 'slug' | 'id'>): string {
+  return l.slug ? `/products/${l.slug}` : `/listing/${l.id}`;
+}
+
 export function publicCardToListingCard(l: PublicListingCard): ListingCardData {
   return {
     id: l.id,
+    slug: l.slug,
     title: l.title,
     brand: l.brand ?? '',
     size: l.size ?? '',

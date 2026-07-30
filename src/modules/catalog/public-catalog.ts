@@ -368,13 +368,89 @@ export const getPublicListingBySlug = cache(
   async (slug: string): Promise<PublicListingDetail | null> => {
     const s = slug.trim().toLowerCase();
     if (!s || s.length > 200) return null;
-    const listing = await prisma.listing.findFirst({
-      where: { slug: s, status: 'published' },
-      select: PUBLIC_DETAIL_SELECT,
-    });
+    const listing = await timeSpan('db.listingBySlug', () =>
+      prisma.listing.findFirst({
+        where: { slug: s, status: 'published' },
+        select: PUBLIC_DETAIL_SELECT,
+      }),
+    );
     return listing ? mapPublicDetail(listing) : null;
   },
 );
+
+/** Ranking inputs for related products (all public, taken from the PDP DTO). */
+export interface RelatedQuery {
+  listingId: string;
+  brand: string | null;
+  categorySlug: string | null;
+  size: string | null;
+  priceMinor: number | null;
+}
+
+/**
+ * Up to `limit` OTHER published listings related to the given one, ranked
+ * deterministically:
+ *   1. same brand, 2. same category, 3. same size, 4. nearest price,
+ *   5. newest, 6. id tie-break.
+ * The current listing is excluded and only published rows are considered, so a
+ * listing can never appear through any duplicate path. ONE bounded query
+ * (`LIMIT`), covers batch-signed in ONE round-trip — no N+1.
+ */
+export async function getRelatedListings(
+  q: RelatedQuery,
+  limit = 8,
+): Promise<PublicListingCard[]> {
+  const rows = await timeSpan('db.related', () =>
+    prisma.$queryRaw<Row[]>(Prisma.sql`
+      SELECT l.id,
+             l.slug,
+             l.title,
+             l.brand,
+             l.size,
+             l.condition::text AS "condition",
+             l.gender::text AS "gender",
+             l.price_minor AS "priceMinor",
+             l.currency,
+             c.slug AS "categorySlug",
+             c.name AS "categoryName",
+             (SELECT i.storage_key FROM listing_images i
+                WHERE i.listing_id = l.id
+                ORDER BY i.position ASC, i.created_at ASC
+                LIMIT 1) AS "coverKey",
+             l.created_at AS "createdAt"
+      FROM listings l
+      LEFT JOIN categories c ON c.id = l.category_id
+      WHERE l.status = 'published' AND l.id <> ${q.listingId}::uuid
+      ORDER BY
+        COALESCE(${q.brand}::text IS NOT NULL AND l.brand = ${q.brand}, false) DESC,
+        COALESCE(${q.categorySlug}::text IS NOT NULL AND c.slug = ${q.categorySlug}, false) DESC,
+        COALESCE(${q.size}::text IS NOT NULL AND l.size = ${q.size}, false) DESC,
+        ABS(COALESCE(l.price_minor, 0) - ${q.priceMinor ?? 0}) ASC,
+        l.created_at DESC,
+        l.id DESC
+      LIMIT ${limit}
+    `),
+  );
+
+  const signed = await signCovers(
+    rows.map((r) => r.coverKey).filter((k): k is string => Boolean(k)),
+  );
+
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    brand: r.brand,
+    size: r.size,
+    condition: r.condition,
+    gender: r.gender,
+    priceMinor: r.priceMinor,
+    currency: r.currency,
+    categorySlug: r.categorySlug,
+    categoryName: r.categoryName,
+    coverUrl: r.coverKey ? (signed.get(r.coverKey) ?? null) : null,
+  }));
+}
 
 export interface PublicSellerPage {
   profile: PublicSellerProfile;

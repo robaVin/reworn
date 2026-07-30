@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DELIVERY_NOTE_MAX, hasDisallowedControlChar } from './delivery';
 
 /**
  * Listing input validation (Zod).
@@ -57,6 +58,20 @@ const condition = z.enum(LISTING_CONDITIONS, {
 });
 const gender = z.enum(LISTING_GENDERS).default('unisex');
 const deliveryMethod = z.enum(DELIVERY_METHODS).optional();
+/**
+ * Free-text delivery note: trimmed, length-capped ({@link DELIVERY_NOTE_MAX}),
+ * and stripped of disallowed control characters (newlines/tabs are preserved so
+ * a multi-line note survives). Empty -> undefined.
+ */
+const deliveryNote = z
+  .string()
+  .trim()
+  .max(DELIVERY_NOTE_MAX)
+  .refine((v) => !hasDisallowedControlChar(v), {
+    message: 'Delivery note contains unsupported characters.',
+  })
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined));
 const categoryId = z.string().uuid('Choose a valid category.');
 const originalPriceMinor = z
   .number()
@@ -81,7 +96,7 @@ export const draftListingSchema = z.object({
   originalPriceMinor,
   location: optionalText(120),
   deliveryMethod,
-  deliveryNote: optionalText(200),
+  deliveryNote,
 });
 export type DraftListingInput = z.infer<typeof draftListingSchema>;
 
@@ -105,7 +120,7 @@ export const publishableListingSchema = z.object({
   originalPriceMinor,
   location: z.string().trim().min(1, 'A location is required.').max(120),
   deliveryMethod,
-  deliveryNote: optionalText(200),
+  deliveryNote,
 });
 export type PublishableListingInput = z.infer<typeof publishableListingSchema>;
 

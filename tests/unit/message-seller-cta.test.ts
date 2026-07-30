@@ -28,6 +28,20 @@ describe('MessageSellerCta', () => {
     expect(html).not.toContain('<form');
   });
 
+  it('guest with a returnPath returns to the canonical product URL', () => {
+    const html = renderToStaticMarkup(
+      createElement(MessageSellerCta, {
+        listingId: LISTING_ID,
+        state: 'guest',
+        returnPath: '/products/wool-overcoat-abc12345',
+      }),
+    );
+    expect(html).toContain(
+      encodeURIComponent('/products/wool-overcoat-abc12345'),
+    );
+    expect(html).not.toContain(encodeURIComponent(`/listing/${LISTING_ID}`));
+  });
+
   it('buyer sees a form whose ONLY field is the listing id', () => {
     const html = markup('buyer');
     expect(html).toContain('<form');

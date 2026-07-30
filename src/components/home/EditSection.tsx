@@ -9,7 +9,10 @@ import {
   listBrowseCategories,
 } from '@/modules/catalog/public-catalog';
 import { parseBrowseQuery } from '@/modules/catalog/browse-query';
-import { publicCardToListingCard } from '@/components/marketplace/listing-card-data';
+import {
+  publicCardToListingCard,
+  productHref,
+} from '@/components/marketplace/listing-card-data';
 
 /** How many real listings the homepage previews (bounded). */
 const HOME_LISTING_COUNT = 8;
@@ -68,7 +71,7 @@ export async function EditSection() {
           here first.
         </ListingGridEmpty>
       ) : (
-        <ListingGrid listings={cards} hrefFor={(l) => `/listing/${l.id}`} />
+        <ListingGrid listings={cards} hrefFor={productHref} />
       )}
     </section>
   );

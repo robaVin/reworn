@@ -6,7 +6,12 @@ processes garment purchases** — no cart, checkout, order, payout, escrow, or
 platform shipping. The only platform payment is the seller's subscription.
 
 Canonical documentation lives in [`docs/`](docs/) — the **repository is the
-source of truth** (see [`docs/README.md`](docs/README.md)). The **subscription
+source of truth** (see [`docs/README.md`](docs/README.md)). The canonical public
+**Product Detail Page** is `/products/[slug]` — a streamed page (instant
+skeleton shell; primary content, message CTA, and related products each in their
+own Suspense boundary) with full SEO metadata + `Product` JSON-LD; the legacy
+`/listing/[id]` route 308-redirects to it, so there is exactly one canonical URL
+per listing (see [`docs/PRODUCTS.md`](docs/PRODUCTS.md)). The **subscription
 domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
 source of truth for publishing limits and seller authorization — see
 [`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md). Server-side **checkout
