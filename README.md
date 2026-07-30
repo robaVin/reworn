@@ -62,10 +62,12 @@ CI (`.github/workflows/ci.yml`) runs exactly this on Node 20.
 2. Apply migrations: `npm run db:migrate:deploy` (forward-only; uses
    `DIRECT_URL`). **Migrations `0011` and `0012` are required** for the public
    marketplace — `/browse` search/filter/sort and `/shop/[handle]` fail without
-   the `search_vector` column and the seller `handle`. Migrations **`0013`–`0017`** add
+   the `search_vector` column and the seller `handle`. Migrations **`0013`–`0018`** add
    the messaging tables (Increment 3A) + listing-lifecycle hardening + compose
-   idempotency token, the subscription pending-uniqueness index (4A), and the
-   checkout-session state on payment attempts (4B). Treat a missing migration as
+   idempotency token, the subscription pending-uniqueness index (4A), the
+   checkout-session state on payment attempts (4B), and the listing **`slug`**
+   (stable product-detail URL key) + **`delivery_method`/`delivery_note`**
+   columns (UX-1.2A). Treat a missing migration as
    a **deployment failure** even though `error.tsx` renders cleanly.
 3. Create the private `listing-images` Storage bucket (one-time).
 4. Set env: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`,

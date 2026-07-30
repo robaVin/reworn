@@ -27,6 +27,7 @@ import {
   type DraftListingInput,
   type UpdateListingInput,
 } from './schemas';
+import { buildListingSlug } from './listing-slug';
 
 /**
  * Listing service — the ONLY sanctioned path for listing reads and writes.
@@ -161,6 +162,8 @@ export async function createDraftListing(
     currency: input.currency,
     originalPriceMinor: input.originalPriceMinor ?? null,
     location: input.location ?? null,
+    deliveryMethod: input.deliveryMethod ?? 'unspecified',
+    deliveryNote: input.deliveryNote ?? null,
     status: 'draft' as const,
     bootstrapKey: opts.bootstrapKey ?? null,
   };
@@ -368,6 +371,12 @@ export async function updateListing(
     data.originalPriceMinor = input.originalPriceMinor ?? null;
   }
   if (input.location !== undefined) data.location = input.location ?? null;
+  if (input.deliveryMethod !== undefined) {
+    data.deliveryMethod = input.deliveryMethod ?? 'unspecified';
+  }
+  if (input.deliveryNote !== undefined) {
+    data.deliveryNote = input.deliveryNote ?? null;
+  }
   if (input.categoryId !== undefined)
     data.categoryId = input.categoryId ?? null;
 
@@ -428,20 +437,47 @@ export async function transitionListing(
       currency: listing.currency,
       originalPriceMinor: listing.originalPriceMinor ?? undefined,
       location: listing.location ?? undefined,
+      deliveryMethod: listing.deliveryMethod,
+      deliveryNote: listing.deliveryNote ?? undefined,
     });
     if (!parsed.success) {
       throw new ListingIncompleteError(parsed.error.flatten().fieldErrors);
     }
   }
 
-  return prisma.listing.update({
-    where: { id },
-    data: {
-      status: nextStatus,
-      // Stamp publishedAt the first time it goes live; keep it thereafter.
-      ...(nextStatus === 'published' && listing.publishedAt === null
-        ? { publishedAt: new Date() }
-        : {}),
-    },
-  });
+  // First publish assigns a STABLE public slug (generated once, never changed).
+  // Republish/other transitions keep the existing slug.
+  const firstPublish = nextStatus === 'published' && listing.slug === null;
+  if (!firstPublish) {
+    return prisma.listing.update({
+      where: { id },
+      data: {
+        status: nextStatus,
+        // Stamp publishedAt the first time it goes live; keep it thereafter.
+        ...(nextStatus === 'published' && listing.publishedAt === null
+          ? { publishedAt: new Date() }
+          : {}),
+      },
+    });
+  }
+
+  // Escalate the id-derived code length only on the astronomically rare unique
+  // collision; a full-length code (the entire id) is guaranteed unique.
+  for (const codeLen of [8, 16, 32]) {
+    try {
+      return await prisma.listing.update({
+        where: { id },
+        data: {
+          status: nextStatus,
+          slug: buildListingSlug(listing.id, listing.title, codeLen),
+          ...(listing.publishedAt === null ? { publishedAt: new Date() } : {}),
+        },
+      });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'P2002' && codeLen !== 32) continue;
+      throw e;
+    }
+  }
+  // Unreachable: a full-length code cannot collide (the id is unique).
+  throw new ListingConflictError('slug_conflict');
 }

@@ -69,6 +69,8 @@ export default async function EditListingPage({
                     : '',
                 currency: listing.currency,
                 location: listing.location ?? '',
+                deliveryMethod: listing.deliveryMethod,
+                deliveryNote: listing.deliveryNote ?? '',
               },
             }}
           />

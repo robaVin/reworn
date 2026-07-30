@@ -6,7 +6,11 @@ import { Field, TextInput, Textarea, Select } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { ImageManager } from '@/components/seller/ImageManager';
-import { LISTING_CONDITIONS, LISTING_GENDERS } from '@/modules/catalog/schemas';
+import {
+  LISTING_CONDITIONS,
+  LISTING_GENDERS,
+  DELIVERY_METHODS,
+} from '@/modules/catalog/schemas';
 import {
   createListingAction,
   updateListingAction,
@@ -35,6 +39,13 @@ const GENDER_LABELS: Record<(typeof LISTING_GENDERS)[number], string> = {
   men: 'Men',
   kids: 'Kids',
   unisex: 'Unisex',
+};
+
+const DELIVERY_LABELS: Record<(typeof DELIVERY_METHODS)[number], string> = {
+  unspecified: 'Not specified',
+  shipping: 'Shipping',
+  pickup: 'Local pickup',
+  both: 'Shipping or local pickup',
 };
 
 /** Placeholder title so a draft can be bootstrapped before the user types one. */
@@ -81,6 +92,8 @@ type Fields = {
   price: string;
   currency: string;
   location: string;
+  deliveryMethod: string;
+  deliveryNote: string;
 };
 
 const emptyFields: Fields = {
@@ -96,6 +109,8 @@ const emptyFields: Fields = {
   price: '',
   currency: 'MKD',
   location: '',
+  deliveryMethod: 'unspecified',
+  deliveryNote: '',
 };
 
 export interface CreateListingFormProps {
@@ -148,6 +163,8 @@ export function CreateListingForm({
     if (f.color.trim()) p.color = f.color;
     if (f.material.trim()) p.material = f.material;
     if (f.location.trim()) p.location = f.location;
+    if (f.deliveryMethod) p.deliveryMethod = f.deliveryMethod;
+    if (f.deliveryNote.trim()) p.deliveryNote = f.deliveryNote;
     const minor = toMinorUnits(f.price);
     if (minor !== undefined) p.priceMinor = minor;
     return p;
@@ -460,6 +477,45 @@ export function CreateListingForm({
               <option value="MKD">MKD</option>
               <option value="EUR">EUR</option>
             </Select>
+          </Field>
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-5" disabled={busy}>
+        <legend className="font-display text-lg font-semibold text-ink">
+          Delivery
+        </legend>
+        <p className="text-xs text-muted">
+          Informational only. You arrange hand-over directly with the buyer —
+          ReWorn never handles shipping or payment.
+        </p>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field id="deliveryMethod" label="How you’ll hand it over">
+            <Select
+              id="deliveryMethod"
+              value={fields.deliveryMethod}
+              onChange={set('deliveryMethod')}
+            >
+              {DELIVERY_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {DELIVERY_LABELS[m]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field
+            id="deliveryNote"
+            label="Delivery note (optional)"
+            error={err('deliveryNote')}
+          >
+            <TextInput
+              id="deliveryNote"
+              value={fields.deliveryNote}
+              onChange={set('deliveryNote')}
+              maxLength={200}
+              aria-invalid={!!err('deliveryNote')}
+              placeholder="e.g. Ships from Skopje; local pickup welcome"
+            />
           </Field>
         </div>
       </fieldset>

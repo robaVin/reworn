@@ -22,6 +22,13 @@ export const LISTING_CONDITIONS = [
 
 export const LISTING_GENDERS = ['women', 'men', 'kids', 'unisex'] as const;
 
+export const DELIVERY_METHODS = [
+  'unspecified',
+  'shipping',
+  'pickup',
+  'both',
+] as const;
+
 const title = z.string().trim().min(1, 'A title is required.').max(140);
 
 const optionalText = (max: number) =>
@@ -49,6 +56,7 @@ const condition = z.enum(LISTING_CONDITIONS, {
   message: 'Choose a condition.',
 });
 const gender = z.enum(LISTING_GENDERS).default('unisex');
+const deliveryMethod = z.enum(DELIVERY_METHODS).optional();
 const categoryId = z.string().uuid('Choose a valid category.');
 const originalPriceMinor = z
   .number()
@@ -72,6 +80,8 @@ export const draftListingSchema = z.object({
   currency,
   originalPriceMinor,
   location: optionalText(120),
+  deliveryMethod,
+  deliveryNote: optionalText(200),
 });
 export type DraftListingInput = z.infer<typeof draftListingSchema>;
 
@@ -94,6 +104,8 @@ export const publishableListingSchema = z.object({
   currency,
   originalPriceMinor,
   location: z.string().trim().min(1, 'A location is required.').max(120),
+  deliveryMethod,
+  deliveryNote: optionalText(200),
 });
 export type PublishableListingInput = z.infer<typeof publishableListingSchema>;
 

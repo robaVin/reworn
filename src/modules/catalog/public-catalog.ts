@@ -20,6 +20,8 @@ import { filterFingerprint, type BrowseQuery } from './browse-query';
 
 export interface PublicListingCard {
   id: string;
+  /** Stable public slug for /products/[slug]. Non-null for published rows. */
+  slug: string | null;
   title: string;
   brand: string | null;
   size: string | null;
@@ -48,6 +50,10 @@ export interface PublicListingDetail extends PublicListingCard {
   color: string | null;
   material: string | null;
   location: string | null;
+  /** How the seller offers to hand the item over (informational). */
+  deliveryMethod: string;
+  /** Optional free-text delivery detail (informational). */
+  deliveryNote: string | null;
   originalPriceMinor: number | null;
   createdAt: Date;
   seller: PublicSellerProfile;
@@ -56,6 +62,7 @@ export interface PublicListingDetail extends PublicListingCard {
 
 interface Row {
   id: string;
+  slug: string | null;
   title: string;
   brand: string | null;
   size: string | null;
@@ -197,6 +204,7 @@ export async function listPublishedListings(
   const rows = await timeSpan('db.browse', () =>
     prisma.$queryRaw<Row[]>(Prisma.sql`
       SELECT l.id,
+             l.slug,
              l.title,
              l.brand,
              l.size,
@@ -227,6 +235,7 @@ export async function listPublishedListings(
 
   const cards: PublicListingCard[] = items.map((r) => ({
     id: r.id,
+    slug: r.slug,
     title: r.title,
     brand: r.brand,
     size: r.size,
@@ -260,76 +269,110 @@ export async function listPublishedListings(
   return { items: cards, nextCursor };
 }
 
+/** Exactly the intentionally-public columns a product detail page needs. */
+const PUBLIC_DETAIL_SELECT = {
+  id: true,
+  slug: true,
+  title: true,
+  brand: true,
+  size: true,
+  color: true,
+  material: true,
+  condition: true,
+  gender: true,
+  priceMinor: true,
+  originalPriceMinor: true,
+  currency: true,
+  description: true,
+  location: true,
+  deliveryMethod: true,
+  deliveryNote: true,
+  createdAt: true,
+  category: { select: { slug: true, name: true } },
+  seller: { select: { handle: true, shopName: true, createdAt: true } },
+  images: {
+    orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    select: { storageKey: true, width: true, height: true },
+  },
+} satisfies Prisma.ListingSelect;
+
+type PublicDetailRow = Prisma.ListingGetPayload<{
+  select: typeof PUBLIC_DETAIL_SELECT;
+}>;
+
+/** Map a selected row to the public DTO, batch-signing all image URLs once. */
+async function mapPublicDetail(
+  listing: PublicDetailRow,
+): Promise<PublicListingDetail> {
+  const signed = await signCovers(listing.images.map((i) => i.storageKey));
+  return {
+    id: listing.id,
+    slug: listing.slug,
+    title: listing.title,
+    brand: listing.brand,
+    size: listing.size,
+    condition: listing.condition,
+    gender: listing.gender,
+    priceMinor: listing.priceMinor,
+    currency: listing.currency,
+    categorySlug: listing.category?.slug ?? null,
+    categoryName: listing.category?.name ?? null,
+    coverUrl: listing.images[0]
+      ? (signed.get(listing.images[0].storageKey) ?? null)
+      : null,
+    description: listing.description,
+    color: listing.color,
+    material: listing.material,
+    location: listing.location,
+    deliveryMethod: listing.deliveryMethod,
+    deliveryNote: listing.deliveryNote,
+    originalPriceMinor: listing.originalPriceMinor,
+    createdAt: listing.createdAt,
+    seller: {
+      handle: listing.seller.handle,
+      shopName: listing.seller.shopName,
+      joinedAt: listing.seller.createdAt,
+    },
+    images: listing.images
+      .map((i) => ({
+        url: signed.get(i.storageKey) ?? '',
+        width: i.width,
+        height: i.height,
+      }))
+      .filter((i) => i.url),
+  };
+}
+
 /**
- * A single published listing (else null -> caller renders not-found).
+ * A single published listing by id (else null -> caller renders not-found).
  * Request-memoized so generateMetadata + the page render share ONE query.
+ * Retained so `/listing/[id]` keeps resolving; the canonical PDP reads by slug.
  */
 export const getPublicListing = cache(
   async (id: string): Promise<PublicListingDetail | null> => {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-
     const listing = await prisma.listing.findFirst({
       where: { id, status: 'published' },
-      select: {
-        id: true,
-        title: true,
-        brand: true,
-        size: true,
-        color: true,
-        material: true,
-        condition: true,
-        gender: true,
-        priceMinor: true,
-        originalPriceMinor: true,
-        currency: true,
-        description: true,
-        location: true,
-        createdAt: true,
-        category: { select: { slug: true, name: true } },
-        seller: { select: { handle: true, shopName: true, createdAt: true } },
-        images: {
-          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-          select: { storageKey: true, width: true, height: true },
-        },
-      },
+      select: PUBLIC_DETAIL_SELECT,
     });
-    if (!listing) return null;
+    return listing ? mapPublicDetail(listing) : null;
+  },
+);
 
-    const signed = await signCovers(listing.images.map((i) => i.storageKey));
-
-    return {
-      id: listing.id,
-      title: listing.title,
-      brand: listing.brand,
-      size: listing.size,
-      condition: listing.condition,
-      gender: listing.gender,
-      priceMinor: listing.priceMinor,
-      currency: listing.currency,
-      categorySlug: listing.category?.slug ?? null,
-      categoryName: listing.category?.name ?? null,
-      coverUrl: listing.images[0]
-        ? (signed.get(listing.images[0].storageKey) ?? null)
-        : null,
-      description: listing.description,
-      color: listing.color,
-      material: listing.material,
-      location: listing.location,
-      originalPriceMinor: listing.originalPriceMinor,
-      createdAt: listing.createdAt,
-      seller: {
-        handle: listing.seller.handle,
-        shopName: listing.seller.shopName,
-        joinedAt: listing.seller.createdAt,
-      },
-      images: listing.images
-        .map((i) => ({
-          url: signed.get(i.storageKey) ?? '',
-          width: i.width,
-          height: i.height,
-        }))
-        .filter((i) => i.url),
-    };
+/**
+ * A single published listing by its stable public slug (else null). The
+ * canonical read for /products/[slug]. Request-memoized so generateMetadata +
+ * the page render share ONE query.
+ */
+export const getPublicListingBySlug = cache(
+  async (slug: string): Promise<PublicListingDetail | null> => {
+    const s = slug.trim().toLowerCase();
+    if (!s || s.length > 200) return null;
+    const listing = await prisma.listing.findFirst({
+      where: { slug: s, status: 'published' },
+      select: PUBLIC_DETAIL_SELECT,
+    });
+    return listing ? mapPublicDetail(listing) : null;
   },
 );
 

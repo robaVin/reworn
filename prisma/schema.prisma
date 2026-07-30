@@ -383,6 +383,21 @@ model Listing {
 
   location String?
 
+  /// How the seller will hand the item over. Informational only — ReWorn never
+  /// brokers delivery; buyer and seller arrange it directly. Defaults to
+  /// `unspecified` (existing rows are backfilled to it in migration 0018).
+  deliveryMethod DeliveryMethod @default(unspecified) @map("delivery_method")
+  /// Optional free-text delivery detail (e.g. "Ships from Skopje, buyer covers
+  /// postage; local pickup welcome").
+  deliveryNote   String?        @map("delivery_note")
+
+  /// Public, stable, human-readable URL slug for the product detail page
+  /// (/products/[slug]). GENERATED ONCE at first publish from the then-current
+  /// title plus a short id-derived code, and NEVER changed afterwards, so
+  /// public URLs stay stable across later edits. NULL until first publish
+  /// (a UNIQUE index treats NULLs as distinct, so many drafts coexist).
+  slug String? @unique
+
   status      ListingStatus @default(draft)
   /// Set the first time the listing is published; retained thereafter.
   publishedAt DateTime?     @map("published_at") @db.Timestamptz(6)
@@ -639,4 +654,15 @@ enum ListingGender {
   unisex
 
   @@map("listing_gender")
+}
+
+/// How a seller will hand an item over. Informational only — ReWorn never
+/// brokers payment or delivery; buyer and seller arrange it directly.
+enum DeliveryMethod {
+  unspecified
+  shipping
+  pickup
+  both
+
+  @@map("delivery_method")
 }

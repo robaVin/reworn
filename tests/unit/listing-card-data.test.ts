@@ -28,6 +28,7 @@ describe('majorToMinor / minorToMajor', () => {
 describe('publicCardToListingCard', () => {
   const base: PublicListingCard = {
     id: '00000000-0000-4000-8000-000000000001',
+    slug: 'wool-coat-00000000',
     title: 'Wool coat',
     brand: 'Zegna',
     size: 'M',
