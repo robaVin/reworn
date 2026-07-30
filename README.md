@@ -9,10 +9,12 @@ Canonical documentation lives in [`docs/`](docs/) — the **repository is the
 source of truth** (see [`docs/README.md`](docs/README.md)). The **subscription
 domain** (seller plan / lifecycle / entitlement / feature-gating) is the single
 source of truth for publishing limits and seller authorization — see
-[`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md). Stripe checkout/webhooks and
-billing UI are deferred; per the rollout policy `SUBSCRIPTION_ENFORCEMENT`
-**defaults to disabled** and stays off in production until billing is live (see
-the runbook in `docs/SUBSCRIPTIONS.md`). Buyer↔seller
+[`docs/SUBSCRIPTIONS.md`](docs/SUBSCRIPTIONS.md). Server-side **checkout
+initiation** (create a provider session + redirect) is built behind a
+provider-neutral abstraction (see [`docs/PAYMENTS.md`](docs/PAYMENTS.md)); webhook
+activation and billing UI are deferred. Per the rollout policy
+`SUBSCRIPTION_ENFORCEMENT` **defaults to disabled** and stays off in production
+until billing is live (see the runbook in `docs/SUBSCRIPTIONS.md`). Buyer↔seller
 **messaging** has a secure backend (domain, RLS, service, tests) as of Increment
 3A, a **conversation-creation Server Action** on the listing page (3B-A), an
 authenticated **inbox** at `/messages` (3B-B), and and a **conversation thread + composer** at `/messages/[conversationId]`
@@ -58,11 +60,11 @@ CI (`.github/workflows/ci.yml`) runs exactly this on Node 20.
 2. Apply migrations: `npm run db:migrate:deploy` (forward-only; uses
    `DIRECT_URL`). **Migrations `0011` and `0012` are required** for the public
    marketplace — `/browse` search/filter/sort and `/shop/[handle]` fail without
-   the `search_vector` column and the seller `handle`. Migrations **`0013`–`0016`** add
+   the `search_vector` column and the seller `handle`. Migrations **`0013`–`0017`** add
    the messaging tables (Increment 3A) + listing-lifecycle hardening + compose
-   idempotency token, and the subscription pending-uniqueness index (Increment
-   4A). Treat a missing migration as a **deployment failure** even though
-   `error.tsx` renders cleanly.
+   idempotency token, the subscription pending-uniqueness index (4A), and the
+   checkout-session state on payment attempts (4B). Treat a missing migration as
+   a **deployment failure** even though `error.tsx` renders cleanly.
 3. Create the private `listing-images` Storage bucket (one-time).
 4. Set env: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`,

@@ -270,6 +270,11 @@ model PaymentAttempt {
   /// event cannot be processed twice.
   providerReference String? @map("provider_reference")
 
+  /// The provider-hosted checkout URL to redirect the seller to (Increment 4B).
+  /// Non-secret; persisted so a repeated checkout initiation can REUSE the open
+  /// session instead of creating a new one. Never a provider secret/API key.
+  checkoutUrl String? @map("checkout_url")
+
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   /// Attempts expire if the user abandons the redirect.
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)

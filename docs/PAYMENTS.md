@@ -37,6 +37,55 @@ gateway is only a "collect one payment" primitive. A verified server-side
 callback updates exactly one `PaymentAttempt` (idempotent, DB-enforced). Browser
 return parameters are never treated as proof of payment.
 
+## Checkout initiation (Increment 4B — IMPLEMENTED)
+
+The application-layer checkout flow is now built (provider-independent; only the
+`mock` provider is wired — a real gateway remains blocked). Layering:
+
+```
+startCheckoutAction (Server Action)   auth · input · redirect · observability
+        ↓
+initiateCheckout (checkout service)   seller authz · plan · pending subscription
+        ↓                             (4A reuse/replace) · idempotency
+PaymentProvider (abstraction)         createCheckoutSession · validateConfiguration
+        ↓
+payment_attempts / subscriptions
+```
+
+- **`PaymentProvider`** (`src/modules/payment/provider.ts`) is the checkout-session
+  abstraction: `createCheckoutSession(request) → { providerSessionId, checkoutUrl }`
+  and `validateConfiguration()`. `MockPaymentProvider` is the only implementation;
+  `getPaymentProvider()` **fails closed** (`PAYMENT_PROVIDER="none"` →
+  `PaymentConfigError`, no silent fallback). No provider SDK leaks past an
+  implementation. (This complements the planned `verifyCallback` primitive that
+  webhook processing will use in 4C.)
+- **Flow:** an **active seller** initiates checkout for a plan → the 4A
+  `createPendingSubscription` reuses the same-plan pending or supersedes a
+  different-plan one → an OPEN session is reused, else the provider creates one
+  and a `payment_attempts` row is persisted (merchant ref, provider session id,
+  non-secret `checkout_url`, bound `subscription_id`, amount/currency, expiry) →
+  the seller is redirected to the provider URL. Amount/plan are **server-computed
+  from the DB**.
+- **Idempotency:** at most one open attempt per pending subscription
+  (`ux_one_open_attempt_per_subscription`, migration 0017). Sequential repeats
+  reuse the session; a different plan starts a new one; only a truly concurrent
+  double-init may create a second provider session (unavoidable) but persists
+  only one.
+- **Boundary:** checkout **never activates** a subscription — it stays `pending`.
+  Activation is exclusively webhook processing (4C), which deduplicates provider
+  events via `payment_events.provider_event_id` (see
+  [SUBSCRIPTIONS.md](SUBSCRIPTIONS.md)).
+- **Privacy/errors:** failures map to safe kinds (`notSeller` / `sellerInactive`
+  / `invalidPlan` / `providerUnavailable` / `providerError` / `unexpected`); raw
+  provider errors, API keys, customer ids, and payloads never reach the client,
+  DTOs, or logs. The DTO carries only `checkoutUrl`.
+
+Still deferred to later increments: webhook handlers, activation, confirmation,
+customer portal, billing history/invoices/refunds, plan changes, cancellations,
+proration, retries, dunning, Stripe Elements, and the frontend billing UI (the
+button that calls `startCheckoutAction`). The end-to-end paid flow completes when
+webhook activation lands in 4C.
+
 ## Configuration expected later (from the bank)
 
 Merchant credentials, gateway/sandbox credentials, official documentation,

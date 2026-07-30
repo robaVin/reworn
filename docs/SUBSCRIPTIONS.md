@@ -209,6 +209,14 @@ publishing is immediately un-gated again; no data changes are required.
 lifecycle policy (with notice) would own any future takedown, and is out of scope
 here.
 
+## Checkout (Increment 4B)
+
+Checkout **initiation** is built (see [PAYMENTS.md](PAYMENTS.md)): an active
+seller starts a checkout for a plan, which calls `createPendingSubscription`
+(reuse/supersede) and redirects to a provider session — creating a `pending`
+subscription and a reconciliation `payment_attempt`. Checkout **never activates**
+a subscription; activation stays the webhook's job (4C).
+
 ## Explicitly deferred
 
 Stripe integration (Checkout / Elements / customer portal / webhooks), the
