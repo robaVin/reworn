@@ -703,3 +703,39 @@ describe('lifecycle sweep + cancellation (P1.4)', () => {
     expect(await svc.hasActiveSubscription(sellerId)).toBe(false);
   });
 });
+
+describe('listActiveSubscriptionPlans (P1.6 pricing)', () => {
+  it('returns active plans cheapest-first with id + public price fields', async () => {
+    const plans = await svc.listActiveSubscriptionPlans();
+    expect(plans.length).toBeGreaterThanOrEqual(1);
+    // Sorted by price ascending.
+    for (let i = 1; i < plans.length; i++) {
+      expect(plans[i]!.priceMinor).toBeGreaterThanOrEqual(
+        plans[i - 1]!.priceMinor,
+      );
+    }
+    const p = plans[0]!;
+    expect(typeof p.id).toBe('string');
+    expect(typeof p.name).toBe('string');
+    expect(typeof p.priceMinor).toBe('number');
+    expect(p.currency).toHaveLength(3);
+    expect(p.termDays).toBeGreaterThan(0);
+    expect(p.weeklyListingQuota).toBeGreaterThanOrEqual(0);
+  });
+
+  it('excludes inactive plans', async () => {
+    await prisma.subscriptionPlan.create({
+      data: {
+        code: `inactive-${Date.now()}`,
+        name: 'Inactive Plan',
+        priceMinor: 999999,
+        currency: 'MKD',
+        termDays: 30,
+        weeklyListingQuota: 1,
+        isActive: false,
+      },
+    });
+    const plans = await svc.listActiveSubscriptionPlans();
+    expect(plans.some((p) => p.name === 'Inactive Plan')).toBe(false);
+  });
+});

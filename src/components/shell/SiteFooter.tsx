@@ -16,6 +16,7 @@ const columns: Array<{
     links: [
       { label: 'Browse the edit', href: '/browse' },
       { label: 'Sell an item', href: '/sell' },
+      { label: 'Pricing', href: '/pricing' },
       { label: 'Saved items', href: '/saved' },
     ],
   },

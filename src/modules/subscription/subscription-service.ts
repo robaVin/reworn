@@ -16,6 +16,7 @@ import type {
   SellerEntitlement,
   SellerSubscriptionDTO,
   SubscriptionPlanSummary,
+  SubscriptionPlanOption,
 } from './dto';
 
 /**
@@ -94,6 +95,29 @@ export async function hasActiveSubscription(
 ): Promise<boolean> {
   const live = await getLiveSubscription(sellerId);
   return live !== null && isEntitling(live, now);
+}
+
+/**
+ * Active subscription plans for the public pricing page, cheapest first. Exposes
+ * only catalog fields (price/term/quota) + the plan id needed to start checkout.
+ */
+export async function listActiveSubscriptionPlans(): Promise<
+  SubscriptionPlanOption[]
+> {
+  const plans = await prisma.subscriptionPlan.findMany({
+    where: { isActive: true },
+    orderBy: [{ priceMinor: 'asc' }, { code: 'asc' }],
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      priceMinor: true,
+      currency: true,
+      termDays: true,
+      weeklyListingQuota: true,
+    },
+  });
+  return plans;
 }
 
 /* ------------------------- entitlement resolution ------------------------- */

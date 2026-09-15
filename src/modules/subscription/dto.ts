@@ -16,6 +16,21 @@ export interface SubscriptionPlanSummary {
   weeklyListingQuota: number;
 }
 
+/**
+ * A selectable plan for the public pricing page. Carries the plan `id` (needed
+ * to start checkout — plan ids are catalog identifiers, not sensitive) plus the
+ * public price/term/quota. No subscription/seller data.
+ */
+export interface SubscriptionPlanOption {
+  id: string;
+  code: string;
+  name: string;
+  priceMinor: number;
+  currency: string;
+  termDays: number;
+  weeklyListingQuota: number;
+}
+
 /** The seller's view of their own subscription. */
 export interface SellerSubscriptionDTO {
   status: SubscriptionStatus;
