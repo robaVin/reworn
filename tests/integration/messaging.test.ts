@@ -442,8 +442,13 @@ describe('monotonic activity: last_message_at never moves backwards (GREATEST)',
 
   it('an out-of-order (older) insert does not move last_message_at backwards', async () => {
     const convId = await freshConversation(BUYER, 'monotonic-1');
-    const newer = new Date('2026-08-01T00:00:00.000Z');
-    const older = new Date('2026-07-01T00:00:00.000Z');
+    // FUTURE-relative to now, so both always exceed the conversation's
+    // creation timestamp — GREATEST then reflects the message stamps regardless
+    // of the wall-clock date. (Hardcoded 2026 dates silently broke this test
+    // once real time advanced past them.)
+    const start = Date.now();
+    const newer = new Date(start + 2 * 86_400_000);
+    const older = new Date(start + 1 * 86_400_000);
 
     // Insert the NEWER message first, then an OLDER-timestamped one.
     await prisma.message.create({
@@ -473,7 +478,9 @@ describe('monotonic activity: last_message_at never moves backwards (GREATEST)',
 
   it('concurrent inserts leave last_message_at at the newest, regardless of order', async () => {
     const convId = await freshConversation(BUYER2, 'monotonic-2');
-    const base = Date.parse('2026-09-01T00:00:00.000Z');
+    // Future-relative base so every stamp exceeds the conversation's creation
+    // time (see the note in the previous test); deterministic for all time.
+    const base = Date.now() + 86_400_000;
     // Timestamps spread over a minute, inserted CONCURRENTLY in arbitrary order.
     const offsets = [30, 5, 55, 10, 40, 0, 25, 50, 15, 45];
     const stamps = offsets.map((s) => new Date(base + s * 1000));
