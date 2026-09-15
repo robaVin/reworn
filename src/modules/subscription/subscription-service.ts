@@ -363,3 +363,150 @@ export async function transitionSubscription(
     throw e;
   }
 }
+
+/* --------------------- scheduled lifecycle processing --------------------- */
+
+export interface LifecycleSweepResult {
+  /** active rows whose paid period ended and moved to grace_period. */
+  enteredGrace: number;
+  /** active rows with a due cancellation that moved to cancelled. */
+  cancelled: number;
+  /** grace_period rows whose grace window elapsed and moved to expired. */
+  expired: number;
+}
+
+/** Bounded per-run cap so one sweep can never run unboundedly. */
+const SWEEP_BATCH = 1000;
+
+/**
+ * Advance every subscription whose time-based window has elapsed. SYSTEM-driven,
+ * idempotent, and safe to run on any schedule (or twice): it only ever acts on
+ * rows whose window has already passed, and each move records an immutable
+ * event via {@link transitionSubscription}.
+ *
+ *   active,  period ended, cancellation due  -> cancelled  (cancel-at-period-end)
+ *   active,  period ended                    -> grace_period (+ graceEndsAt)
+ *   grace_period, grace elapsed              -> expired
+ *
+ * `isEntitling` already denies access the instant a window passes, so this sweep
+ * makes the STORED status catch up with that truth; it can never *extend* access.
+ */
+export async function sweepSubscriptionLifecycle(
+  now: Date = new Date(),
+): Promise<LifecycleSweepResult> {
+  const graceDays = env.SUBSCRIPTION_GRACE_PERIOD_DAYS;
+  const result: LifecycleSweepResult = {
+    enteredGrace: 0,
+    cancelled: 0,
+    expired: 0,
+  };
+
+  // 1. Active subscriptions whose paid period has ended.
+  const endedActive = await prisma.subscription.findMany({
+    where: { status: 'active', currentPeriodEnd: { lte: now } },
+    select: { id: true, currentPeriodEnd: true, cancelAt: true },
+    take: SWEEP_BATCH,
+  });
+  for (const s of endedActive) {
+    if (s.cancelAt !== null && s.cancelAt <= now) {
+      await transitionSubscription(s.id, 'cancel', {
+        reason: 'cancelled_at_period_end',
+      });
+      result.cancelled += 1;
+    } else {
+      const base = s.currentPeriodEnd ?? now;
+      const graceEndsAt = new Date(base.getTime() + graceDays * 86_400_000);
+      await transitionSubscription(s.id, 'enter_grace', {
+        reason: 'period_ended',
+        patch: { graceEndsAt },
+      });
+      result.enteredGrace += 1;
+    }
+  }
+
+  // 2. Grace subscriptions whose grace window has elapsed (including any just
+  //    moved into grace above whose grace end is already in the past).
+  const elapsedGrace = await prisma.subscription.findMany({
+    where: { status: 'grace_period', graceEndsAt: { lte: now } },
+    select: { id: true },
+    take: SWEEP_BATCH,
+  });
+  for (const s of elapsedGrace) {
+    await transitionSubscription(s.id, 'expire', { reason: 'grace_elapsed' });
+    result.expired += 1;
+  }
+
+  return result;
+}
+
+/* ----------------------- user-facing cancellation ------------------------- */
+
+/**
+ * Schedule cancellation of the caller's live subscription at the end of the
+ * period they have already paid for (cancel-at-period-end). Access is NOT
+ * revoked now — the seller keeps what they paid for until `currentPeriodEnd`,
+ * at which point the lifecycle sweep cancels it. Owner-scoped by the seller
+ * profile; idempotent (re-requesting returns the existing `cancelAt`).
+ */
+export async function scheduleCancellation(
+  userId: string,
+): Promise<{ cancelAt: Date }> {
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { profileId: userId },
+    select: { id: true },
+  });
+  if (!seller) throw new SubscriptionNotFoundError();
+
+  const live = await prisma.subscription.findFirst({
+    where: { sellerId: seller.id, status: { in: ['active', 'grace_period'] } },
+  });
+  if (!live) throw new SubscriptionNotFoundError();
+  if (live.cancelAt) return { cancelAt: live.cancelAt };
+
+  const cancelAt = live.currentPeriodEnd ?? new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.subscription.update({
+      where: { id: live.id },
+      data: { cancelAt },
+    });
+    await recordEvent(
+      tx,
+      live.id,
+      live.status,
+      live.status,
+      'cancellation_scheduled',
+    );
+  });
+  return { cancelAt };
+}
+
+/**
+ * Undo a scheduled cancellation (before it takes effect), so the subscription
+ * renews normally again. Owner-scoped; idempotent (no-op if none scheduled).
+ */
+export async function resumeSubscription(userId: string): Promise<void> {
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { profileId: userId },
+    select: { id: true },
+  });
+  if (!seller) throw new SubscriptionNotFoundError();
+
+  const live = await prisma.subscription.findFirst({
+    where: { sellerId: seller.id, status: { in: ['active', 'grace_period'] } },
+  });
+  if (!live || live.cancelAt === null) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.subscription.update({
+      where: { id: live.id },
+      data: { cancelAt: null },
+    });
+    await recordEvent(
+      tx,
+      live.id,
+      live.status,
+      live.status,
+      'cancellation_resumed',
+    );
+  });
+}

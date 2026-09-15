@@ -88,6 +88,14 @@ const schema = z
     // --- Rate limiting ---
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
     RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+
+    // --- Scheduled jobs ---
+    // Shared secret required to trigger the subscription lifecycle sweep via
+    // POST /api/cron/subscription-sweep. Set to a long random value in any
+    // environment where the endpoint is reachable; when unset the endpoint is
+    // disabled (503) so a misconfiguration can never expose an unauthenticated
+    // job trigger.
+    CRON_SECRET: z.string().min(16).optional().or(z.literal('')),
   })
   .superRefine((v, ctx) => {
     /* ------------------------------------------------------------------

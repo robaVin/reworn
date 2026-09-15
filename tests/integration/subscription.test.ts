@@ -555,3 +555,151 @@ describe('provider-event idempotency (webhook replay protection)', () => {
     expect(await prisma.subscriptionEvent.count()).toBe(before); // no leak
   });
 });
+
+describe('lifecycle sweep + cancellation (P1.4)', () => {
+  /** Create a subscription row directly in a chosen state. */
+  async function mkSub(
+    sellerId: string,
+    over: {
+      status: 'active' | 'grace_period' | 'expired';
+      currentPeriodEnd?: Date | null;
+      graceEndsAt?: Date | null;
+      cancelAt?: Date | null;
+    },
+  ): Promise<string> {
+    const row = await prisma.subscription.create({
+      data: {
+        sellerId,
+        planId,
+        status: over.status,
+        currentPeriodStart: new Date('2020-01-01T00:00:00.000Z'),
+        currentPeriodEnd: over.currentPeriodEnd ?? null,
+        graceEndsAt: over.graceEndsAt ?? null,
+        cancelAt: over.cancelAt ?? null,
+      },
+      select: { id: true },
+    });
+    return row.id;
+  }
+
+  it('active + period ended -> grace_period with a graceEndsAt', async () => {
+    const { sellerId } = await makeSeller();
+    const periodEnd = new Date('2020-06-01T00:00:00.000Z');
+    const id = await mkSub(sellerId, {
+      status: 'active',
+      currentPeriodEnd: periodEnd,
+    });
+
+    const res = await svc.sweepSubscriptionLifecycle(
+      new Date('2020-06-02T00:00:00.000Z'),
+    );
+    expect(res.enteredGrace).toBeGreaterThanOrEqual(1);
+
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { id } });
+    expect(sub.status).toBe('grace_period');
+    expect(sub.graceEndsAt?.getTime()).toBe(
+      periodEnd.getTime() + 7 * 86_400_000, // grace = 7 days in tests
+    );
+    const ev = await prisma.subscriptionEvent.findFirst({
+      where: { subscriptionId: id, toStatus: 'grace_period' },
+    });
+    expect(ev?.reason).toBe('period_ended');
+  });
+
+  it('grace_period + grace elapsed -> expired', async () => {
+    const { sellerId } = await makeSeller();
+    const id = await mkSub(sellerId, {
+      status: 'grace_period',
+      currentPeriodEnd: new Date('2020-05-01T00:00:00.000Z'),
+      graceEndsAt: new Date('2020-05-08T00:00:00.000Z'),
+    });
+    await svc.sweepSubscriptionLifecycle(new Date('2020-05-09T00:00:00.000Z'));
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { id } });
+    expect(sub.status).toBe('expired');
+  });
+
+  it('active + period ended + cancellation due -> cancelled (not grace)', async () => {
+    const { sellerId } = await makeSeller();
+    const periodEnd = new Date('2020-06-01T00:00:00.000Z');
+    const id = await mkSub(sellerId, {
+      status: 'active',
+      currentPeriodEnd: periodEnd,
+      cancelAt: periodEnd,
+    });
+    await svc.sweepSubscriptionLifecycle(new Date('2020-06-02T00:00:00.000Z'));
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { id } });
+    expect(sub.status).toBe('cancelled');
+  });
+
+  it('active + period NOT ended -> unchanged; sweep is idempotent', async () => {
+    const { sellerId } = await makeSeller();
+    const id = await mkSub(sellerId, {
+      status: 'active',
+      currentPeriodEnd: new Date('2999-01-01T00:00:00.000Z'),
+    });
+    const first = await svc.sweepSubscriptionLifecycle(
+      new Date('2020-01-01T00:00:00.000Z'),
+    );
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { id } });
+    expect(sub.status).toBe('active');
+    // Re-running changes nothing further for this row.
+    const second = await svc.sweepSubscriptionLifecycle(
+      new Date('2020-01-01T00:00:00.000Z'),
+    );
+    expect(second.enteredGrace + second.cancelled + second.expired).toBe(
+      first.enteredGrace + first.cancelled + first.expired - 0, // stable
+    );
+    expect(
+      (await prisma.subscription.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('active');
+  });
+
+  it('scheduleCancellation sets cancelAt=periodEnd, keeps access, is idempotent', async () => {
+    const { profileId, sellerId } = await makeSeller();
+    const periodEnd = new Date(Date.now() + 30 * 86_400_000); // future
+    const id = await mkSub(sellerId, {
+      status: 'active',
+      currentPeriodEnd: periodEnd,
+    });
+
+    const { cancelAt } = await svc.scheduleCancellation(profileId);
+    expect(cancelAt.getTime()).toBe(periodEnd.getTime());
+
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { id } });
+    expect(sub.status).toBe('active'); // access NOT revoked now
+    expect(sub.cancelAt?.getTime()).toBe(periodEnd.getTime());
+    expect(await svc.hasActiveSubscription(sellerId)).toBe(true); // still entitled
+
+    // Idempotent: second call returns the same cancelAt, no duplicate schedule.
+    const again = await svc.scheduleCancellation(profileId);
+    expect(again.cancelAt.getTime()).toBe(periodEnd.getTime());
+    expect(
+      await prisma.subscriptionEvent.count({
+        where: { subscriptionId: id, reason: 'cancellation_scheduled' },
+      }),
+    ).toBe(1);
+  });
+
+  it('resumeSubscription clears a scheduled cancellation', async () => {
+    const { profileId, sellerId } = await makeSeller();
+    const periodEnd = new Date(Date.now() + 30 * 86_400_000);
+    const id = await mkSub(sellerId, {
+      status: 'active',
+      currentPeriodEnd: periodEnd,
+      cancelAt: periodEnd,
+    });
+    await svc.resumeSubscription(profileId);
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { id } });
+    expect(sub.cancelAt).toBeNull();
+    expect(sub.status).toBe('active');
+  });
+
+  it('an expired subscription does not entitle', async () => {
+    const { sellerId } = await makeSeller();
+    await mkSub(sellerId, {
+      status: 'expired',
+      currentPeriodEnd: new Date('2020-02-01T00:00:00.000Z'),
+    });
+    expect(await svc.hasActiveSubscription(sellerId)).toBe(false);
+  });
+});

@@ -55,3 +55,8 @@ process.env.SUBSCRIPTION_ENFORCEMENT =
   process.env.SUBSCRIPTION_ENFORCEMENT ?? 'false';
 
 process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? 'error';
+
+// Scheduled-job trigger secret (fixed test value) so the cron route's auth
+// guard can be exercised.
+process.env.CRON_SECRET =
+  process.env.CRON_SECRET ?? 'test-cron-secret-0123456789abcdef';
