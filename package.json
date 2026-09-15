@@ -4,7 +4,7 @@
   "private": true,
   "description": "ReWorn — second-hand fashion marketplace (classifieds model, subscription-gated sellers)",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "preinstall": "node scripts/check-node.mjs",
