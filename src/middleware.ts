@@ -27,7 +27,17 @@ function isSensitive(pathname: string): boolean {
   return SENSITIVE_PATH_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * A4 instrumentation: when PERF_TRACE=1 (inlined at build), the middleware emits
+ * a `Server-Timing` response header with the total middleware duration and the
+ * `refreshSession` (Supabase `getUser()`) network portion. This distinguishes
+ * middleware CPU from the Auth network round-trip and is visible in `curl -D-`
+ * and Chrome DevTools. Off by default → no timing disclosure in production.
+ */
+const PERF = process.env.PERF_TRACE === '1';
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const startedAt = PERF ? performance.now() : 0;
   const { pathname } = request.nextUrl;
   const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
 
@@ -84,7 +94,18 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Refresh the Supabase session (rotates tokens, writes cookies onto the
   // response). This is a convenience layer only — NOT authorization. Every
   // protected route independently re-verifies the user server-side.
+  const authStart = PERF ? performance.now() : 0;
   await refreshSession(request, response);
+
+  if (PERF) {
+    const authMs = Math.round(performance.now() - authStart);
+    const totalMs = Math.round(performance.now() - startedAt);
+    // `mwauth` = the Supabase getUser() network round-trip; `mw` = total middleware.
+    response.headers.set(
+      'Server-Timing',
+      `mwauth;dur=${authMs}, mw;dur=${totalMs}`,
+    );
+  }
 
   return applySecurity(response, nonce);
 }
