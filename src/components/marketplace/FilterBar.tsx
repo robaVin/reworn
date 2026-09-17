@@ -138,9 +138,22 @@ export function FilterBar({
     query.sort !== (query.q ? 'relevance' : 'newest');
 
   return (
-    <section aria-label="Filters" className="mb-6">
-      <p aria-live="polite" className="sr-only">
-        {pending ? 'Updating results' : ''}
+    <section aria-label="Filters" aria-busy={pending} className="mb-6">
+      {/* Immediate, VISIBLE feedback that a filter is being applied. The
+          FilterBar stays mounted (useTransition holds the current results while
+          the RSC navigation runs); this pill is the visible pending signal a
+          sighted user needs. Also announced politely for assistive tech. */}
+      <p
+        aria-live="polite"
+        className={`mb-3 flex items-center gap-2 text-sm text-muted transition-opacity ${
+          pending ? 'opacity-100' : 'pointer-events-none h-0 opacity-0'
+        }`}
+      >
+        <span
+          aria-hidden
+          className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-line border-t-terracotta-strong"
+        />
+        {pending ? 'Updating results…' : ''}
       </p>
 
       {/* Search + sort are always visible (top row). */}
