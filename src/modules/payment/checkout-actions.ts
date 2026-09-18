@@ -2,6 +2,7 @@ import 'server-only';
 
 import { logger } from '@/lib/logger';
 import { AuthorizationError } from '@/modules/auth/errors';
+import { enforceActionRateLimit, RateLimitedError } from '@/lib/security/rate-limit';
 import { initiateCheckout } from './checkout-service';
 import {
   CheckoutRejectedError,
@@ -25,6 +26,7 @@ export type CheckoutOutcome =
 
 /** Maps a thrown domain error to a safe, detail-free checkout-failure kind. */
 export function mapCheckoutError(error: unknown): CheckoutErrorKind {
+  if (error instanceof RateLimitedError) return 'rateLimited';
   if (error instanceof AuthorizationError) {
     if (error.reason === 'seller_profile_required') return 'notSeller';
     return 'sellerInactive'; // seller_frozen / seller_banned
@@ -51,6 +53,8 @@ export async function resolveCheckout(
     return { kind: 'error', error: 'invalidPlan' };
   }
   try {
+    // Throttle per verified seller before contacting the provider.
+    enforceActionRateLimit('checkout', userId);
     const { checkoutUrl } = await initiateCheckout(userId, planIdRaw, provider);
     return { kind: 'redirect', to: checkoutUrl };
   } catch (error) {

@@ -9,7 +9,7 @@
 
 /** Non-redirect failure categories surfaced by the creation action. */
 export type ConversationErrorKind =
-  'notFound' | 'ownListing' | 'validationError' | 'unexpected';
+  'notFound' | 'ownListing' | 'rateLimited' | 'validationError' | 'unexpected';
 
 /** useActionState state for the creation form. Success is a redirect, not a state. */
 export type StartConversationState =
@@ -26,6 +26,8 @@ export function conversationErrorMessage(kind: ConversationErrorKind): string {
       return 'This listing is no longer available.';
     case 'ownListing':
       return 'This is your own listing.';
+    case 'rateLimited':
+      return 'You are doing that too quickly. Please wait a moment and try again.';
     case 'validationError':
     case 'unexpected':
     default:

@@ -10,6 +10,7 @@ import {
   toActionError,
   type ActionResult,
 } from '@/modules/catalog/action-result';
+import { enforceActionRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * Subscription mutation Server Actions — the seller-facing surface for
@@ -23,6 +24,7 @@ export async function cancelSubscriptionAction(): Promise<
 > {
   try {
     const ctx = await requireAnyRole(['seller', 'admin']);
+    enforceActionRateLimit('subscription', ctx.userId);
     const { cancelAt } = await scheduleCancellation(ctx.userId);
     return actionOk({ cancelAt: cancelAt.toISOString() });
   } catch (error) {
@@ -35,6 +37,7 @@ export async function resumeSubscriptionAction(): Promise<
 > {
   try {
     const ctx = await requireAnyRole(['seller', 'admin']);
+    enforceActionRateLimit('subscription', ctx.userId);
     await resumeSubscription(ctx.userId);
     return actionOk(undefined);
   } catch (error) {

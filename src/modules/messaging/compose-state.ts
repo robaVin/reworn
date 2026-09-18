@@ -9,6 +9,7 @@ export type SendErrorKind =
   | 'tooLong'
   | 'controlChar'
   | 'notFound'
+  | 'rateLimited'
   | 'validationError'
   | 'unexpected';
 
@@ -29,6 +30,8 @@ export function sendErrorMessage(kind: SendErrorKind): string {
       return 'This message contains unsupported characters.';
     case 'notFound':
       return 'This conversation is no longer available.';
+    case 'rateLimited':
+      return 'You are sending messages too quickly. Please wait a moment and try again.';
     case 'validationError':
     case 'unexpected':
     default:

@@ -11,6 +11,7 @@ import {
   updateListing,
   transitionListing,
 } from './listing-service';
+import { enforceActionRateLimit } from '@/lib/security/rate-limit';
 import {
   actionOk,
   toActionError,
@@ -33,6 +34,7 @@ export async function createListingAction(
 ): Promise<ActionResult<{ id: string }>> {
   try {
     const ctx = await requireAnyRole(['seller', 'admin']);
+    enforceActionRateLimit('listingWrite', ctx.userId);
     const parsed = draftListingSchema.safeParse(input);
     if (!parsed.success) {
       return actionFail(400, 'validation', parsed.error.flatten().fieldErrors);
@@ -58,6 +60,7 @@ export async function updateListingAction(
 ): Promise<ActionResult<{ id: string }>> {
   try {
     const ctx = await requireAnyRole(['seller', 'admin']);
+    enforceActionRateLimit('listingWrite', ctx.userId);
     const parsed = updateListingSchema.safeParse(input);
     if (!parsed.success) {
       return actionFail(400, 'validation', parsed.error.flatten().fieldErrors);

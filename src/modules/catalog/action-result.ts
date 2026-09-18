@@ -9,6 +9,7 @@ import {
   ListingIncompleteError,
 } from './errors';
 import { logger } from '@/lib/logger';
+import { RateLimitedError } from '@/lib/security/rate-limit';
 
 /**
  * Serializable result shape for listing server actions. Kept in its own module
@@ -54,6 +55,9 @@ export function toActionError(error: unknown): ActionResult<never> {
   }
   if (error instanceof ImageLimitError) {
     return actionFail(error.status, error.message);
+  }
+  if (error instanceof RateLimitedError) {
+    return actionFail(error.status, 'rate_limited');
   }
   logger.error('listing action failed', { error });
   return actionFail(500, 'server_error');

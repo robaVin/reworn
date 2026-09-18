@@ -117,3 +117,51 @@ export function checkRateLimit(
     windowSeconds * 1000,
   );
 }
+
+/* -------------------------- Server Action limits -------------------------- */
+
+/** Thrown when a per-user Server-Action limit is exceeded (safe 429). */
+export class RateLimitedError extends Error {
+  readonly status = 429 as const;
+  constructor(
+    readonly action: string,
+    readonly resetAt: number,
+  ) {
+    super(`rate_limited:${action}`);
+    this.name = 'RateLimitedError';
+  }
+}
+
+/**
+ * Per-user, per-action limits for authenticated Server Actions (SA-1). Reuses
+ * the same in-memory sliding-window store as the middleware limiter — so, like
+ * it, these are PER-INSTANCE. That is correct for the current single-instance
+ * model; a horizontally-scaled deployment needs a shared store (tracked with the
+ * hosting decision). Limits are generous enough for real usage (e.g. autosave
+ * debounced at ~1/s) and only cap scripted abuse.
+ */
+export const ACTION_LIMITS = {
+  messageSend: { max: 20, windowSeconds: 60 },
+  conversationStart: { max: 20, windowSeconds: 60 },
+  listingWrite: { max: 120, windowSeconds: 60 },
+  checkout: { max: 15, windowSeconds: 60 },
+  subscription: { max: 30, windowSeconds: 60 },
+} as const;
+
+export type ActionLimitName = keyof typeof ACTION_LIMITS;
+
+/**
+ * Enforce a per-user Server-Action limit, keyed by the VERIFIED user id (never
+ * a client value). Throws {@link RateLimitedError} when exceeded, which each
+ * action maps to a safe, generic failure. Does not block legitimate usage at
+ * the configured limits.
+ */
+export function enforceActionRateLimit(
+  action: ActionLimitName,
+  identity: string,
+  store: RateLimitStore = rateLimitStore,
+): void {
+  const { max, windowSeconds } = ACTION_LIMITS[action];
+  const result = checkRateLimit(`action:${action}`, identity, max, windowSeconds, store);
+  if (!result.allowed) throw new RateLimitedError(action, result.resetAt);
+}

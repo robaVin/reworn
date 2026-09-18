@@ -7,6 +7,7 @@ export type CheckoutErrorKind =
   | 'notSeller'
   | 'sellerInactive'
   | 'invalidPlan'
+  | 'rateLimited'
   | 'providerUnavailable'
   | 'providerError'
   | 'unexpected';
@@ -26,6 +27,8 @@ export function checkoutErrorMessage(kind: CheckoutErrorKind): string {
       return 'Your seller account can’t start a subscription right now.';
     case 'invalidPlan':
       return 'That plan isn’t available.';
+    case 'rateLimited':
+      return 'You are doing that too quickly. Please wait a moment and try again.';
     case 'providerUnavailable':
       return 'Payments aren’t available yet. Please try again later.';
     case 'providerError':

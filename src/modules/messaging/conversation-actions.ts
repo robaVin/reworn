@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 import { AuthorizationError } from '@/modules/auth/errors';
+import { enforceActionRateLimit, RateLimitedError } from '@/lib/security/rate-limit';
 import {
   getOrCreateConversationForListing,
   sendConversationMessage,
@@ -30,6 +31,7 @@ export type StartConversationOutcome =
 
 /** Maps a thrown domain error to a safe, id-free failure kind. */
 export function mapConversationError(error: unknown): ConversationErrorKind {
+  if (error instanceof RateLimitedError) return 'rateLimited';
   if (error instanceof AuthorizationError) {
     // 404 = missing / non-public / malformed (uniform, non-disclosing);
     // 403 = the seller's own listing.
@@ -71,6 +73,9 @@ export async function resolveStartConversation(
   }
 
   try {
+    // Throttle per verified user (never a client value): caps scripted abuse
+    // of the create-conversation boundary without blocking real usage.
+    enforceActionRateLimit('conversationStart', userId);
     const { id, created } = await getOrCreateConversationForListing(
       userId,
       listingId,
@@ -100,6 +105,7 @@ export function mapSendError(error: unknown): SendErrorKind {
         return 'validationError';
     }
   }
+  if (error instanceof RateLimitedError) return 'rateLimited';
   if (error instanceof AuthorizationError && error.status === 404) {
     return 'notFound';
   }
@@ -124,6 +130,8 @@ export async function resolveSendMessage(
   const token =
     typeof clientSubmissionId === 'string' ? clientSubmissionId : undefined;
   try {
+    // Throttle per verified sender before touching the service or DB.
+    enforceActionRateLimit('messageSend', userId);
     await sendConversationMessage(userId, conversationId, body, token);
     return { kind: 'redirect', to: `/messages/${conversationId}` };
   } catch (error) {
