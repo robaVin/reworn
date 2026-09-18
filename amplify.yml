@@ -1,0 +1,32 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Pin the Node runtime to the repo's .nvmrc (20.20.2). engine-strict=true
+        # AND the lockfile (eslint-visitor-keys requires >=20.19) mean the build
+        # image's default Node must not be assumed. nvm reads .nvmrc.
+        - nvm install "$(cat .nvmrc)"
+        - nvm use "$(cat .nvmrc)"
+        - node --version
+        # Clean, reproducible install from the lockfile. Honors engine-strict and
+        # installs the Linux native sharp binary (@img/sharp-linux-x64). NEVER use
+        # --ignore-scripts or an engine bypass here.
+        - npm ci
+        # Generate the Prisma client BEFORE the build: `next build` compiles code
+        # that imports @prisma/client. `prisma generate` reads schema.prisma only
+        # and does NOT connect to the database. Migrations are NOT run here.
+        - npx prisma generate
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    # Next.js SSR (App Router, force-dynamic). Amplify's managed Next.js adapter
+    # consumes .next; no output:'standalone'/'export' is used or required.
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
