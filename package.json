@@ -40,12 +40,12 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "_overridesReason": "Security: force patched transitive deps. postcss GHSA-qx2v-qp2m-jg93 (incl. Next's bundled copy); esbuild GHSA-67mh-4wv8-2f99 / vite path-traversal (dev-server only, pulled by vitest); sharp GHSA-f88m-g3jw-g9cj libvips CVEs (Next's image-optimizer dependency); brace-expansion 5.0.8 (dev-only ESLint tree, DoS advisory range <=5.0.7; 5.0.8 ships a CommonJS build so minimatch@3 still resolves). All ranges are backward compatible.",
+  "_overridesReason": "Security: force patched transitive deps. postcss GHSA-qx2v-qp2m-jg93 (incl. Next's bundled copy); esbuild GHSA-67mh-4wv8-2f99 / vite path-traversal (dev-server only, pulled by vitest); sharp GHSA-f88m-g3jw-g9cj libvips CVEs (Next's image-optimizer dependency); brace-expansion 5.0.12 (dev-only ESLint tree, DoS advisories GHSA-v6h2-p8h4-qcjw <=5.0.7 and GHSA-rgw5-rvv9-x895 <=5.0.8; 5.0.12 still ships a CommonJS build so minimatch@3 resolves). All ranges are backward compatible.",
   "overrides": {
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.23",
     "esbuild": "^0.25.0",
     "sharp": "^0.35.4",
-    "brace-expansion": "5.0.8"
+    "brace-expansion": "5.0.12"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
@@ -73,7 +73,7 @@
     "embedded-postgres": "^18.4.0-beta.17",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.3",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.23",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
     "prisma": "^6.1.0",
