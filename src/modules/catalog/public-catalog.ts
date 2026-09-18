@@ -9,6 +9,7 @@ import { SIGNED_URL_TTL_SECONDS } from './image-config';
 import { normalizeHandle } from './handle';
 import { encodeCursor, decodeCursor } from './cursor';
 import { filterFingerprint, type BrowseQuery } from './browse-query';
+import { resolveCategorySlugsFromQuery } from './category-search';
 import { cachedCatalog } from '@/lib/catalog-cache';
 
 /**
@@ -127,9 +128,23 @@ async function listPublishedListingsUncached(
     conds.push(Prisma.sql`l.seller_id = ${opts.sellerId}::uuid`);
   }
   if (query.q) {
-    conds.push(
+    // Free-text search matches the listing's full-text fields (title/brand/
+    // material/description in search_vector) OR its CATEGORY — so "shoes" (or
+    // the localized term) surfaces Shoes-category listings without selecting the
+    // category filter. Category matching resolves the query to canonical slug(s)
+    // in code (no migration) and uses the indexed category_id path. This OR is
+    // ANDed with every other condition, so an EXPLICIT category filter (below)
+    // still narrows results — it never becomes an OR with the category filter.
+    const textMatch = [
       Prisma.sql`l.search_vector @@ websearch_to_tsquery('simple', ${query.q})`,
-    );
+    ];
+    const catSlugs = resolveCategorySlugsFromQuery(query.q);
+    if (catSlugs.length > 0) {
+      textMatch.push(
+        Prisma.sql`l.category_id IN (SELECT id FROM categories WHERE slug = ANY(${catSlugs}))`,
+      );
+    }
+    conds.push(Prisma.sql`(${Prisma.join(textMatch, ' OR ')})`);
   }
   if (query.categorySlug) {
     // Filter on l.category_id (via a scalar subquery) rather than the joined

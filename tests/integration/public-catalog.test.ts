@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import pg from 'pg';
 import type { StorageAdapter } from '@/modules/catalog/storage';
 import {
   parseBrowseQuery,
@@ -100,7 +101,18 @@ beforeAll(async () => {
   });
   await server.initialise();
   await server.start();
-  await server.createDatabase('reworn');
+  // Create the test DB as UTF-8 to match production (Supabase is UTF-8).
+  // embedded-postgres' initdb defaults to the host codepage on Windows
+  // (WIN1252), which cannot represent Cyrillic search input; template0 lets us
+  // pin the encoding regardless of the host locale.
+  const admin = new pg.Client({
+    connectionString: `postgresql://postgres:postgres@localhost:${PORT}/postgres`,
+  });
+  await admin.connect();
+  await admin.query(
+    "CREATE DATABASE reworn ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0",
+  );
+  await admin.end();
 
   process.env.DATABASE_URL = url;
   process.env.DIRECT_URL = url;
@@ -686,5 +698,58 @@ describe('home preview + categories (2D-E)', () => {
       expect(typeof c.slug).toBe('string');
       expect(Object.keys(c).sort()).toEqual(['name', 'slug']); // no id leaked
     }
+  });
+});
+
+describe('free-text category-aware search (FIX 2)', () => {
+  // "Leather boots" is seeded in the Shoes category with NO "shoe" in its title;
+  // "Running shoes" is also Shoes but matches by title text.
+  it('matches by category even when the title lacks the term', async () => {
+    const t = titles(await pub.listPublishedListings(q({ q: 'shoes' }, 50)));
+    expect(t).toContain('Leather boots'); // category match (the new behavior)
+    expect(t).toContain('Running shoes'); // existing text match preserved
+  });
+
+  it('category matching is case-insensitive', async () => {
+    const t = titles(await pub.listPublishedListings(q({ q: 'SHOES' }, 50)));
+    expect(t).toContain('Leather boots');
+  });
+
+  it('preserves existing full-text search on title/brand', async () => {
+    const t = titles(await pub.listPublishedListings(q({ q: 'overcoat' }, 50)));
+    expect(t).toContain('Wool overcoat');
+  });
+
+  it('an explicit category filter still narrows (AND, never OR)', async () => {
+    // q "shoes" + category=clothing must NOT surface Shoes-category listings —
+    // the category text match is ANDed with the explicit filter, not ORed.
+    const t = titles(
+      await pub.listPublishedListings(
+        q({ q: 'shoes', category: 'clothing' }, 50),
+      ),
+    );
+    expect(t).not.toContain('Leather boots');
+    expect(t).not.toContain('Running shoes');
+  });
+
+  it('an unrelated query pulls in nothing merely because category search exists', async () => {
+    const t = titles(await pub.listPublishedListings(q({ q: 'camera' }, 50)));
+    expect(t).not.toContain('Leather boots');
+    expect(t).not.toContain('Running shoes');
+  });
+
+  it('empty query still lists all published (no accidental filtering)', async () => {
+    const page = await pub.listPublishedListings(q({}, 50));
+    expect(page.items.length).toBeGreaterThan(1);
+  });
+
+  it('Albanian category term resolves to the canonical category', async () => {
+    const t = titles(await pub.listPublishedListings(q({ q: 'Këpucë' }, 50)));
+    expect(t).toContain('Leather boots');
+  });
+
+  it('Macedonian category term resolves to the canonical category', async () => {
+    const t = titles(await pub.listPublishedListings(q({ q: 'Обувки' }, 50)));
+    expect(t).toContain('Leather boots');
   });
 });
