@@ -59,5 +59,9 @@
       "providerUnavailable": "Pagesat nuk janë ende të disponueshme. Provoni më vonë.",
       "generic": "Diçka shkoi keq gjatë fillimit të pagesës. Provoni përsëri."
     }
+  },
+  "Auth": {
+    "existingAccountHint": "Keni tashmë një llogari me këtë email? Hyni në vend të kësaj.",
+    "signIn": "Hyni"
   }
 }

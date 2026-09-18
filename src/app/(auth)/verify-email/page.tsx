@@ -3,12 +3,14 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { Field, TextInput } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 
 function VerifyEmailForm() {
+  const tAuth = useTranslations('Auth');
   const params = useSearchParams();
   const preset = params.get('email') ?? '';
   const [email, setEmail] = useState(preset);
@@ -68,6 +70,17 @@ function VerifyEmailForm() {
         {message ??
           'Enter your email below if you need another verification message.'}
       </Alert>
+
+      {/* Enumeration-safe guidance for the already-registered case: shown to
+          everyone (never conditioned on whether the email exists), so an
+          existing user is routed to sign-in without the app disclosing account
+          existence. */}
+      <p className="mt-4 text-sm text-muted">
+        {tAuth('existingAccountHint')}{' '}
+        <Link href="/login" className="font-semibold text-terracotta-strong">
+          {tAuth('signIn')}
+        </Link>
+      </p>
 
       <form onSubmit={onResend} className="mt-6 space-y-4">
         <Field id="email" label="Email">

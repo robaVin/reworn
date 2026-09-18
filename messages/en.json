@@ -59,5 +59,9 @@
       "providerUnavailable": "Payments aren’t available yet. Please try again later.",
       "generic": "Something went wrong starting checkout. Please try again."
     }
+  },
+  "Auth": {
+    "existingAccountHint": "Already have an account with this email? Sign in instead.",
+    "signIn": "Sign in"
   }
 }

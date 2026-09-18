@@ -85,6 +85,85 @@ describe('resend-verification route', () => {
   });
 });
 
+describe('register route (enumeration-safe duplicate handling)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    signUp.mockResolvedValue({ data: { user: null }, error: null });
+  });
+
+  async function register(body: unknown) {
+    const { POST } = await import('@/app/api/auth/register/route');
+    return POST(
+      new Request('http://localhost/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }) as never,
+    );
+  }
+
+  const valid = {
+    email: 'new@example.com',
+    password: 'password1',
+    displayName: 'New User',
+  };
+
+  it('new email → 200 with the enumeration-safe verification message', async () => {
+    const res = await register(valid);
+    expect(res.status).toBe(200);
+    expect((await res.json()).message).toMatch(/check your email/i);
+    expect(signUp).toHaveBeenCalledTimes(1);
+  });
+
+  it('existing email → identical response, whether Supabase obscures or errors', async () => {
+    // Confirmation-enabled Supabase obscures duplicates (no error); even if a
+    // duplicate error were returned, the route must respond identically to the
+    // new-email case so account existence cannot be probed.
+    signUp.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'User already registered' },
+    });
+    const res = await register({ ...valid, email: 'existing@example.com' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).message).toMatch(/check your email/i);
+  });
+
+  it('never leaks the duplicate/internal reason to the client', async () => {
+    signUp.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'User already registered' },
+    });
+    const res = await register({ ...valid, email: 'existing@example.com' });
+    expect(JSON.stringify(await res.json())).not.toMatch(/already registered/i);
+  });
+
+  it('malformed email → 400 validation, without calling the provider', async () => {
+    const res = await register({ ...valid, email: 'not-an-email' });
+    expect(res.status).toBe(400);
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('unexpected Supabase failure → generic safe 200 (still enumeration-safe)', async () => {
+    signUp.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'kaboom internal detail' },
+    });
+    const res = await register(valid);
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(await res.json())).not.toMatch(/kaboom/i);
+  });
+
+  it('submitting twice with the same email creates no route-side records', async () => {
+    // The route only calls Supabase Auth signUp; the application profile + buyer
+    // role are provisioned idempotently on first login, never here — so a repeat
+    // signup cannot create a duplicate profile.
+    await register({ ...valid, email: 'dupe@example.com' });
+    const res = await register({ ...valid, email: 'dupe@example.com' });
+    expect(res.status).toBe(200);
+    expect(signUp).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('update-password route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
