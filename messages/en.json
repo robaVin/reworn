@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "send": "Send",
+    "search": "Search",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "somethingWrong": "Something went wrong. Please try again.",
+    "noResults": "No results",
+    "required": "Required field",
+    "skipToContent": "Skip to content"
+  },
+  "LanguageSelector": {
+    "label": "Language",
+    "change": "Change language"
+  },
+  "Announcement": {
+    "message": "Give great clothes a second life · New pieces added every day"
+  },
+  "Nav": {
+    "saved": "Saved items",
+    "messages": "Messages",
+    "sell": "Sell an item",
+    "login": "Log in",
+    "register": "Create account",
+    "sellerDashboard": "Seller dashboard",
+    "listings": "Listings",
+    "subscription": "Subscription",
+    "account": "Account",
+    "admin": "Admin",
+    "logout": "Log out",
+    "searchLabel": "Search listings"
+  },
+  "Messages": {
+    "sendError": {
+      "empty": "Enter a message.",
+      "tooLong": "Messages can contain up to 4000 characters.",
+      "controlChar": "This message contains unsupported characters.",
+      "notFound": "This conversation is no longer available.",
+      "rateLimited": "You are sending messages too quickly. Please wait a moment and try again.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "conversationError": {
+      "notFound": "This listing is no longer available.",
+      "ownListing": "This is your own listing.",
+      "rateLimited": "You are doing that too quickly. Please wait a moment and try again.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "Checkout": {
+    "error": {
+      "notSeller": "Only sellers can start a subscription.",
+      "sellerInactive": "Your seller account can’t start a subscription right now.",
+      "invalidPlan": "That plan isn’t available.",
+      "rateLimited": "You are doing that too quickly. Please wait a moment and try again.",
+      "providerUnavailable": "Payments aren’t available yet. Please try again later.",
+      "generic": "Something went wrong starting checkout. Please try again."
+    }
+  }
+}

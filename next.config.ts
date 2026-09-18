@@ -1,4 +1,9 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+// next-intl: cookie-based locale (no /[locale] routing). Points at the request
+// config that resolves the locale + messages per request.
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /**
  * Narrowly allow next/image to optimize ONLY the exact Supabase project host and
@@ -57,4 +62,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

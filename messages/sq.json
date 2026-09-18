@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Ruaj",
+    "cancel": "Anulo",
+    "delete": "Fshi",
+    "edit": "Redakto",
+    "send": "Dërgo",
+    "search": "Kërko",
+    "loading": "Po ngarkohet…",
+    "retry": "Provo përsëri",
+    "somethingWrong": "Diçka shkoi keq. Ju lutemi provoni përsëri.",
+    "noResults": "Nuk ka rezultate",
+    "required": "Fushë e detyrueshme",
+    "skipToContent": "Kalo te përmbajtja"
+  },
+  "LanguageSelector": {
+    "label": "Gjuha",
+    "change": "Ndrysho gjuhën"
+  },
+  "Announcement": {
+    "message": "Jepini rrobave të mira një jetë të dytë · Artikuj të rinj çdo ditë"
+  },
+  "Nav": {
+    "saved": "Të ruajtura",
+    "messages": "Mesazhet",
+    "sell": "Shit një artikull",
+    "login": "Hyr",
+    "register": "Krijo llogari",
+    "sellerDashboard": "Paneli i shitësit",
+    "listings": "Shpalljet",
+    "subscription": "Abonimi",
+    "account": "Llogaria",
+    "admin": "Admin",
+    "logout": "Dil",
+    "searchLabel": "Kërko artikuj"
+  },
+  "Messages": {
+    "sendError": {
+      "empty": "Shkruani një mesazh.",
+      "tooLong": "Mesazhet mund të përmbajnë deri në 4000 karaktere.",
+      "controlChar": "Ky mesazh përmban karaktere të pambështetura.",
+      "notFound": "Kjo bisedë nuk është më e disponueshme.",
+      "rateLimited": "Po dërgoni mesazhe shumë shpejt. Prisni pak dhe provoni përsëri.",
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    },
+    "conversationError": {
+      "notFound": "Ky artikull nuk është më i disponueshëm.",
+      "ownListing": "Ky është artikulli juaj.",
+      "rateLimited": "Po veproni shumë shpejt. Prisni pak dhe provoni përsëri.",
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    }
+  },
+  "Checkout": {
+    "error": {
+      "notSeller": "Vetëm shitësit mund të fillojnë një abonim.",
+      "sellerInactive": "Llogaria juaj e shitësit nuk mund të fillojë një abonim për momentin.",
+      "invalidPlan": "Ky plan nuk është i disponueshëm.",
+      "rateLimited": "Po veproni shumë shpejt. Prisni pak dhe provoni përsëri.",
+      "providerUnavailable": "Pagesat nuk janë ende të disponueshme. Provoni më vonë.",
+      "generic": "Diçka shkoi keq gjatë fillimit të pagesës. Provoni përsëri."
+    }
+  }
+}

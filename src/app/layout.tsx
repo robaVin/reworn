@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Work_Sans } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
+import { LOCALE_HTML_LANG, normalizeLocale } from '@/i18n/config';
 import { AnnouncementBar } from '@/components/shell/AnnouncementBar';
 import { SiteHeader } from '@/components/shell/SiteHeader';
 import { SiteFooter } from '@/components/shell/SiteFooter';
@@ -70,25 +73,36 @@ export const viewport: Viewport = {
   themeColor: '#C06B4E',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Locale is resolved per request from the NEXT_LOCALE cookie (force-dynamic),
+  // so SSR and hydration agree — no English-then-switch flash.
+  const locale = await getLocale();
+  const messages = await getMessages();
+  const t = await getTranslations('Common');
+
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang={LOCALE_HTML_LANG[normalizeLocale(locale)]}
+      className={`${display.variable} ${body.variable}`}
+    >
       <body className="flex min-h-dvh flex-col">
-        <a
-          href="#main"
-          className="absolute left-4 top-4 z-[100] -translate-y-[300%] rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-cream transition-transform focus:translate-y-0"
-        >
-          Skip to content
-        </a>
-        <AnnouncementBar />
-        {/* Server-authoritative header: identity comes from getAuthContext(). */}
-        <SiteHeader />
-        <div id="main" className="flex-1">
-          {children}
-        </div>
-        <SiteFooter />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <a
+            href="#main"
+            className="absolute left-4 top-4 z-[100] -translate-y-[300%] rounded-control bg-terracotta-strong px-5 py-2.5 text-sm font-semibold text-cream transition-transform focus:translate-y-0"
+          >
+            {t('skipToContent')}
+          </a>
+          <AnnouncementBar />
+          {/* Server-authoritative header: identity comes from getAuthContext(). */}
+          <SiteHeader />
+          <div id="main" className="flex-1">
+            {children}
+          </div>
+          <SiteFooter />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

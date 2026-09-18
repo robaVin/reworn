@@ -42,15 +42,25 @@ function loginWithNext(next: string): string {
   return `/login?next=${encodeURIComponent(next)}`;
 }
 
-export function buildHeaderNav(identity: NavIdentity): HeaderNav {
+/**
+ * Localized label lookup, injected by the caller (SiteHeader passes
+ * `getTranslations('Nav')`). Injecting it keeps this module pure and
+ * synchronously unit-testable — tests pass an identity `(key) => key`.
+ */
+export type NavTranslator = (key: string) => string;
+
+export function buildHeaderNav(
+  identity: NavIdentity,
+  t: NavTranslator,
+): HeaderNav {
   const { authenticated, email, roles } = identity;
 
   const saved: NavLink = {
-    label: 'Saved items',
+    label: t('saved'),
     href: authenticated ? '/saved' : loginWithNext('/saved'),
   };
   const messages: NavLink = {
-    label: 'Messages',
+    label: t('messages'),
     href: authenticated ? '/messages' : loginWithNext('/messages'),
   };
   const sell: NavLink = {
@@ -58,7 +68,7 @@ export function buildHeaderNav(identity: NavIdentity): HeaderNav {
     // decides the destination (login, onboarding, profile-required,
     // subscription-required, or create-a-listing) from the verified user — the
     // client never decides.
-    label: 'Sell an item',
+    label: t('sell'),
     href: '/sell',
   };
 
@@ -70,8 +80,8 @@ export function buildHeaderNav(identity: NavIdentity): HeaderNav {
       messages,
       sell,
       menu: [
-        { label: 'Log in', href: '/login' },
-        { label: 'Create account', href: '/register' },
+        { label: t('login'), href: '/login' },
+        { label: t('register'), href: '/register' },
       ],
       showLogout: false,
     };
@@ -82,18 +92,18 @@ export function buildHeaderNav(identity: NavIdentity): HeaderNav {
     // Seller destinations: truthful shells until Increment #6 / catalog.
     // Every destination re-enforces requireAnyRolePage(['seller','admin']).
     menu.push(
-      { label: 'Seller dashboard', href: '/seller' },
-      { label: 'Listings', href: '/seller/listings' },
-      { label: 'Subscription', href: '/seller/subscription' },
+      { label: t('sellerDashboard'), href: '/seller' },
+      { label: t('listings'), href: '/seller/listings' },
+      { label: t('subscription'), href: '/seller/subscription' },
     );
   }
   menu.push(
-    { label: 'Messages', href: '/messages' },
-    { label: 'Account', href: '/account' },
-    { label: 'Saved items', href: '/saved' },
+    { label: t('messages'), href: '/messages' },
+    { label: t('account'), href: '/account' },
+    { label: t('saved'), href: '/saved' },
   );
   if (isAdmin(roles)) {
-    menu.push({ label: 'Admin', href: '/admin' });
+    menu.push({ label: t('admin'), href: '/admin' });
   }
 
   return {

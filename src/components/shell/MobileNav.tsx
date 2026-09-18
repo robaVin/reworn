@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { HeaderNav } from './nav-model';
 import { Dialog } from '@/components/ui/Dialog';
 import { IconButton } from '@/components/ui/IconButton';
+import { LanguageSelector } from './LanguageSelector';
 import { CloseIcon, HeartIcon, MenuIcon, MessageIcon } from './icons';
 
 /**
@@ -112,6 +113,10 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
                 {loggingOut ? 'Logging out…' : 'Log out'}
               </button>
             )}
+          </div>
+
+          <div className="px-3">
+            <LanguageSelector className="block" />
           </div>
         </nav>
       </Dialog>
