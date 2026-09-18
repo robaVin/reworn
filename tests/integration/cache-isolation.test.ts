@@ -5,14 +5,10 @@ import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import pg from 'pg';
 import type { StorageAdapter } from '@/modules/catalog/storage';
 import type { ProcessedImage } from '@/modules/catalog/image-processing';
 import type { DraftListingInput } from '@/modules/catalog/schemas';
-import {
-  invalidateCatalog,
-  __catalogCacheSize,
-} from '@/lib/catalog-cache';
+import { invalidateCatalog, __catalogCacheSize } from '@/lib/catalog-cache';
 
 /**
  * Cache-isolation regression guard (Phase S).

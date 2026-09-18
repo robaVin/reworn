@@ -162,6 +162,12 @@ export function enforceActionRateLimit(
   store: RateLimitStore = rateLimitStore,
 ): void {
   const { max, windowSeconds } = ACTION_LIMITS[action];
-  const result = checkRateLimit(`action:${action}`, identity, max, windowSeconds, store);
+  const result = checkRateLimit(
+    `action:${action}`,
+    identity,
+    max,
+    windowSeconds,
+    store,
+  );
   if (!result.allowed) throw new RateLimitedError(action, result.resetAt);
 }

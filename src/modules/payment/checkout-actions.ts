@@ -2,7 +2,10 @@ import 'server-only';
 
 import { logger } from '@/lib/logger';
 import { AuthorizationError } from '@/modules/auth/errors';
-import { enforceActionRateLimit, RateLimitedError } from '@/lib/security/rate-limit';
+import {
+  enforceActionRateLimit,
+  RateLimitedError,
+} from '@/lib/security/rate-limit';
 import { initiateCheckout } from './checkout-service';
 import {
   CheckoutRejectedError,

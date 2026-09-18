@@ -21,10 +21,7 @@ import { middleware } from '@/middleware';
 
 const APP = 'http://localhost:3000'; // matches NEXT_PUBLIC_APP_URL in tests/setup.ts
 
-function post(
-  path: string,
-  headers: Record<string, string> = {},
-): NextRequest {
+function post(path: string, headers: Record<string, string> = {}): NextRequest {
   return new NextRequest(new URL(path, APP), { method: 'POST', headers });
 }
 

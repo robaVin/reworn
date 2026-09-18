@@ -5,7 +5,6 @@ import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import pg from 'pg';
 import type { StorageAdapter } from '@/modules/catalog/storage';
 import type { ProcessedImage } from '@/modules/catalog/image-processing';
 import type { DraftListingInput } from '@/modules/catalog/schemas';
@@ -262,19 +261,29 @@ describe('IDOR — conversation access (third party vs the two participants)', (
     });
     await listings.transitionListing(SELLER_A, draft.id, 'publish');
     convId = (await msg.getOrCreateConversationForListing(BUYER, draft.id)).id;
-    await msg.sendConversationMessage(BUYER, convId, 'Is this still available?');
+    await msg.sendConversationMessage(
+      BUYER,
+      convId,
+      'Is this still available?',
+    );
   });
 
   it('both participants can read the conversation', async () => {
-    expect(await msg.getConversationForCurrentUser(BUYER, convId)).not.toBeNull();
+    expect(
+      await msg.getConversationForCurrentUser(BUYER, convId),
+    ).not.toBeNull();
     expect(
       await msg.getConversationForCurrentUser(SELLER_A, convId),
     ).not.toBeNull();
   });
 
   it('an outsider and an unrelated seller cannot read it (null)', async () => {
-    expect(await msg.getConversationForCurrentUser(OUTSIDER, convId)).toBeNull();
-    expect(await msg.getConversationForCurrentUser(SELLER_B, convId)).toBeNull();
+    expect(
+      await msg.getConversationForCurrentUser(OUTSIDER, convId),
+    ).toBeNull();
+    expect(
+      await msg.getConversationForCurrentUser(SELLER_B, convId),
+    ).toBeNull();
   });
 
   it('an outsider cannot list its messages (404)', async () => {
