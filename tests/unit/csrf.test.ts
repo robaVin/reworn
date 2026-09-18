@@ -61,6 +61,47 @@ describe('CSRF origin verification', () => {
     });
   });
 
+  describe('server-to-server exempt routes (RH-1)', () => {
+    // These receive cross-origin POSTs from a payment provider / scheduler with
+    // no browser Origin. They are exempted from the Origin check ONLY; each still
+    // authenticates cryptographically (signature / CRON_SECRET) in its handler.
+    const EXEMPT = ['/api/payments/webhook', '/api/cron/subscription-sweep'];
+
+    it.each(EXEMPT)('%s is exempt from origin checking', (p) => {
+      expect(isExemptFromCsrf(p)).toBe(true);
+    });
+
+    it.each(EXEMPT)(
+      'allows a POST to %s with NO Origin/Referer (server-to-server)',
+      (p) => {
+        expect(verifyCsrf('POST', p, null, null, APP).ok).toBe(true);
+      },
+    );
+
+    it.each(EXEMPT)(
+      'allows a POST to %s even from a foreign origin (auth is the signature)',
+      (p) => {
+        expect(verifyCsrf('POST', p, EVIL, null, APP).ok).toBe(true);
+      },
+    );
+
+    it('exempts nested sub-paths but NOT unrelated sibling paths', () => {
+      expect(isExemptFromCsrf('/api/payments/webhook/retry')).toBe(true);
+      // A sibling that merely shares the prefix string is NOT exempt.
+      expect(isExemptFromCsrf('/api/payments/webhookX')).toBe(false);
+      expect(isExemptFromCsrf('/api/payments/checkout')).toBe(false);
+      expect(isExemptFromCsrf('/api/payments')).toBe(false);
+    });
+
+    it('does NOT exempt other payment or api paths from origin checking', () => {
+      // The blanket /api/payments rate-limit prefix must not be confused with a
+      // CSRF exemption: a normal cross-origin payments POST is still rejected.
+      const r = verifyCsrf('POST', '/api/payments/checkout', EVIL, null, APP);
+      expect(r.ok).toBe(false);
+      expect(r.reason).toBe('origin_mismatch');
+    });
+  });
+
   describe('image upload route', () => {
     const UPLOAD = '/api/seller/listings/1b2c/images';
 

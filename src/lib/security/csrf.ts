@@ -25,13 +25,28 @@ export interface CsrfResult {
 }
 
 /**
- * Routes that legitimately receive cross-origin POSTs and therefore cannot
- * use origin checking. Each MUST authenticate the caller cryptographically.
+ * Routes that legitimately receive cross-origin, server-to-server POSTs and
+ * therefore CANNOT use origin checking — the caller is a payment provider or a
+ * scheduler, not a browser, so it sends no matching `Origin`/`Referer`. Origin
+ * verification would reject them with `missing_origin_and_referer` before the
+ * handler runs, so they are exempted HERE and each MUST authenticate the caller
+ * cryptographically in its own handler:
  *
- * The bank payment callback will be added here once the official signing
- * rules are known — it will be verified by signature, not by Origin.
+ *  - /api/payments/webhook       — verified by provider SIGNATURE over the raw
+ *                                  body (fails closed: 503 if unconfigured, 400
+ *                                  on a bad/absent signature).
+ *  - /api/cron/subscription-sweep — verified by a constant-time CRON_SECRET
+ *                                  bearer compare (fails closed: 503 if unset,
+ *                                  401 on mismatch).
+ *
+ * Exemption removes ONLY the browser-oriented Origin check; it never removes the
+ * signature/secret checks, which are the real authentication for these paths.
+ * Matched by exact path or as a path prefix (see isExemptFromCsrf).
  */
-const ORIGIN_CHECK_EXEMPT_PATHS: readonly string[] = [];
+const ORIGIN_CHECK_EXEMPT_PATHS: readonly string[] = [
+  '/api/payments/webhook',
+  '/api/cron/subscription-sweep',
+];
 
 export function isExemptFromCsrf(pathname: string): boolean {
   return ORIGIN_CHECK_EXEMPT_PATHS.some(
