@@ -147,7 +147,9 @@
     "messageSeller": "Пиши му на продавачот",
     "starting": "Започнува…",
     "signInToMessage": "Најавете се за да му пишете на продавачот",
-    "ownListingNote": "Ова е вашиот оглас"
+    "ownListingNote": "Ова е вашиот оглас",
+    "paginationLabel": "Навигација по страници",
+    "olderMessagesLabel": "Постари пораки"
   },
   "Checkout": {
     "error": {

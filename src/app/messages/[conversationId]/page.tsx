@@ -79,7 +79,10 @@ export default async function ConversationThreadPage({
       <div id="thread" tabIndex={-1} className="scroll-mt-24 outline-none">
         {/* "Load older" sits ABOVE the window because messages read oldest→newest
             downward; loading older prepends earlier history. */}
-        <nav aria-label="Older messages" className="mt-8 flex justify-center">
+        <nav
+          aria-label={t('olderMessagesLabel')}
+          className="mt-8 flex justify-center"
+        >
           {olderHref ? (
             <Button href={`${olderHref}#thread`} variant="outline" size="sm">
               {t('loadOlder')}

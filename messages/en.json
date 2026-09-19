@@ -147,7 +147,9 @@
     "messageSeller": "Message seller",
     "starting": "Starting…",
     "signInToMessage": "Sign in to message seller",
-    "ownListingNote": "This is your listing"
+    "ownListingNote": "This is your listing",
+    "paginationLabel": "Pagination",
+    "olderMessagesLabel": "Older messages"
   },
   "Checkout": {
     "error": {

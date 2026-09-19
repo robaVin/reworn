@@ -147,7 +147,9 @@
     "messageSeller": "Shkruaji shitësit",
     "starting": "Po fillon…",
     "signInToMessage": "Hyni për t’i shkruar shitësit",
-    "ownListingNote": "Ky është listimi juaj"
+    "ownListingNote": "Ky është listimi juaj",
+    "paginationLabel": "Navigimi i faqeve",
+    "olderMessagesLabel": "Mesazhet më të vjetra"
   },
   "Checkout": {
     "error": {

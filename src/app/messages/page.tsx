@@ -69,7 +69,10 @@ export default async function MessagesPage({
                 </li>
               ))}
             </ul>
-            <nav aria-label="Pagination" className="mt-8 flex justify-center">
+            <nav
+              aria-label={t('paginationLabel')}
+              className="mt-8 flex justify-center"
+            >
               {nextHref ? (
                 <Button href={`${nextHref}#inbox`} variant="outline">
                   {t('olderConversations')}
