@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import {
@@ -25,14 +26,20 @@ const HOME_LISTING_COUNT = 8;
  * whole preview are batch-signed in one request by the service.
  */
 export async function EditSection() {
-  const [page, categories] = await Promise.all([
+  const [page, categories, t, tCat] = await Promise.all([
     listPublishedListings({
       ...parseBrowseQuery({}),
       pageSize: HOME_LISTING_COUNT,
     }),
     listBrowseCategories(),
+    getTranslations('Home'),
+    getTranslations('Categories'),
   ]);
   const cards = page.items.map(publicCardToListingCard);
+  // Localize the DISPLAY label by canonical slug; the slug (identity) is
+  // unchanged, and an unknown slug falls back to its stored English name.
+  const categoryLabel = (slug: string, name: string) =>
+    tCat.has(slug) ? tCat(slug) : name;
 
   return (
     <section
@@ -45,31 +52,33 @@ export async function EditSection() {
           id="edit-heading"
           className="font-display text-2xl font-bold text-ink sm:text-[34px]"
         >
-          The edit
+          {t('editHeading')}
         </h2>
         <Button href="/browse" variant="ghost" size="sm">
-          See all
+          {t('seeAll')}
         </Button>
       </div>
 
-      <nav aria-label="Categories" className="my-5 flex flex-wrap gap-2">
+      <nav
+        aria-label={t('categoriesLabel')}
+        className="my-5 flex flex-wrap gap-2"
+      >
         <Chip href="/browse" selected>
-          All
+          {t('categoryAll')}
         </Chip>
         {categories.map((category) => (
           <Chip key={category.slug} href={`/browse?category=${category.slug}`}>
-            {category.name}
+            {categoryLabel(category.slug, category.name)}
           </Chip>
         ))}
       </nav>
 
       {cards.length === 0 ? (
         <ListingGridEmpty
-          title="No listings yet"
-          action={<Button href="/sell">List an item</Button>}
+          title={t('emptyTitle')}
+          action={<Button href="/sell">{t('emptyAction')}</Button>}
         >
-          Nothing has been published yet — freshly listed pieces will appear
-          here first.
+          {t('emptyBody')}
         </ListingGridEmpty>
       ) : (
         <ListingGrid listings={cards} hrefFor={productHref} priorityCount={4} />

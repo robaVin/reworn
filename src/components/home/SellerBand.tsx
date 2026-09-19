@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -5,7 +6,8 @@ import { Button } from '@/components/ui/Button';
  * Sustainable copy adjusted to the classifieds model (no shipping, no
  * platform-tracked impact claims).
  */
-export function SellerBand() {
+export async function SellerBand() {
+  const t = await getTranslations('Home');
   return (
     <section
       aria-labelledby="sellband-heading"
@@ -16,14 +18,13 @@ export function SellerBand() {
           id="sellband-heading"
           className="min-w-[260px] flex-1 font-display text-2xl font-bold leading-[1.02] text-ink sm:text-[38px]"
         >
-          Your closet clean-out can do good.
+          {t('sellBandHeading')}
         </h2>
         <p className="max-w-[34ch] text-sm leading-relaxed text-muted">
-          List your pre-loved pieces in minutes. Buyers message you directly —
-          you agree on price and handover between yourselves.
+          {t('sellBandBody')}
         </p>
         <Button href="/sell" size="lg">
-          Start selling
+          {t('startSelling')}
         </Button>
       </div>
     </section>

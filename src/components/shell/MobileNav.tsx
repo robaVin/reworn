@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { HeaderNav } from './nav-model';
 import { Dialog } from '@/components/ui/Dialog';
 import { IconButton } from '@/components/ui/IconButton';
@@ -17,6 +18,7 @@ import { CloseIcon, HeartIcon, MenuIcon, MessageIcon } from './icons';
  * an open dialog cannot linger (and trap focus) after the trigger is hidden.
  */
 export function MobileNav({ nav }: { nav: HeaderNav }) {
+  const t = useTranslations('Nav');
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const close = () => setOpen(false);
@@ -46,14 +48,19 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
 
   return (
     <div className="md:hidden">
-      <IconButton label="Open navigation" onClick={() => setOpen(true)}>
+      <IconButton label={t('openNav')} onClick={() => setOpen(true)}>
         <MenuIcon />
       </IconButton>
 
-      <Dialog open={open} onClose={close} label="Navigation" variant="drawer">
+      <Dialog
+        open={open}
+        onClose={close}
+        label={t('menuTitle')}
+        variant="drawer"
+      >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <p className="font-display text-lg font-bold">Menu</p>
-          <IconButton label="Close navigation" onClick={close}>
+          <p className="font-display text-lg font-bold">{t('menuTitle')}</p>
+          <IconButton label={t('closeNav')} onClick={close}>
             <CloseIcon />
           </IconButton>
         </div>
@@ -61,10 +68,10 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
         <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
           <div>
             <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              Marketplace
+              {t('marketplace')}
             </p>
             <Link href="/browse" onClick={close} className={linkClasses}>
-              Browse the edit
+              {t('browse')}
             </Link>
             <Link href={nav.sell.href} onClick={close} className={linkClasses}>
               {nav.sell.label}
@@ -85,11 +92,11 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
 
           <div>
             <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              Account
+              {t('accountSection')}
             </p>
             {nav.authenticated && nav.email && (
               <p className="truncate px-3 pb-2 text-xs text-muted">
-                Signed in as{' '}
+                {t('signedInAs')}{' '}
                 <span className="font-semibold text-ink">{nav.email}</span>
               </p>
             )}
@@ -110,7 +117,7 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
                 disabled={loggingOut}
                 className={`${linkClasses} w-full text-left disabled:opacity-60`}
               >
-                {loggingOut ? 'Logging out…' : 'Log out'}
+                {loggingOut ? t('loggingOut') : t('logout')}
               </button>
             )}
           </div>

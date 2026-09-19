@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -9,13 +10,15 @@ import { Button } from '@/components/ui/Button';
  * The statistics band keeps the prototype's layout but carries truthful
  * product facts; real marketplace metrics replace them when they exist.
  */
-const PRODUCT_FACTS = [
-  { value: '100%', label: 'Pre-loved pieces' },
-  { value: '0%', label: 'Commission on sales' },
-  { value: 'Direct', label: 'Buyer–seller contact' },
-] as const;
+export async function Hero() {
+  const t = await getTranslations('Home');
+  // Numeric values are locale-neutral; only the label + "Direct" word localize.
+  const PRODUCT_FACTS = [
+    { value: '100%', label: t('statPreLoved') },
+    { value: '0%', label: t('statCommission') },
+    { value: t('statDirect'), label: t('statDirectLabel') },
+  ] as const;
 
-export function Hero() {
   return (
     <section className="mx-auto mt-4 max-w-shell px-4 sm:mt-6 sm:px-8 lg:px-10">
       <div className="relative overflow-hidden rounded-card border border-line bg-gradient-to-br from-sand to-surface px-6 py-10 sm:px-12 sm:py-16 lg:px-16 lg:py-20">
@@ -31,22 +34,20 @@ export function Hero() {
 
         <div className="relative z-10 max-w-[560px]">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-            Pre-loved · Curated · Circular
+            {t('eyebrow')}
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold leading-[0.98] tracking-tight text-ink sm:text-6xl lg:text-[68px]">
-            Slow fashion, second life.
+            {t('title')}
           </h1>
           <p className="mt-4 max-w-[44ch] text-base leading-relaxed text-muted">
-            Every piece you buy or sell keeps good clothing in circulation — and
-            out of landfill. Buyers and sellers connect directly, no middleman
-            checkout.
+            {t('description')}
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Button href="/#edit" size="lg">
-              Shop the edit
+              {t('shopEdit')}
             </Button>
             <Button href="/sell" variant="outline" size="lg">
-              Start selling
+              {t('startSelling')}
             </Button>
           </div>
 
