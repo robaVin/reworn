@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import type { PublicListingDetail } from '@/modules/catalog/public-catalog';
 import { buildProductJsonLd } from '@/modules/catalog/product-jsonld';
@@ -17,20 +18,6 @@ import { Chip } from '@/components/ui/Chip';
  * profile UUIDs, storage keys, or payment ids appear in the output.
  */
 
-const CONDITION_LABELS: Record<string, string> = {
-  new: 'New with tags',
-  like_new: 'Like new',
-  very_good: 'Very good',
-  good: 'Good',
-  fair: 'Fair',
-};
-const GENDER_LABELS: Record<string, string> = {
-  women: 'Women',
-  men: 'Men',
-  kids: 'Kids',
-  unisex: 'Unisex',
-};
-
 /** Deterministic 0-360 hue for the no-photo placeholder tint. */
 function hueFromSlug(slug: string): number {
   let h = 0;
@@ -38,7 +25,7 @@ function hueFromSlug(slug: string): number {
   return h;
 }
 
-export function ProductDetail({
+export async function ProductDetail({
   listing,
   canonicalPath,
   absoluteUrl,
@@ -51,20 +38,36 @@ export function ProductDetail({
   cta: ReactNode;
   related: ReactNode;
 }) {
+  const t = await getTranslations('Listing');
+  const tCat = await getTranslations('Categories');
   const conditionLabel = listing.condition
-    ? (CONDITION_LABELS[listing.condition] ?? listing.condition)
+    ? t.has(`condition.${listing.condition}`)
+      ? t(`condition.${listing.condition}`)
+      : listing.condition
     : null;
+  const genderLabel = t.has(`gender.${listing.gender}`)
+    ? t(`gender.${listing.gender}`)
+    : listing.gender;
+  // Localize the category DISPLAY name by its canonical slug; fall back to the
+  // stored English name when the slug isn't in the Categories catalog.
+  const categoryLabel =
+    listing.categorySlug && tCat.has(listing.categorySlug)
+      ? tCat(listing.categorySlug)
+      : listing.categoryName;
   void canonicalPath; // canonical is set via route metadata; kept for symmetry
 
   return (
     <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
       <JsonLd data={buildProductJsonLd(listing, absoluteUrl)} />
 
-      <nav aria-label="Breadcrumb" className="mb-6 text-sm text-muted">
+      <nav
+        aria-label={t('breadcrumbLabel')}
+        className="mb-6 text-sm text-muted"
+      >
         <ol className="flex flex-wrap items-center gap-1">
           <li>
             <Link href="/browse" className="hover:text-ink">
-              Browse
+              {t('breadcrumbBrowse')}
             </Link>
           </li>
           {listing.categoryName && listing.categorySlug && (
@@ -74,7 +77,7 @@ export function ProductDetail({
                 href={`/browse?category=${listing.categorySlug}`}
                 className="hover:text-ink"
               >
-                {listing.categoryName}
+                {categoryLabel}
               </Link>
             </li>
           )}
@@ -109,7 +112,7 @@ export function ProductDetail({
             <span className="text-2xl font-bold text-ink">
               {listing.priceMinor !== null
                 ? formatPrice(listing.priceMinor, listing.currency)
-                : 'Price on request'}
+                : t('priceOnRequest')}
             </span>
             {listing.originalPriceMinor !== null &&
               listing.priceMinor !== null &&
@@ -119,36 +122,34 @@ export function ProductDetail({
                 </span>
               )}
           </div>
-          <p className="mt-1 text-xs text-muted">
-            Price is informational — payment and delivery are arranged directly
-            with the seller.
-          </p>
+          <p className="mt-1 text-xs text-muted">{t('priceDisclaimer')}</p>
 
           <p className="mt-3 inline-flex items-center gap-1.5 rounded-control border border-forest/30 bg-forest/5 px-2.5 py-1 text-sm font-medium text-forest">
-            <span aria-hidden>●</span> Available
+            <span aria-hidden>●</span> {t('available')}
           </p>
 
           <dl className="mt-6 grid grid-cols-2 gap-3 text-sm">
-            {listing.size && <Detail label="Size" value={listing.size} />}
+            {listing.size && (
+              <Detail label={t('sizeLabel')} value={listing.size} />
+            )}
             {conditionLabel && (
-              <Detail label="Condition" value={conditionLabel} />
+              <Detail label={t('conditionLabel')} value={conditionLabel} />
             )}
-            {listing.categoryName && (
-              <Detail label="Category" value={listing.categoryName} />
+            {categoryLabel && (
+              <Detail label={t('categoryLabel')} value={categoryLabel} />
             )}
-            <Detail
-              label="Department"
-              value={GENDER_LABELS[listing.gender] ?? listing.gender}
-            />
-            {listing.color && <Detail label="Colour" value={listing.color} />}
+            <Detail label={t('departmentLabel')} value={genderLabel} />
+            {listing.color && (
+              <Detail label={t('colourLabel')} value={listing.color} />
+            )}
             {listing.material && (
-              <Detail label="Material" value={listing.material} />
+              <Detail label={t('materialLabel')} value={listing.material} />
             )}
             {listing.location && (
-              <Detail label="Location" value={listing.location} />
+              <Detail label={t('locationLabel')} value={listing.location} />
             )}
             <Detail
-              label="Listed"
+              label={t('listedLabel')}
               value={
                 <time dateTime={listing.createdAt.toISOString()}>
                   {formatDate(listing.createdAt)}
@@ -159,10 +160,12 @@ export function ProductDetail({
 
           <div className="mt-6 rounded-card border border-line bg-surface p-4">
             <h2 className="text-xs uppercase tracking-wide text-muted">
-              Delivery
+              {t('deliveryHeading')}
             </h2>
             <p className="mt-1 text-sm font-medium text-ink">
-              {deliveryMethodLabel(listing.deliveryMethod)}
+              {t.has(`deliveryMethod.${listing.deliveryMethod}`)
+                ? t(`deliveryMethod.${listing.deliveryMethod}`)
+                : deliveryMethodLabel(listing.deliveryMethod)}
             </p>
             {listing.deliveryNote && (
               <p className="mt-1 whitespace-pre-line text-sm text-muted">
@@ -174,7 +177,7 @@ export function ProductDetail({
           {listing.description && (
             <div className="mt-6">
               <h2 className="font-display text-lg font-semibold text-ink">
-                Description
+                {t('descriptionHeading')}
               </h2>
               <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted">
                 {listing.description}
@@ -183,7 +186,9 @@ export function ProductDetail({
           )}
 
           <div className="mt-8 rounded-card border border-line bg-surface p-4">
-            <p className="text-xs uppercase tracking-wide text-muted">Seller</p>
+            <p className="text-xs uppercase tracking-wide text-muted">
+              {t('sellerHeading')}
+            </p>
             <Link
               href={`/shop/${listing.seller.handle}`}
               className="mt-1 inline-block font-display text-lg font-semibold text-ink hover:text-terracotta-strong"
@@ -192,7 +197,7 @@ export function ProductDetail({
             </Link>
             <div className="mt-2">
               <Chip href={`/shop/${listing.seller.handle}`}>
-                View seller’s items
+                {t('viewSellerItems')}
               </Chip>
             </div>
             {cta}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   cancelSubscriptionAction,
   resumeSubscriptionAction,
@@ -20,6 +21,7 @@ export function SubscriptionManager({
   live: boolean;
   initiallyScheduled: boolean;
 }) {
+  const t = useTranslations('Sell');
   const [scheduled, setScheduled] = useState(initiallyScheduled);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -34,7 +36,7 @@ export function SubscriptionManager({
       setError(null);
       const res = await action();
       if (res.ok) setScheduled(next);
-      else setError('Something went wrong. Please try again.');
+      else setError(t('subscription.genericError'));
     });
 
   return (
@@ -42,15 +44,14 @@ export function SubscriptionManager({
       {scheduled ? (
         <div className="space-y-2">
           <p className="text-sm text-muted">
-            Your subscription is set to cancel at the end of the current period.
-            You keep access until then.
+            {t('subscription.cancelScheduledNote')}
           </p>
           <Button
             variant="outline"
             onClick={() => run(resumeSubscriptionAction, false)}
             disabled={pending}
           >
-            {pending ? 'Working…' : 'Resume subscription'}
+            {pending ? t('subscription.working') : t('subscription.resume')}
           </Button>
         </div>
       ) : (
@@ -59,7 +60,7 @@ export function SubscriptionManager({
           onClick={() => run(cancelSubscriptionAction, true)}
           disabled={pending}
         >
-          {pending ? 'Working…' : 'Cancel subscription'}
+          {pending ? t('subscription.working') : t('subscription.cancel')}
         </Button>
       )}
       {error && (

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import {
   listPublishedListings,
   listBrowseCategories,
@@ -27,7 +28,10 @@ export async function generateMetadata({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
   const query = parseBrowseQuery(searchParamsToRaw(await searchParams));
-  const title = query.q ? `“${query.q}” — Browse` : 'Browse the edit';
+  const t = await getTranslations('Browse');
+  const title = query.q
+    ? t('searchMetaTitle', { query: query.q })
+    : t('heading');
   // Canonical intentionally OMITS the cursor so paginated pages don't become
   // separate indexable URLs. Filtered/search pages are not promoted as landing
   // pages (noindex,follow) — only the bare /browse is indexable.
@@ -54,9 +58,10 @@ export default async function BrowsePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = parseBrowseQuery(searchParamsToRaw(await searchParams));
-  const [page, categories] = await Promise.all([
+  const [page, categories, t] = await Promise.all([
     listPublishedListings(query),
     listBrowseCategories(),
+    getTranslations('Browse'),
   ]);
 
   const cards = page.items.map(publicCardToListingCard);
@@ -66,7 +71,7 @@ export default async function BrowsePage({
   return (
     <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
       <h1 className="font-display text-3xl font-bold text-ink sm:text-[34px]">
-        Browse the edit
+        {t('heading')}
       </h1>
 
       <FilterBar query={query} categories={categories} />
@@ -77,16 +82,17 @@ export default async function BrowsePage({
         {cards.length === 0 ? (
           <ListingGridEmpty
             title={
-              query.q ? `No results for “${query.q}”` : 'No listings match yet'
+              query.q
+                ? t('noResultsTitle', { query: query.q })
+                : t('noListingsTitle')
             }
             action={
               <Button href="/browse" variant="outline">
-                Clear filters
+                {t('clearFilters')}
               </Button>
             }
           >
-            Try fewer or different filters — or check back soon as sellers add
-            more pieces.
+            {t('emptyBody')}
           </ListingGridEmpty>
         ) : (
           <>
@@ -95,13 +101,16 @@ export default async function BrowsePage({
               hrefFor={productHref}
               priorityCount={4}
             />
-            <nav aria-label="Pagination" className="mt-10 flex justify-center">
+            <nav
+              aria-label={t('paginationLabel')}
+              className="mt-10 flex justify-center"
+            >
               {nextHref ? (
                 <Button href={`${nextHref}#results`} variant="outline">
-                  Next page
+                  {t('nextPage')}
                 </Button>
               ) : (
-                <p className="text-sm text-muted">You’ve reached the end.</p>
+                <p className="text-sm text-muted">{t('endReached')}</p>
               )}
             </nav>
           </>

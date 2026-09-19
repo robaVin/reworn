@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { buildBrowseHref } from '@/modules/catalog/browse-url';
 import type { BrowseQuery } from '@/modules/catalog/browse-query';
@@ -10,20 +11,6 @@ import { Button } from '@/components/ui/Button';
 
 /** Common clothing sizes offered as the canonical multi-select filter set. */
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'] as const;
-
-const CONDITION_LABELS: Record<(typeof LISTING_CONDITIONS)[number], string> = {
-  new: 'New with tags',
-  like_new: 'Like new',
-  very_good: 'Very good',
-  good: 'Good',
-  fair: 'Fair',
-};
-const GENDER_LABELS: Record<(typeof LISTING_GENDERS)[number], string> = {
-  women: 'Women',
-  men: 'Men',
-  kids: 'Kids',
-  unisex: 'Unisex',
-};
 
 const collapse = (s: string) => s.replace(/\s+/g, ' ').trim();
 
@@ -46,6 +33,9 @@ export function FilterBar({
   query: BrowseQuery;
   categories: CategoryOption[];
 }) {
+  const t = useTranslations('Browse');
+  const tListing = useTranslations('Listing');
+  const tCat = useTranslations('Categories');
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false); // mobile disclosure
@@ -106,15 +96,15 @@ export function FilterBar({
     const mn = minText.trim() ? majorToMinor(minText) : undefined;
     const mx = maxText.trim() ? majorToMinor(maxText) : undefined;
     if (minText.trim() && mn === undefined) {
-      setPriceErr('Enter a valid minimum price.');
+      setPriceErr(t('priceErrorMin'));
       return;
     }
     if (maxText.trim() && mx === undefined) {
-      setPriceErr('Enter a valid maximum price.');
+      setPriceErr(t('priceErrorMax'));
       return;
     }
     if (mn !== undefined && mx !== undefined && mn > mx) {
-      setPriceErr('Minimum price must be less than or equal to maximum.');
+      setPriceErr(t('priceErrorRange'));
       return;
     }
     setPriceErr(null);
@@ -138,7 +128,7 @@ export function FilterBar({
     query.sort !== (query.q ? 'relevance' : 'newest');
 
   return (
-    <section aria-label="Filters" aria-busy={pending} className="mb-6">
+    <section aria-label={t('filters')} aria-busy={pending} className="mb-6">
       {/* Immediate, VISIBLE feedback that a filter is being applied. The
           FilterBar stays mounted (useTransition holds the current results while
           the RSC navigation runs); this pill is the visible pending signal a
@@ -153,7 +143,7 @@ export function FilterBar({
           aria-hidden
           className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-line border-t-terracotta-strong"
         />
-        {pending ? 'Updating results…' : ''}
+        {pending ? t('updatingResults') : ''}
       </p>
 
       {/* Search + sort are always visible (top row). */}
@@ -163,14 +153,14 @@ export function FilterBar({
             htmlFor="browse-q"
             className="mb-1 block text-sm font-medium text-ink"
           >
-            Search
+            {t('searchLabel')}
           </label>
           <input
             id="browse-q"
             type="search"
             value={qText}
             onChange={(e) => setQText(e.target.value)}
-            placeholder="Search titles, brands, materials…"
+            placeholder={t('searchPlaceholder')}
             maxLength={100}
             className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink"
           />
@@ -180,7 +170,7 @@ export function FilterBar({
             htmlFor="browse-sort"
             className="mb-1 block text-sm font-medium text-ink"
           >
-            Sort
+            {t('sortLabel')}
           </label>
           <select
             id="browse-sort"
@@ -190,10 +180,10 @@ export function FilterBar({
             }
             className="min-h-11 rounded-control border border-line bg-surface px-3 text-sm text-ink"
           >
-            <option value="newest">Newest</option>
-            <option value="price_asc">Price: low to high</option>
-            <option value="price_desc">Price: high to low</option>
-            {query.q && <option value="relevance">Best match</option>}
+            <option value="newest">{t('sortNewest')}</option>
+            <option value="price_asc">{t('sortPriceAsc')}</option>
+            <option value="price_desc">{t('sortPriceDesc')}</option>
+            {query.q && <option value="relevance">{t('sortRelevance')}</option>}
           </select>
         </div>
         <button
@@ -203,7 +193,7 @@ export function FilterBar({
           aria-controls="browse-filter-panel"
           className="min-h-11 rounded-control border border-line px-4 text-sm font-semibold text-ink lg:hidden"
         >
-          {open ? 'Hide filters' : 'Filters'}
+          {open ? t('hideFilters') : t('filters')}
         </button>
       </div>
 
@@ -218,7 +208,7 @@ export function FilterBar({
               htmlFor="browse-category"
               className="mb-1 block text-sm font-medium text-ink"
             >
-              Category
+              {t('categoryLabel')}
             </label>
             <select
               id="browse-category"
@@ -228,10 +218,10 @@ export function FilterBar({
               }
               className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink"
             >
-              <option value="">All categories</option>
+              <option value="">{t('allCategories')}</option>
               {categories.map((c) => (
                 <option key={c.slug} value={c.slug}>
-                  {c.name}
+                  {tCat.has(c.slug) ? tCat(c.slug) : c.name}
                 </option>
               ))}
             </select>
@@ -241,7 +231,7 @@ export function FilterBar({
               htmlFor="browse-gender"
               className="mb-1 block text-sm font-medium text-ink"
             >
-              Department
+              {t('departmentLabel')}
             </label>
             <select
               id="browse-gender"
@@ -249,10 +239,10 @@ export function FilterBar({
               onChange={(e) => patch({ gender: e.target.value || undefined })}
               className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink"
             >
-              <option value="">Everyone</option>
+              <option value="">{t('everyone')}</option>
               {LISTING_GENDERS.map((g) => (
                 <option key={g} value={g}>
-                  {GENDER_LABELS[g]}
+                  {tListing(`gender.${g}`)}
                 </option>
               ))}
             </select>
@@ -262,7 +252,9 @@ export function FilterBar({
         {/* Size + condition (checkbox groups) */}
         <div className="space-y-4">
           <fieldset>
-            <legend className="mb-1 text-sm font-medium text-ink">Size</legend>
+            <legend className="mb-1 text-sm font-medium text-ink">
+              {t('sizeLabel')}
+            </legend>
             <div className="flex flex-wrap gap-2">
               {SIZE_OPTIONS.map((s) => (
                 <label
@@ -281,7 +273,7 @@ export function FilterBar({
           </fieldset>
           <fieldset>
             <legend className="mb-1 text-sm font-medium text-ink">
-              Condition
+              {t('conditionLabel')}
             </legend>
             <div className="flex flex-col gap-1.5">
               {LISTING_CONDITIONS.map((c) => (
@@ -296,7 +288,7 @@ export function FilterBar({
                       patch({ conditions: toggle(query.conditions, c) })
                     }
                   />
-                  {CONDITION_LABELS[c]}
+                  {tListing(`condition.${c}`)}
                 </label>
               ))}
             </div>
@@ -306,27 +298,29 @@ export function FilterBar({
         {/* Price + location */}
         <div className="space-y-4">
           <fieldset>
-            <legend className="mb-1 text-sm font-medium text-ink">Price</legend>
+            <legend className="mb-1 text-sm font-medium text-ink">
+              {t('priceLabel')}
+            </legend>
             <div className="flex items-center gap-2">
               <input
-                aria-label="Minimum price"
+                aria-label={t('minPriceAria')}
                 inputMode="decimal"
                 value={minText}
                 onChange={(e) => setMinText(e.target.value)}
                 onBlur={applyPrice}
-                placeholder="Min"
+                placeholder={t('minPlaceholder')}
                 className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink"
               />
               <span aria-hidden className="text-muted">
                 –
               </span>
               <input
-                aria-label="Maximum price"
+                aria-label={t('maxPriceAria')}
                 inputMode="decimal"
                 value={maxText}
                 onChange={(e) => setMaxText(e.target.value)}
                 onBlur={applyPrice}
-                placeholder="Max"
+                placeholder={t('maxPlaceholder')}
                 className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink"
               />
             </div>
@@ -341,19 +335,19 @@ export function FilterBar({
               htmlFor="browse-location"
               className="mb-1 block text-sm font-medium text-ink"
             >
-              Location
+              {t('locationLabel')}
             </label>
             <input
               id="browse-location"
               value={locText}
               onChange={(e) => setLocText(e.target.value)}
-              placeholder="e.g. Skopje"
+              placeholder={t('locationPlaceholder')}
               maxLength={80}
               className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink"
               aria-describedby="browse-location-hint"
             />
             <p id="browse-location-hint" className="mt-1 text-xs text-muted">
-              Exact location match (not radius or fuzzy search).
+              {t('locationHint')}
             </p>
           </div>
         </div>
@@ -366,7 +360,7 @@ export function FilterBar({
             size="sm"
             onClick={() => startTransition(() => router.push('/browse'))}
           >
-            Clear all filters
+            {t('clearAllFilters')}
           </Button>
         </div>
       )}

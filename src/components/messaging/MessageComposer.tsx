@@ -2,10 +2,11 @@
 
 import { useActionState, useEffect, useId, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { sendMessageAction } from '@/modules/messaging/actions';
 import {
   INITIAL_SEND_STATE,
-  sendErrorMessage,
+  sendErrorMessageKey,
 } from '@/modules/messaging/compose-state';
 import { MAX_MESSAGE_LENGTH } from '@/modules/messaging/schemas';
 import { Button } from '@/components/ui/Button';
@@ -28,9 +29,10 @@ import { Button } from '@/components/ui/Button';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations('Messages');
   return (
     <Button type="submit" disabled={pending} aria-disabled={pending}>
-      {pending ? 'Sending…' : 'Send'}
+      {pending ? t('sending') : t('send')}
     </Button>
   );
 }
@@ -40,6 +42,7 @@ export function MessageComposer({
 }: {
   conversationId: string;
 }) {
+  const t = useTranslations('Messages');
   const [state, formAction] = useActionState(
     sendMessageAction,
     INITIAL_SEND_STATE,
@@ -62,7 +65,7 @@ export function MessageComposer({
         htmlFor="message-body"
         className="block text-sm font-semibold text-ink"
       >
-        Your message
+        {t('composeLabel')}
       </label>
       <textarea
         id="message-body"
@@ -76,12 +79,11 @@ export function MessageComposer({
       />
 
       <p id={hintId} className="mt-1 text-xs text-muted">
-        Plain text, up to {MAX_MESSAGE_LENGTH} characters. Payment and delivery
-        are arranged directly with the other person.
+        {t('composeHint', { max: MAX_MESSAGE_LENGTH })}
       </p>
       {hasError && (
         <p id={errorId} role="alert" className="mt-1 text-sm text-danger">
-          {sendErrorMessage(state.error)}
+          {t(`sendError.${sendErrorMessageKey(state.error)}`)}
         </p>
       )}
 

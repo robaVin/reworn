@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { requireAnyRolePage } from '@/modules/auth/page-guards';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -14,69 +15,65 @@ export const dynamic = 'force-dynamic';
  */
 export default async function SellerHomePage() {
   await requireAnyRolePage(['seller', 'admin'], '/seller');
+  const t = await getTranslations('Sell');
 
   return (
     <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-        Seller studio
+        {t('sellerStudio')}
       </p>
       <h1 className="mt-3 font-display text-3xl font-bold text-ink sm:text-[40px]">
-        Your seller space
+        {t('dashboard.heading')}
       </h1>
       <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">
-        Access granted. Operational metrics and publishing tools connect as
-        their domains ship — nothing here is simulated marketplace data.
+        {t('dashboard.intro')}
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <h2 className="font-display text-lg font-semibold text-ink">
-            Subscription
+            {t('dashboard.subscriptionTitle')}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Plan selection, weekly listing quota and renewals open with
-            Increment #6.
+            {t('dashboard.subscriptionBody')}
           </p>
           <div className="mt-4">
             <Button href="/seller/subscription" variant="outline" size="sm">
-              Open subscription
+              {t('dashboard.openSubscription')}
             </Button>
           </div>
         </Card>
         <Card>
           <h2 className="font-display text-lg font-semibold text-ink">
-            Listings
+            {t('dashboard.listingsTitle')}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Create, preview and publish listings once the catalogue domain is
-            connected. No listings yet.
+            {t('dashboard.listingsBody')}
           </p>
           <div className="mt-4">
             <Button href="/seller/listings" variant="outline" size="sm">
-              Open listings
+              {t('dashboard.openListings')}
             </Button>
           </div>
         </Card>
         <Card>
           <h2 className="font-display text-lg font-semibold text-ink">
-            Inquiries
+            {t('dashboard.inquiriesTitle')}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Buyer messages about your pieces arrive with the messaging
-            increment.
+            {t('dashboard.inquiriesBody')}
           </p>
           <div className="mt-4">
             <Button href="/messages" variant="outline" size="sm">
-              Open messages
+              {t('dashboard.openMessages')}
             </Button>
           </div>
         </Card>
       </div>
 
       <div className="mt-8 max-w-xl">
-        <Alert tone="info" title="No fabricated metrics">
-          Active listings, views, saved-by-buyers counts and quota usage will
-          appear here from real services — never from design fixtures.
+        <Alert tone="info" title={t('dashboard.noMetricsTitle')}>
+          {t('dashboard.noMetricsBody')}
         </Alert>
       </div>
     </main>

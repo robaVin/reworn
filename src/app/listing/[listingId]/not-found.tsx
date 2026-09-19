@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 
@@ -12,15 +13,15 @@ export const metadata: Metadata = {
  * paused / archived). Deliberately does not reveal which — a non-public listing
  * is indistinguishable from a missing one.
  */
-export default function ListingNotFound() {
+export default async function ListingNotFound() {
+  const t = await getTranslations('Listing');
   return (
     <main className="mx-auto max-w-shell px-4 py-16 sm:px-8 lg:px-10">
       <EmptyState
-        title="This listing isn’t available"
-        action={<Button href="/browse">Back to browse</Button>}
+        title={t('listingNotFoundTitle')}
+        action={<Button href="/browse">{t('backToBrowse')}</Button>}
       >
-        It may have been removed, sold, or is no longer public. Explore what
-        else is available.
+        {t('notFoundBody')}
       </EmptyState>
     </main>
   );

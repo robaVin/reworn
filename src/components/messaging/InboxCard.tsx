@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 import type { ConversationSummaryDTO } from '@/modules/messaging/dto';
 import { formatDate } from '@/lib/format';
 
@@ -13,22 +14,26 @@ import { formatDate } from '@/lib/format';
  * ids, emails, or auth ids are present in the DTO or the markup. The thumbnail
  * is decorative (alt=""): the listing title is adjacent text.
  */
-export function InboxCard({
+export async function InboxCard({
   conversation,
 }: {
   conversation: ConversationSummaryDTO;
 }) {
+  const t = await getTranslations('Messages');
   const { id, listing, counterparty, lastMessagePreview, lastActivityAt } =
     conversation;
   const removed = listing.status === 'removed';
   const listingLabel = removed
-    ? `${listing.title} (no longer available)`
+    ? `${listing.title} (${t('listingRemovedNote')})`
     : listing.title;
 
   return (
     <Link
       href={`/messages/${id}`}
-      aria-label={`Conversation with ${counterparty.displayName} about ${listing.title}`}
+      aria-label={t('inboxCardLabel', {
+        name: counterparty.displayName,
+        title: listing.title,
+      })}
       className="flex gap-4 rounded-card border border-line bg-surface p-4 transition-colors hover:border-terracotta-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-strong"
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-control border border-line bg-sand">
@@ -45,7 +50,7 @@ export function InboxCard({
             aria-hidden
             className="grid h-full w-full place-items-center px-1 text-center text-[10px] leading-tight text-muted"
           >
-            No image
+            {t('noImage')}
           </span>
         )}
       </div>
@@ -72,7 +77,7 @@ export function InboxCard({
 
         <p className="mt-1 truncate text-sm text-ink">
           {lastMessagePreview ?? (
-            <span className="italic text-muted">No messages yet</span>
+            <span className="italic text-muted">{t('noMessagesPreview')}</span>
           )}
         </p>
       </div>

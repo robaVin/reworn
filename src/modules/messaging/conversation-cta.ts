@@ -19,6 +19,25 @@ export const INITIAL_CONVERSATION_STATE: StartConversationState = {
   status: 'idle',
 };
 
+/**
+ * Maps a failure kind to its stable catalog key under `Messages.conversationError`.
+ * Pure and client-safe — the consumer translates the returned key with next-intl.
+ */
+export function conversationErrorMessageKey(
+  kind: ConversationErrorKind,
+): string {
+  switch (kind) {
+    case 'notFound':
+    case 'ownListing':
+    case 'rateLimited':
+      return kind;
+    case 'validationError':
+    case 'unexpected':
+    default:
+      return 'generic';
+  }
+}
+
 /** Safe, generic user-facing message for a failure kind (no ids, no internals). */
 export function conversationErrorMessage(kind: ConversationErrorKind): string {
   switch (kind) {

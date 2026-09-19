@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -13,6 +14,7 @@ export function LogoutButton({
 }: {
   variant?: 'primary' | 'outline' | 'ghost';
 }) {
+  const tNav = useTranslations('Nav');
   const [pending, setPending] = useState(false);
 
   async function onClick() {
@@ -32,7 +34,7 @@ export function LogoutButton({
       onClick={onClick}
       disabled={pending}
     >
-      {pending ? 'Logging out…' : 'Log out'}
+      {pending ? tNav('loggingOut') : tNav('logout')}
     </Button>
   );
 }

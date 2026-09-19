@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
 import { MessageSellerForm } from './MessageSellerForm';
 import type { MessageCtaState } from '@/modules/messaging/conversation-actions';
@@ -11,7 +12,7 @@ import type { MessageCtaState } from '@/modules/messaging/conversation-actions';
  *   - buyer  -> the progressively-enhanced creation form.
  * No profile/seller ids are ever rendered.
  */
-export function MessageSellerCta({
+export async function MessageSellerCta({
   listingId,
   state,
   returnPath,
@@ -22,13 +23,15 @@ export function MessageSellerCta({
    * URL). Falls back to the legacy id route, which redirects to canonical. */
   returnPath?: string;
 }) {
+  const t = await getTranslations('Messages');
+
   if (state === 'owner') {
     return (
       <p
         className="mt-2 rounded-control border border-line bg-sand px-4 py-2.5 text-sm font-medium text-muted"
         data-testid="own-listing-note"
       >
-        This is your listing
+        {t('ownListingNote')}
       </p>
     );
   }
@@ -41,7 +44,7 @@ export function MessageSellerCta({
         variant="primary"
         className="mt-2 w-full sm:w-auto"
       >
-        Sign in to message seller
+        {t('signInToMessage')}
       </Button>
     );
   }

@@ -18,6 +18,25 @@ export type CheckoutState =
 
 export const INITIAL_CHECKOUT_STATE: CheckoutState = { status: 'idle' };
 
+/**
+ * Maps a checkout-failure kind to its stable catalog key under `Checkout.error`.
+ * Pure and client-safe — the consumer translates the returned key with next-intl.
+ */
+export function checkoutErrorMessageKey(kind: CheckoutErrorKind): string {
+  switch (kind) {
+    case 'notSeller':
+    case 'sellerInactive':
+    case 'invalidPlan':
+    case 'rateLimited':
+    case 'providerUnavailable':
+      return kind;
+    case 'providerError':
+    case 'unexpected':
+    default:
+      return 'generic';
+  }
+}
+
 /** Safe, generic message for a checkout failure — no provider detail. */
 export function checkoutErrorMessage(kind: CheckoutErrorKind): string {
   switch (kind) {

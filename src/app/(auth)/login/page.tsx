@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
@@ -11,29 +12,33 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 
-function loginErrorMessage(code: string | null): string | null {
+function loginErrorMessageKey(code: string | null): string | null {
   switch (code) {
     case 'auth':
-      return 'Sign-in could not be completed. Please try again.';
+      return 'errorAuth';
     case 'oauth':
-      return 'Google sign-in is unavailable or not configured for this project.';
+      return 'errorOAuth';
     case 'config':
-      return 'Authentication is not configured in this environment.';
+      return 'errorConfig';
     case 'session':
-      return 'Your session ended. Please log in again to continue.';
+      return 'errorSession';
     default:
       return null;
   }
 }
 
 function LoginForm() {
+  const t = useTranslations('Auth');
+  const tc = useTranslations('Common');
+  const tNav = useTranslations('Nav');
   const router = useRouter();
   const params = useSearchParams();
   const next = safeRedirectPath(params.get('next'), '/');
+  const errorKey = loginErrorMessageKey(params.get('error'));
   const banner =
-    loginErrorMessage(params.get('error')) ??
+    (errorKey ? t(errorKey) : null) ??
     (params.get('next') && !params.get('error')
-      ? 'Please log in to continue to the page you requested.'
+      ? t('loginRequiredNext')
       : null);
 
   const [email, setEmail] = useState('');
@@ -53,7 +58,7 @@ function LoginForm() {
       });
       if (!res.ok) {
         setPassword('');
-        setError('Invalid email or password.');
+        setError(t('invalidCredentials'));
         return;
       }
       const data = (await res.json()) as { redirectTo?: string };
@@ -61,7 +66,7 @@ function LoginForm() {
       router.refresh();
     } catch {
       setPassword('');
-      setError('Something went wrong. Please try again.');
+      setError(tc('somethingWrong'));
     } finally {
       setPending(false);
     }
@@ -69,30 +74,30 @@ function LoginForm() {
 
   return (
     <AuthCard
-      title="Welcome back"
-      subtitle="Log in to your ReWorn account."
+      title={t('loginTitle')}
+      subtitle={t('loginSubtitle')}
       footer={
         <>
-          No account?{' '}
+          {t('noAccount')}{' '}
           <Link
             href="/register"
             className="font-semibold text-terracotta-strong"
           >
-            Create one
+            {t('createOne')}
           </Link>
         </>
       }
     >
       {banner && (
         <div className="mb-6">
-          <Alert tone="info" title="Sign in required">
+          <Alert tone="info" title={t('signInRequired')}>
             {banner}
           </Alert>
         </div>
       )}
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <Field id="email" label="Email">
+        <Field id="email" label={t('emailLabel')}>
           <TextInput
             id="email"
             name="email"
@@ -104,7 +109,7 @@ function LoginForm() {
             disabled={pending}
           />
         </Field>
-        <Field id="password" label="Password">
+        <Field id="password" label={t('passwordLabel')}>
           <PasswordInput
             id="password"
             name="password"
@@ -121,7 +126,7 @@ function LoginForm() {
             href="/forgot-password"
             className="text-xs font-semibold text-terracotta-strong"
           >
-            Forgot password?
+            {t('forgotPasswordLink')}
           </Link>
         </div>
 
@@ -132,7 +137,7 @@ function LoginForm() {
         )}
 
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? 'Signing in…' : 'Log in'}
+          {pending ? t('signingIn') : tNav('login')}
         </Button>
       </form>
 
@@ -144,10 +149,12 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  const t = useTranslations('Auth');
+  const tc = useTranslations('Common');
   return (
     <Suspense
       fallback={
-        <AuthCard title="Welcome back" subtitle="Loading…">
+        <AuthCard title={t('loginTitle')} subtitle={tc('loading')}>
           <div className="animate-pulse-soft h-40 rounded-xl bg-sand" />
         </AuthCard>
       }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Wordmark } from '@/components/shell/Wordmark';
 
 /**
@@ -15,6 +16,7 @@ export function AuthCard({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const t = useTranslations('Auth');
   return (
     <main className="mx-auto flex w-full max-w-md flex-col px-4 py-12 sm:px-6 sm:py-16">
       <div className="mb-8">
@@ -32,7 +34,7 @@ export function AuthCard({
       {footer && <div className="mt-6 text-sm text-muted">{footer}</div>}
       <p className="mt-8 text-center text-xs text-muted">
         <Link href="/" className="font-semibold text-terracotta-strong">
-          Back to the homepage
+          {t('backToHome')}
         </Link>
       </p>
     </main>

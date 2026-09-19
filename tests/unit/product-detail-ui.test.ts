@@ -41,9 +41,12 @@ const base: PublicListingDetail = {
   images: [{ url: 'signed://img1', width: 800, height: 800 }],
 };
 
-function render(over: Partial<PublicListingDetail> = {}): string {
+// ProductDetail is an async server component; call it and await its element.
+async function render(
+  over: Partial<PublicListingDetail> = {},
+): Promise<string> {
   return renderToStaticMarkup(
-    createElement(ProductDetail, {
+    await ProductDetail({
       listing: { ...base, ...over },
       canonicalPath: '/products/wool-overcoat-abc12345',
       absoluteUrl: 'https://reworn.example/products/wool-overcoat-abc12345',
@@ -54,8 +57,8 @@ function render(over: Partial<PublicListingDetail> = {}): string {
 }
 
 describe('ProductDetail content', () => {
-  it('renders every required and optional field', () => {
-    const html = render();
+  it('renders every required and optional field', async () => {
+    const html = await render();
     expect(html).toContain('Wool Overcoat');
     expect(html).toContain('Maison Kre');
     expect(html).toMatch(/240/); // price
@@ -73,38 +76,38 @@ describe('ProductDetail content', () => {
     expect(html).toContain('RELATED'); // related slot
   });
 
-  it('has exactly one H1, a labelled breadcrumb, and a semantic time element', () => {
-    const html = render();
+  it('has exactly one H1, a labelled breadcrumb, and a semantic time element', async () => {
+    const html = await render();
     expect((html.match(/<h1/g) ?? []).length).toBe(1);
     expect(html).toContain('aria-label="Breadcrumb"');
     expect(html).toContain('/browse?category=outerwear');
     expect(html).toContain('<time dateTime="2026-01-02T00:00:00.000Z"');
   });
 
-  it('maps each delivery method to its public label', () => {
-    expect(render({ deliveryMethod: 'unspecified' })).toContain(
+  it('maps each delivery method to its public label', async () => {
+    expect(await render({ deliveryMethod: 'unspecified' })).toContain(
       'Arrange delivery directly with the seller',
     );
-    expect(render({ deliveryMethod: 'shipping' })).toContain(
+    expect(await render({ deliveryMethod: 'shipping' })).toContain(
       'Shipping available',
     );
-    expect(render({ deliveryMethod: 'pickup' })).toContain(
+    expect(await render({ deliveryMethod: 'pickup' })).toContain(
       'Collection available',
     );
-    expect(render({ deliveryMethod: 'both' })).toContain(
+    expect(await render({ deliveryMethod: 'both' })).toContain(
       'Shipping or collection available',
     );
   });
 
-  it('omits the note when absent and preserves it (with newlines) when present', () => {
+  it('omits the note when absent and preserves it (with newlines) when present', async () => {
     // Absent: the note text is gone (description is nulled too so the shared
     // `whitespace-pre-line` class isn't a false positive).
-    const absent = render({ deliveryNote: null, description: null });
+    const absent = await render({ deliveryNote: null, description: null });
     expect(absent).not.toContain('Ships from Skopje');
     expect(absent).not.toContain('whitespace-pre-line');
 
     // Present: both lines survive, rendered in a newline-preserving paragraph.
-    const multiline = render({
+    const multiline = await render({
       description: null,
       deliveryNote: `Ships Monday${String.fromCharCode(10)}Pickup in Skopje`,
     });
@@ -113,8 +116,8 @@ describe('ProductDetail content', () => {
     expect(multiline).toContain('Pickup in Skopje');
   });
 
-  it('renders HTML-like listing text as inert plain text (no raw markup)', () => {
-    const html = render({
+  it('renders HTML-like listing text as inert plain text (no raw markup)', async () => {
+    const html = await render({
       description: '</script><img src=x onerror=alert(1)>',
       deliveryNote: '<b>bold</b> & <i>italic</i>',
     });
@@ -123,21 +126,21 @@ describe('ProductDetail content', () => {
     expect(html).toContain('&lt;'); // escaped entities present instead
   });
 
-  it('falls back to the garment glyph when there are no images', () => {
-    const html = render({ images: [], coverUrl: null });
+  it('falls back to the garment glyph when there are no images', async () => {
+    const html = await render({ images: [], coverUrl: null });
     expect(html).toContain('no photo provided');
   });
 
-  it('exposes no internal ids (listing UUID, seller/profile UUID, storage keys)', () => {
-    const html = render();
+  it('exposes no internal ids (listing UUID, seller/profile UUID, storage keys)', async () => {
+    const html = await render();
     expect(html).not.toContain(LISTING_UUID);
     expect(html).not.toContain(SELLER_PROFILE_UUID);
     expect(html).not.toContain('storage_key');
     expect(html).not.toContain('storageKey');
   });
 
-  it('emits Product JSON-LD with an in-stock offer', () => {
-    const html = render();
+  it('emits Product JSON-LD with an in-stock offer', async () => {
+    const html = await render();
     expect(html).toContain('application/ld+json');
     expect(html).toContain('"@type":"Product"');
     expect(html).toContain('https://schema.org/InStock');

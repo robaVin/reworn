@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireAnyRolePage } from '@/modules/auth/page-guards';
 import {
   getOwnedListing,
@@ -10,7 +11,10 @@ import { CreateListingForm } from '@/components/seller/CreateListingForm';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 
-export const metadata: Metadata = { title: 'Edit listing' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Sell');
+  return { title: t('meta.editTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 /**
@@ -36,14 +40,15 @@ export default async function EditListingPage({
 
   const editable = isEditable(listing.status);
   const categories = editable ? await listActiveCategories() : [];
+  const t = await getTranslations('Sell');
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 lg:px-10">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-        Seller studio
+        {t('sellerStudio')}
       </p>
       <h1 className="mt-3 font-display text-3xl font-bold text-ink sm:text-[34px]">
-        {editable ? 'Edit listing' : 'Listing'}
+        {editable ? t('edit.headingEdit') : t('edit.headingListing')}
       </h1>
 
       <div className="mt-8">
@@ -76,13 +81,15 @@ export default async function EditListingPage({
           />
         ) : (
           <>
-            <Alert tone="info" title={`This listing is ${listing.status}`}>
-              Editing and lifecycle actions for {listing.status} listings arrive
-              in a later increment. You can still see it in your listings.
+            <Alert
+              tone="info"
+              title={t('edit.readOnlyTitle', { status: listing.status })}
+            >
+              {t('edit.readOnlyBody', { status: listing.status })}
             </Alert>
             <div className="mt-4">
               <Button href="/seller/listings" variant="outline">
-                Back to your listings
+                {t('edit.backToListings')}
               </Button>
             </div>
           </>

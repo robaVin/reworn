@@ -36,12 +36,13 @@ const base: Summary = {
   lastActivityAt: new Date('2026-07-29T10:00:00.000Z'),
 };
 
-const render = (c: Summary) =>
-  renderToStaticMarkup(createElement(InboxCard, { conversation: c }));
+// InboxCard is an async server component; call it and await its element.
+const render = async (c: Summary) =>
+  renderToStaticMarkup(await InboxCard({ conversation: c }));
 
 describe('InboxCard', () => {
-  it('renders a populated seller conversation with a thumbnail and machine-readable time', () => {
-    const html = render(base);
+  it('renders a populated seller conversation with a thumbnail and machine-readable time', async () => {
+    const html = await render(base);
     expect(html).toContain('Nordic Thrift');
     expect(html).toContain('@nordic-thrift');
     expect(html).toContain('Wool Overcoat');
@@ -52,8 +53,8 @@ describe('InboxCard', () => {
     expect(html).not.toContain('No image');
   });
 
-  it('shows a placeholder and no image when the cover is missing', () => {
-    const html = render({
+  it('shows a placeholder and no image when the cover is missing', async () => {
+    const html = await render({
       ...base,
       listing: { ...base.listing, coverUrl: null },
     });
@@ -61,8 +62,8 @@ describe('InboxCard', () => {
     expect(html).not.toContain('<img');
   });
 
-  it('marks a removed listing and falls back to its snapshot title', () => {
-    const html = render({
+  it('marks a removed listing and falls back to its snapshot title', async () => {
+    const html = await render({
       ...base,
       listing: {
         id: null,
@@ -78,8 +79,8 @@ describe('InboxCard', () => {
     expect(html).toContain('No image');
   });
 
-  it('does not show a handle for a buyer counterparty', () => {
-    const html = render({
+  it('does not show a handle for a buyer counterparty', async () => {
+    const html = await render({
       ...base,
       counterparty: { kind: 'buyer', displayName: 'ReWorn member' },
     });
@@ -87,13 +88,13 @@ describe('InboxCard', () => {
     expect(html).not.toContain('@');
   });
 
-  it('shows a neutral note when there is no message yet', () => {
-    const html = render({ ...base, lastMessagePreview: null });
+  it('shows a neutral note when there is no message yet', async () => {
+    const html = await render({ ...base, lastMessagePreview: null });
     expect(html).toContain('No messages yet');
   });
 
-  it('never renders a profile/seller/buyer id, listing id, or email', () => {
-    const html = render(base);
+  it('never renders a profile/seller/buyer id, listing id, or email', async () => {
+    const html = await render(base);
     expect(html).not.toContain(LISTING_ID); // the listing id is not rendered
     for (const key of [
       'buyerProfileId',

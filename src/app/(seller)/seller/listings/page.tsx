@@ -1,20 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { requireAnyRolePage } from '@/modules/auth/page-guards';
 import { listSellerListingCards } from '@/modules/catalog/listing-service';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
-export const metadata: Metadata = { title: 'Your listings' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Sell');
+  return { title: t('meta.listingsTitle') };
+}
 export const dynamic = 'force-dynamic';
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  published: 'Live',
-  paused: 'Paused',
-  sold: 'Sold',
-  archived: 'Archived',
-};
 
 const STATUS_CLASSES: Record<string, string> = {
   draft: 'bg-sand text-ink',
@@ -24,8 +20,12 @@ const STATUS_CLASSES: Record<string, string> = {
   archived: 'bg-ink/5 text-muted',
 };
 
-function formatPrice(minor: number | null, currency: string): string {
-  if (minor === null) return 'No price';
+function formatPrice(
+  minor: number | null,
+  currency: string,
+  noPriceLabel: string,
+): string {
+  if (minor === null) return noPriceLabel;
   return `${(minor / 100).toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
@@ -49,31 +49,33 @@ function formatUpdated(d: Date): string {
 export default async function SellerListingsPage() {
   const ctx = await requireAnyRolePage(['seller', 'admin'], '/seller/listings');
   const listings = await listSellerListingCards(ctx.userId);
+  const t = await getTranslations('Sell');
 
   return (
     <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-            Seller studio
+            {t('sellerStudio')}
           </p>
           <h1 className="mt-3 font-display text-3xl font-bold text-ink sm:text-[34px]">
-            Your listings
+            {t('listings.heading')}
           </h1>
         </div>
-        <Button href="/seller/listings/new">New listing</Button>
+        <Button href="/seller/listings/new">{t('listings.newListing')}</Button>
       </div>
 
       {listings.length === 0 ? (
         <div className="mt-8">
           <EmptyState
-            title="No listings yet"
+            title={t('listings.emptyTitle')}
             action={
-              <Button href="/seller/listings/new">Create a listing</Button>
+              <Button href="/seller/listings/new">
+                {t('listings.createListing')}
+              </Button>
             }
           >
-            Create your first listing — add photos, set a price, and publish
-            when it’s ready.
+            {t('listings.emptyBody')}
           </EmptyState>
         </div>
       ) : (
@@ -97,7 +99,7 @@ export default async function SellerListingsPage() {
                     />
                   ) : (
                     <div className="grid h-full w-full place-items-center text-xs text-muted">
-                      No photo yet
+                      {t('listings.noPhoto')}
                     </div>
                   )}
                   <span
@@ -105,7 +107,9 @@ export default async function SellerListingsPage() {
                       STATUS_CLASSES[l.status] ?? 'bg-sand text-ink'
                     }`}
                   >
-                    {STATUS_LABELS[l.status] ?? l.status}
+                    {t.has(`status.${l.status}`)
+                      ? t(`status.${l.status}`)
+                      : l.status}
                   </span>
                 </div>
                 <div className="p-4">
@@ -113,10 +117,12 @@ export default async function SellerListingsPage() {
                     {l.title}
                   </h2>
                   <p className="mt-1 text-sm text-muted">
-                    {formatPrice(l.priceMinor, l.currency)}
+                    {formatPrice(l.priceMinor, l.currency, t('noPrice'))}
                   </p>
                   <p className="mt-2 text-xs text-muted">
-                    Updated {formatUpdated(l.updatedAt)}
+                    {t('listings.updated', {
+                      date: formatUpdated(l.updatedAt),
+                    })}
                   </p>
                 </div>
               </Link>
@@ -126,7 +132,9 @@ export default async function SellerListingsPage() {
                   variant="outline"
                   size="sm"
                 >
-                  {l.status === 'draft' ? 'Continue draft' : 'Edit'}
+                  {l.status === 'draft'
+                    ? t('listings.continueDraft')
+                    : t('listings.edit')}
                 </Button>
               </div>
             </li>

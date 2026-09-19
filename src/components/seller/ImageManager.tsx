@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import {
@@ -19,28 +20,32 @@ interface Image {
 }
 
 /** Map a service error code to a short, human message. */
-function humanizeError(code: string): string {
+function humanizeError(
+  code: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   if (code.startsWith('image_rejected:rejected_format:')) {
     const fmt = code.split(':').pop();
-    return `${fmt?.toUpperCase() ?? 'That'} images aren't supported. Use JPEG, PNG or WebP.`;
+    return t('image.error.rejectedFormat', {
+      format: fmt?.toUpperCase() ?? 'That',
+    });
   }
   if (code.startsWith('image_rejected:mime_signature_mismatch'))
-    return 'That file is not the image type it claims to be.';
+    return t('image.error.mimeMismatch');
   if (code.startsWith('image_rejected:too_large'))
-    return 'That image is too large. Please upload one under 8 MB.';
+    return t('image.error.tooLarge');
   if (code.startsWith('image_rejected:too_small'))
-    return 'That image is too small — each side must be at least 400px.';
+    return t('image.error.tooSmall');
   if (code.startsWith('image_rejected:dimensions_too_large'))
-    return 'That image’s dimensions are too large.';
+    return t('image.error.dimensionsTooLarge');
   if (code.startsWith('image_rejected:undecodable'))
-    return 'That file could not be read as an image.';
+    return t('image.error.undecodable');
   if (code.startsWith('image_rejected:unrecognized_format'))
-    return 'That file is not a supported image.';
+    return t('image.error.unrecognizedFormat');
   if (code.startsWith('image_limit:'))
-    return `You can add up to ${MAX_LISTING_IMAGES} photos.`;
-  if (code.startsWith('listing_conflict:'))
-    return 'This listing can’t be edited right now.';
-  return 'Something went wrong. Please try again.';
+    return t('image.error.limit', { count: MAX_LISTING_IMAGES });
+  if (code.startsWith('listing_conflict:')) return t('image.error.conflict');
+  return t('image.error.generic');
 }
 
 export function ImageManager({
@@ -52,6 +57,7 @@ export function ImageManager({
   /** Bootstraps a draft on demand (e.g. when the user picks the first photo). */
   ensureListingId?: () => Promise<string | null>;
 }) {
+  const t = useTranslations('Sell');
   const [images, setImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState(Boolean(listingId));
   const [busy, setBusy] = useState(false);
@@ -87,15 +93,15 @@ export function ImageManager({
         const targetId =
           listingId ?? (ensureListingId ? await ensureListingId() : null);
         if (!targetId) {
-          setError('Could not start your draft. Please try again.');
+          setError(t('image.couldNotStartDraft'));
           return;
         }
         for (const file of Array.from(files)) {
           if (images.length >= MAX_LISTING_IMAGES) {
-            setError(humanizeError(`image_limit:${MAX_LISTING_IMAGES}`));
+            setError(humanizeError(`image_limit:${MAX_LISTING_IMAGES}`, t));
             break;
           }
-          setStatus(`Uploading ${file.name}…`);
+          setStatus(t('image.uploading', { name: file.name }));
           // Raw body upload: the file bytes ARE the request body and its type is
           // the Content-Type. No multipart, no filename sent (server ignores it).
           const res = await fetch(`/api/seller/listings/${targetId}/images`, {
@@ -109,7 +115,7 @@ export function ImageManager({
             const payload = (await res.json().catch(() => null)) as {
               error?: string;
             } | null;
-            setError(humanizeError(payload?.error ?? 'server_error'));
+            setError(humanizeError(payload?.error ?? 'server_error', t));
             break;
           }
           await refresh(targetId);
@@ -120,7 +126,7 @@ export function ImageManager({
         if (inputRef.current) inputRef.current.value = '';
       }
     },
-    [images.length, listingId, ensureListingId, refresh],
+    [images.length, listingId, ensureListingId, refresh, t],
   );
 
   const move = useCallback(
@@ -140,16 +146,16 @@ export function ImageManager({
           next.map((i) => i.id),
         );
         if (!res.ok) {
-          setError(humanizeError(res.error));
+          setError(humanizeError(res.error, t));
           await refresh(); // roll back to server truth
         } else {
-          setStatus('Order updated.');
+          setStatus(t('image.orderUpdated'));
         }
       } finally {
         setBusy(false);
       }
     },
-    [images, listingId, refresh],
+    [images, listingId, refresh, t],
   );
 
   const remove = useCallback(
@@ -158,14 +164,14 @@ export function ImageManager({
       setError(null);
       try {
         const res = await deleteListingImageAction(id);
-        if (!res.ok) setError(humanizeError(res.error));
+        if (!res.ok) setError(humanizeError(res.error, t));
         await refresh();
-        setStatus('Photo removed.');
+        setStatus(t('image.photoRemoved'));
       } finally {
         setBusy(false);
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   const atLimit = images.length >= MAX_LISTING_IMAGES;
@@ -177,17 +183,15 @@ export function ImageManager({
           id="photos-heading"
           className="font-display text-lg font-semibold text-ink"
         >
-          Photos
+          {t('image.heading')}
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Add up to {MAX_LISTING_IMAGES} photos (JPEG, PNG or WebP, max 8 MB
-          each). The first photo is the cover buyers see first. Photos are
-          optional — you can publish without them.
+          {t('image.helper', { count: MAX_LISTING_IMAGES })}
         </p>
       </div>
 
       {error && (
-        <Alert tone="danger" title="Photo problem">
+        <Alert tone="danger" title={t('image.problemTitle')}>
           {error}
         </Alert>
       )}
@@ -208,7 +212,9 @@ export function ImageManager({
                 <img
                   src={img.url}
                   alt={
-                    index === 0 ? 'Cover photo' : `Listing photo ${index + 1}`
+                    index === 0
+                      ? t('image.coverAlt')
+                      : t('image.photoAlt', { number: index + 1 })
                   }
                   className="h-full w-full object-cover"
                   width={img.width}
@@ -216,7 +222,7 @@ export function ImageManager({
                 />
                 {index === 0 && (
                   <span className="absolute left-2 top-2 rounded-full bg-forest px-2 py-0.5 text-[11px] font-semibold text-cream">
-                    Cover
+                    {t('image.coverBadge')}
                   </span>
                 )}
               </div>
@@ -227,7 +233,7 @@ export function ImageManager({
                     size="sm"
                     onClick={() => move(index, -1)}
                     disabled={busy || index === 0}
-                    aria-label={`Move photo ${index + 1} earlier`}
+                    aria-label={t('image.moveEarlier', { number: index + 1 })}
                   >
                     ↑
                   </Button>
@@ -236,7 +242,7 @@ export function ImageManager({
                     size="sm"
                     onClick={() => move(index, 1)}
                     disabled={busy || index === images.length - 1}
-                    aria-label={`Move photo ${index + 1} later`}
+                    aria-label={t('image.moveLater', { number: index + 1 })}
                   >
                     ↓
                   </Button>
@@ -246,9 +252,9 @@ export function ImageManager({
                   size="sm"
                   onClick={() => remove(img.id)}
                   disabled={busy}
-                  aria-label={`Remove photo ${index + 1}`}
+                  aria-label={t('image.removePhoto', { number: index + 1 })}
                 >
-                  Remove
+                  {t('image.remove')}
                 </Button>
               </div>
             </li>
@@ -261,7 +267,7 @@ export function ImageManager({
           htmlFor="image-upload"
           className="mb-1 block text-sm font-medium text-ink"
         >
-          Add photos
+          {t('image.addPhotos')}
         </label>
         <input
           ref={inputRef}
@@ -275,8 +281,11 @@ export function ImageManager({
         />
         <p className="mt-1 text-xs text-muted" aria-live="polite">
           {atLimit
-            ? `Photo limit reached (${MAX_LISTING_IMAGES}).`
-            : `${images.length} of ${MAX_LISTING_IMAGES} added${busy ? ' — working…' : ''}`}
+            ? t('image.limitReached', { count: MAX_LISTING_IMAGES })
+            : `${t('image.addedCount', {
+                added: images.length,
+                max: MAX_LISTING_IMAGES,
+              })}${busy ? t('image.workingSuffix') : ''}`}
         </p>
       </div>
     </section>

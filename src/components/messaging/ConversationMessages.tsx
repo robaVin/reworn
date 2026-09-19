@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { MessageDTO } from '@/modules/messaging/dto';
 import { formatDateTime } from '@/lib/format';
 
@@ -14,11 +15,13 @@ import { formatDateTime } from '@/lib/format';
 function MessageBubble({
   message,
   counterpartyName,
+  youLabel,
 }: {
   message: MessageDTO;
   counterpartyName: string;
+  youLabel: string;
 }) {
-  const sender = message.sentByViewer ? 'You' : counterpartyName;
+  const sender = message.sentByViewer ? youLabel : counterpartyName;
   return (
     <li
       className={
@@ -47,17 +50,19 @@ function MessageBubble({
   );
 }
 
-export function ConversationMessages({
+export async function ConversationMessages({
   messages,
   counterpartyName,
 }: {
   messages: MessageDTO[];
   counterpartyName: string;
 }) {
+  const t = await getTranslations('Messages');
+
   if (messages.length === 0) {
     return (
       <p className="mt-8 rounded-card border border-line bg-surface px-4 py-10 text-center text-sm text-muted">
-        No messages yet.
+        {t('noMessagesYet')}
       </p>
     );
   }
@@ -69,6 +74,7 @@ export function ConversationMessages({
           key={message.id}
           message={message}
           counterpartyName={counterpartyName}
+          youLabel={t('you')}
         />
       ))}
     </ol>

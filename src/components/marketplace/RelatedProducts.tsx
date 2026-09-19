@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import {
   getRelatedListings,
   type RelatedQuery,
@@ -15,6 +16,7 @@ export async function RelatedProducts({ query }: { query: RelatedQuery }) {
   const related = await getRelatedListings(query, 8);
   if (related.length === 0) return null;
 
+  const t = await getTranslations('Listing');
   const cards = related.map(publicCardToListingCard);
   return (
     <section
@@ -25,7 +27,7 @@ export async function RelatedProducts({ query }: { query: RelatedQuery }) {
         id="related-heading"
         className="font-display text-2xl font-bold text-ink"
       >
-        You might also like
+        {t('relatedHeading')}
       </h2>
       <div className="mt-6">
         <ListingGrid listings={cards} hrefFor={productHref} />

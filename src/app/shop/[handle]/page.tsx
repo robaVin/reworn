@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import {
   resolvePublicSeller,
@@ -33,15 +34,16 @@ export async function generateMetadata({
   params: Promise<{ handle: string }>;
 }): Promise<Metadata> {
   const { handle } = await params;
+  const t = await getTranslations('Shop');
   if (!isValidHandle(normalizeHandle(handle))) {
-    return { title: 'Seller not found', robots: { index: false } };
+    return { title: t('metaNotFound'), robots: { index: false } };
   }
   const seller = await resolvePublicSeller(handle);
-  if (!seller) return { title: 'Seller not found', robots: { index: false } };
+  if (!seller) return { title: t('metaNotFound'), robots: { index: false } };
 
-  const description = `Shop pre-loved fashion from ${seller.shopName} on ReWorn.`;
+  const description = t('metaDescription', { shopName: seller.shopName });
   return {
-    title: `${seller.shopName} — Seller`,
+    title: t('metaTitle', { shopName: seller.shopName }),
     description,
     alternates: { canonical: `/shop/${seller.handle}` },
     openGraph: {
@@ -72,9 +74,11 @@ export default async function ShopPage({
   const query = parseBrowseQuery(
     storefrontRaw(searchParamsToRaw(await searchParams)),
   );
-  const [page, itemCount] = await Promise.all([
+  const [page, itemCount, t, tBrowse] = await Promise.all([
     listPublishedListings(query, { sellerId: seller.id }),
     countSellerPublishedListings(seller.id),
+    getTranslations('Shop'),
+    getTranslations('Browse'),
   ]);
 
   const cards = page.items.map(publicCardToListingCard);
@@ -87,7 +91,7 @@ export default async function ShopPage({
     <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
       <header className="border-b border-line pb-6">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-          Seller
+          {t('sellerEyebrow')}
         </p>
         <h1 className="mt-2 font-display text-3xl font-bold text-ink sm:text-[34px]">
           {seller.shopName}
@@ -95,11 +99,11 @@ export default async function ShopPage({
         <p className="mt-1 text-sm text-muted">@{seller.handle}</p>
         <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
           <div className="flex items-baseline gap-2">
-            <dt className="text-muted">Items for sale</dt>
+            <dt className="text-muted">{t('itemsForSale')}</dt>
             <dd className="font-semibold text-ink">{itemCount}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-muted">Member since</dt>
+            <dt className="text-muted">{t('memberSince')}</dt>
             <dd className="font-semibold text-ink">{memberSince}</dd>
           </div>
         </dl>
@@ -112,10 +116,10 @@ export default async function ShopPage({
       >
         {cards.length === 0 ? (
           <ListingGridEmpty
-            title={`${seller.shopName} has no listings yet`}
-            action={<Button href="/browse">Browse the marketplace</Button>}
+            title={t('emptyTitle', { shopName: seller.shopName })}
+            action={<Button href="/browse">{t('browseMarketplace')}</Button>}
           >
-            This seller hasn’t published any items yet. Check back soon.
+            {t('emptyBody')}
           </ListingGridEmpty>
         ) : (
           <>
@@ -124,16 +128,19 @@ export default async function ShopPage({
               hrefFor={productHref}
               priorityCount={4}
             />
-            <nav aria-label="Pagination" className="mt-10 flex justify-center">
+            <nav
+              aria-label={tBrowse('paginationLabel')}
+              className="mt-10 flex justify-center"
+            >
               {page.nextCursor ? (
                 <Button
                   href={`${shopHref(seller.handle, page.nextCursor)}#results`}
                   variant="outline"
                 >
-                  Next page
+                  {tBrowse('nextPage')}
                 </Button>
               ) : (
-                <p className="text-sm text-muted">You’ve reached the end.</p>
+                <p className="text-sm text-muted">{tBrowse('endReached')}</p>
               )}
             </nav>
           </>

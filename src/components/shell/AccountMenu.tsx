@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { NavLink } from './nav-model';
 import { IconButton } from '@/components/ui/IconButton';
 import { UserIcon } from './icons';
@@ -31,6 +32,8 @@ export function AccountMenu({
   links,
   showLogout,
 }: AccountMenuProps) {
+  const t = useTranslations('Account');
+  const tNav = useTranslations('Nav');
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -105,7 +108,7 @@ export function AccountMenu({
   return (
     <div ref={rootRef} className="relative">
       <IconButton
-        label={authenticated ? 'Account menu' : 'Account — log in or register'}
+        label={authenticated ? t('menuLabelAuthed') : t('menuLabelGuest')}
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
@@ -123,13 +126,13 @@ export function AccountMenu({
         <div
           ref={listRef}
           role="menu"
-          aria-label="Account"
+          aria-label={tNav('account')}
           onKeyDown={onMenuKeyDown}
           className="absolute right-0 top-[calc(100%+8px)] z-50 w-60 rounded-card border border-line bg-surface p-2 shadow-lift"
         >
           {authenticated && email && (
             <p className="truncate border-b border-line px-3 pb-2 pt-1 text-xs text-muted">
-              Signed in as{' '}
+              {tNav('signedInAs')}{' '}
               <span className="font-semibold text-ink">{email}</span>
             </p>
           )}
@@ -155,7 +158,7 @@ export function AccountMenu({
                 disabled={loggingOut}
                 className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-ink hover:bg-sand disabled:opacity-60"
               >
-                {loggingOut ? 'Logging out…' : 'Log out'}
+                {loggingOut ? tNav('loggingOut') : tNav('logout')}
               </button>
             </div>
           )}

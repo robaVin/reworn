@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/cn';
 import { TextInput } from './Field';
 
@@ -34,6 +35,7 @@ export function PasswordInput({
   'aria-describedby'?: string;
   'aria-invalid'?: boolean;
 }) {
+  const t = useTranslations('Auth');
   const [visible, setVisible] = useState(false);
 
   return (
@@ -57,9 +59,9 @@ export function PasswordInput({
         onClick={() => setVisible((v) => !v)}
         className="absolute right-2 top-1/2 -translate-y-1/2 rounded-control px-2 py-1 text-xs font-semibold text-muted hover:text-ink"
         aria-pressed={visible}
-        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-label={visible ? t('hidePassword') : t('showPassword')}
       >
-        {visible ? 'Hide' : 'Show'}
+        {visible ? t('hide') : t('show')}
       </button>
     </div>
   );

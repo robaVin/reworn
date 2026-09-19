@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -6,18 +7,19 @@ import { EmptyState } from '@/components/ui/EmptyState';
  * party learns nothing about whether the conversation exists). Inherits the
  * generic noindex metadata from the route's generateMetadata.
  */
-export default function ThreadNotFound() {
+export default async function ThreadNotFound() {
+  const t = await getTranslations('Messages');
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-8">
       <EmptyState
-        title="Conversation not found"
+        title={t('notFoundTitle')}
         action={
           <Button href="/messages" variant="outline">
-            Back to inbox
+            {t('backToInbox')}
           </Button>
         }
       >
-        This conversation doesn’t exist or isn’t available to you.
+        {t('notFoundBody')}
       </EmptyState>
     </main>
   );

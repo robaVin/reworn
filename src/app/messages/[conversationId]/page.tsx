@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { requireUserPage } from '@/modules/auth/page-guards';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import {
@@ -26,8 +27,9 @@ export async function generateMetadata({
   params: Promise<{ conversationId: string }>;
 }): Promise<Metadata> {
   const { conversationId } = await params;
+  const t = await getTranslations('Messages');
   return {
-    title: 'Conversation — ReWorn',
+    title: t('conversationMetaTitle'),
     alternates: { canonical: `/messages/${conversationId}` },
     robots: { index: false, follow: false },
   };
@@ -52,6 +54,7 @@ export default async function ConversationThreadPage({
   const context = await getConversationForCurrentUser(userId, conversationId);
   if (!context) notFound();
 
+  const t = await getTranslations('Messages');
   const sp = await searchParams;
   const cursor = typeof sp.cursor === 'string' ? sp.cursor : undefined;
   const page = await listRecentConversationMessages(
@@ -67,7 +70,7 @@ export default async function ConversationThreadPage({
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-8">
       <p className="mb-4">
         <Button href="/messages" variant="ghost" size="sm">
-          ← All messages
+          ← {t('allMessages')}
         </Button>
       </p>
 
@@ -79,10 +82,10 @@ export default async function ConversationThreadPage({
         <nav aria-label="Older messages" className="mt-8 flex justify-center">
           {olderHref ? (
             <Button href={`${olderHref}#thread`} variant="outline" size="sm">
-              Load older messages
+              {t('loadOlder')}
             </Button>
           ) : (
-            <p className="text-xs text-muted">Start of the conversation.</p>
+            <p className="text-xs text-muted">{t('startOfConversation')}</p>
           )}
         </nav>
 
@@ -102,7 +105,7 @@ export default async function ConversationThreadPage({
               variant="ghost"
               size="sm"
             >
-              Back to latest messages
+              {t('backToLatest')}
             </Button>
           </p>
         )}

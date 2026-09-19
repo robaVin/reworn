@@ -20,11 +20,18 @@ export function ListingCard({
   listing,
   href,
   priority = false,
+  sizeLabel = 'Size',
 }: {
   listing: ListingCardData;
   href?: string;
   /** Above-the-fold cover: load eagerly with `priority` (skips lazy loading). */
   priority?: boolean;
+  /**
+   * Localized "Size" prefix. Passed by `ListingGrid` (server-side, via
+   * next-intl); defaults to English so the pure component still renders
+   * standalone (e.g. in unit tests) without an intl context.
+   */
+  sizeLabel?: string;
 }) {
   const body = (
     <>
@@ -59,7 +66,7 @@ export function ListingCard({
           {listing.title}
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          Size {listing.size} · {listing.category}
+          {sizeLabel} {listing.size} · {listing.category}
         </p>
         <div className="mt-3 flex items-center justify-between gap-2">
           <span className="text-base font-bold text-ink">

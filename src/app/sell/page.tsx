@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { env } from '@/lib/env';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import {
@@ -12,7 +13,10 @@ import { resolveSellDestination } from '@/modules/catalog/sell-routing';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 
-export const metadata: Metadata = { title: 'Sell on ReWorn' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Sell');
+  return { title: t('meta.sellTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 /**
@@ -51,14 +55,14 @@ export default async function SellPage() {
     case 'buyer_onboarding':
       return (
         <SellShell>
-          {devHint()}
+          <DevHint />
           <BuyerOnboarding />
         </SellShell>
       );
     case 'profile_required':
       return (
         <SellShell>
-          {devHint()}
+          <DevHint />
           <SellerProfileRequired />
         </SellShell>
       );
@@ -80,105 +84,99 @@ export default async function SellPage() {
 }
 
 /** The development-testing hint is shown ONLY when the dev bridge is active. */
-function devHint() {
+async function DevHint() {
   if (env.SUBSCRIPTION_ENFORCEMENT) return null;
+  const t = await getTranslations('Sell');
   return (
-    <Alert tone="info" title="Development testing access">
-      Subscription enforcement is off in this environment, so an approved seller
-      account can test listing creation. Provision your account (development
-      only):
+    <Alert tone="info" title={t('devHint.title')}>
+      {t('devHint.body')}
       <code className="mt-2 block rounded-lg bg-sand px-3 py-2 text-xs text-ink">
         npm run dev:seller:provision -- --email you@example.com
       </code>
-      Then reload this page.
+      {t('devHint.reload')}
     </Alert>
   );
 }
 
-function SellShell({ children }: { children: React.ReactNode }) {
+async function SellShell({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations('Sell');
   return (
     <main className="mx-auto max-w-2xl px-4 py-12 sm:px-8 lg:px-10">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-        Sell on ReWorn
+        {t('page.eyebrow')}
       </p>
       <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-ink sm:text-5xl">
-        Your closet clean-out can do good.
+        {t('page.heading')}
       </h1>
       <p className="mt-4 text-base leading-relaxed text-muted">
-        ReWorn is a classifieds marketplace: you keep 100% of what you sell.
-        Buyers contact you directly, and payment and delivery stay between you
-        and the buyer.
+        {t('page.intro')}
       </p>
       <div className="mt-8 space-y-5">{children}</div>
     </main>
   );
 }
 
-function BuyerOnboarding() {
+async function BuyerOnboarding() {
+  const t = await getTranslations('Sell');
   return (
     <>
-      <Alert tone="info" title="Seller access">
-        Seller subscriptions will be required before production launch, and the
-        bank payment integration is still being configured. You&apos;ll need an
-        active seller profile before you can create listings.
+      <Alert tone="info" title={t('buyerOnboarding.alertTitle')}>
+        {t('buyerOnboarding.alertBody')}
       </Alert>
       <p className="text-sm leading-relaxed text-muted">
-        In-app seller onboarding (profile + subscription) arrives in a later
-        update. When it&apos;s ready you&apos;ll be able to set up your seller
-        profile here.
+        {t('buyerOnboarding.body')}
       </p>
       <div className="flex flex-wrap gap-3">
         <Button href="/account" variant="outline">
-          Your account
+          {t('buyerOnboarding.yourAccount')}
         </Button>
         <Button href="/browse" variant="ghost">
-          Keep browsing
+          {t('buyerOnboarding.keepBrowsing')}
         </Button>
       </div>
     </>
   );
 }
 
-function SellerProfileRequired() {
+async function SellerProfileRequired() {
+  const t = await getTranslations('Sell');
   return (
-    <Alert tone="info" title="Complete your seller profile">
-      Your account has seller access but no seller profile yet. A seller profile
-      is required before creating listings. In-app profile completion arrives in
-      a later update.
+    <Alert tone="info" title={t('profileRequired.title')}>
+      {t('profileRequired.body')}
     </Alert>
   );
 }
 
-function SellerNotActive({ status }: { status: string }) {
+async function SellerNotActive({ status }: { status: string }) {
+  const t = await getTranslations('Sell');
   return (
-    <Alert tone="warning" title="Seller account not active">
-      Your seller account is currently <strong>{status}</strong>, so you
-      can&apos;t create or publish listings. Please contact support.
+    <Alert tone="warning" title={t('notActive.title')}>
+      {t.rich('notActive.body', {
+        status,
+        strong: (chunks) => <strong>{chunks}</strong>,
+      })}
     </Alert>
   );
 }
 
-function SubscriptionRequired() {
+async function SubscriptionRequired() {
+  const t = await getTranslations('Sell');
   return (
     <>
-      <Alert tone="info" title="A seller subscription is required">
-        Publishing listings requires an active seller subscription. Your account
-        is ready — only the payment step remains.
+      <Alert tone="info" title={t('subscriptionRequired.alertTitle')}>
+        {t('subscriptionRequired.alertBody')}
       </Alert>
       <div className="rounded-card border border-line bg-surface p-6">
         <h2 className="font-display text-lg font-semibold text-ink">
-          Payment setup unavailable
+          {t('subscriptionRequired.cardTitle')}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          The bank payment integration is awaiting configuration, so
-          subscription checkout is not available yet. No payment is taken and no
-          charge is created by viewing this page. Please check back once payment
-          setup is complete.
+          {t('subscriptionRequired.cardBody')}
         </p>
         <div className="mt-4">
           {/* Disabled on purpose: no fabricated checkout. */}
           <Button disabled aria-disabled>
-            Payment setup unavailable
+            {t('subscriptionRequired.button')}
           </Button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import type { ListingCardData } from '@/modules/catalog/types';
 import { ListingCard } from './ListingCard';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -23,6 +24,7 @@ export function ListingGrid({
   /** How many leading (above-the-fold) covers load with `priority`. */
   priorityCount?: number;
 }) {
+  const t = useTranslations('Listing');
   return (
     <div className={gridClasses}>
       {listings.map((listing, i) => (
@@ -35,6 +37,7 @@ export function ListingGrid({
             listing={listing}
             href={hrefFor?.(listing)}
             priority={i < priorityCount}
+            sizeLabel={t('sizeLabel')}
           />
         </div>
       ))}
@@ -43,9 +46,10 @@ export function ListingGrid({
 }
 
 export function ListingGridSkeleton({ count = 8 }: { count?: number }) {
+  const t = useTranslations('Browse');
   return (
     <div role="status" className={gridClasses}>
-      <span className="sr-only">Loading listings…</span>
+      <span className="sr-only">{t('loadingListings')}</span>
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
@@ -64,7 +68,7 @@ export function ListingGridSkeleton({ count = 8 }: { count?: number }) {
 }
 
 export function ListingGridEmpty({
-  title = 'Nothing here yet',
+  title,
   action,
   children,
 }: {
@@ -72,18 +76,23 @@ export function ListingGridEmpty({
   action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const t = useTranslations('Browse');
   return (
-    <EmptyState title={title} action={action} icon={<SearchIcon />}>
+    <EmptyState
+      title={title ?? t('emptyDefaultTitle')}
+      action={action}
+      icon={<SearchIcon />}
+    >
       {children}
     </EmptyState>
   );
 }
 
 export function ListingGridError({ children }: { children?: React.ReactNode }) {
+  const t = useTranslations('Browse');
   return (
-    <Alert tone="danger" title="We couldn't load listings">
-      {children ??
-        'Something went wrong on our side. Please try again in a moment.'}
+    <Alert tone="danger" title={t('errorTitle')}>
+      {children ?? t('errorGenericBody')}
     </Alert>
   );
 }

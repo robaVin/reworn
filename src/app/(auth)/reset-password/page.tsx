@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { PasswordStrengthHint } from '@/components/auth/PasswordStrengthHint';
 import { Field } from '@/components/ui/Field';
@@ -11,6 +12,9 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 
 function ResetPasswordForm() {
+  const t = useTranslations('Auth');
+  const tc = useTranslations('Common');
+  const tNav = useTranslations('Nav');
   const router = useRouter();
   const params = useSearchParams();
   const expired = params.get('error') === 'expired';
@@ -19,9 +23,7 @@ function ResetPasswordForm() {
   const [confirm, setConfirm] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(
-    expired
-      ? 'This reset link is invalid or has expired. Request a new one.'
-      : null,
+    expired ? t('resetLinkInvalid') : null,
   );
   const [success, setSuccess] = useState(false);
 
@@ -29,12 +31,12 @@ function ResetPasswordForm() {
     e.preventDefault();
     setError(null);
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('errPasswordMinLength'));
       return;
     }
     if (password !== confirm) {
       setConfirm('');
-      setError('Passwords do not match.');
+      setError(t('errPasswordMismatch'));
       return;
     }
 
@@ -49,10 +51,7 @@ function ResetPasswordForm() {
       setConfirm('');
       const data = (await res.json()) as { message?: string; error?: string };
       if (!res.ok) {
-        setError(
-          data.error ??
-            'This reset link is invalid or has expired. Request a new one.',
-        );
+        setError(data.error ?? t('resetLinkInvalid'));
         return;
       }
       setSuccess(true);
@@ -60,7 +59,7 @@ function ResetPasswordForm() {
     } catch {
       setPassword('');
       setConfirm('');
-      setError('Something went wrong. Please try again.');
+      setError(tc('somethingWrong'));
     } finally {
       setPending(false);
     }
@@ -68,36 +67,35 @@ function ResetPasswordForm() {
 
   return (
     <AuthCard
-      title="Choose a new password"
-      subtitle="Use a strong password you have not used elsewhere."
+      title={t('resetTitle')}
+      subtitle={t('resetSubtitle')}
       footer={
         <>
           <Link
             href="/forgot-password"
             className="font-semibold text-terracotta-strong"
           >
-            Request a new reset link
+            {t('requestNewResetLink')}
           </Link>
           {' · '}
           <Link href="/login" className="font-semibold text-terracotta-strong">
-            Log in
+            {tNav('login')}
           </Link>
         </>
       }
     >
       {success ? (
-        <Alert tone="success" title="Password updated">
-          Your password has been updated. Redirecting you to log in…
+        <Alert tone="success" title={t('passwordUpdatedTitle')}>
+          {t('passwordUpdatedBody')}
         </Alert>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           {expired && (
-            <Alert tone="warning" title="Link expired">
-              Request a fresh reset email, then open the new link before setting
-              a password.
+            <Alert tone="warning" title={t('linkExpiredTitle')}>
+              {t('linkExpiredBody')}
             </Alert>
           )}
-          <Field id="password" label="New password">
+          <Field id="password" label={t('newPasswordLabel')}>
             <PasswordInput
               id="password"
               autoComplete="new-password"
@@ -109,7 +107,7 @@ function ResetPasswordForm() {
             />
           </Field>
           <PasswordStrengthHint password={password} />
-          <Field id="confirm" label="Confirm password">
+          <Field id="confirm" label={t('confirmPasswordLabel')}>
             <PasswordInput
               id="confirm"
               autoComplete="new-password"
@@ -130,7 +128,7 @@ function ResetPasswordForm() {
             disabled={pending || expired}
             className="w-full"
           >
-            {pending ? 'Updating…' : 'Update password'}
+            {pending ? t('updating') : t('updatePassword')}
           </Button>
         </form>
       )}
@@ -139,10 +137,12 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
+  const t = useTranslations('Auth');
+  const tc = useTranslations('Common');
   return (
     <Suspense
       fallback={
-        <AuthCard title="Choose a new password" subtitle="Loading…">
+        <AuthCard title={t('resetTitle')} subtitle={tc('loading')}>
           <div className="animate-pulse-soft h-40 rounded-xl bg-sand" />
         </AuthCard>
       }

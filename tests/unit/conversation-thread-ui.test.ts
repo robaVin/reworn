@@ -41,12 +41,13 @@ const ctx = (over: Partial<Ctx['listing']> = {}): Ctx => ({
   lastActivityAt: new Date('2026-07-29T10:00:00.000Z'),
 });
 
-const headerHtml = (c: Ctx) =>
-  renderToStaticMarkup(createElement(ConversationHeader, { context: c }));
+// Async server components: call them and await the returned element.
+const headerHtml = async (c: Ctx) =>
+  renderToStaticMarkup(await ConversationHeader({ context: c }));
 
 describe('ConversationHeader', () => {
-  it('links a PUBLISHED listing to /listing/[id] and shows the seller handle', () => {
-    const html = headerHtml(ctx());
+  it('links a PUBLISHED listing to /listing/[id] and shows the seller handle', async () => {
+    const html = await headerHtml(ctx());
     expect(html).toContain('Nordic Thrift');
     expect(html).toContain('href="/shop/nordic-thrift"');
     expect(html).toContain(`href="/listing/${LISTING_ID}"`);
@@ -54,16 +55,16 @@ describe('ConversationHeader', () => {
     expect(html).toContain('<img'); // signed cover
   });
 
-  it('does NOT link a paused/archived listing (would 404 publicly)', () => {
+  it('does NOT link a paused/archived listing (would 404 publicly)', async () => {
     for (const status of ['paused', 'archived'] as const) {
-      const html = headerHtml(ctx({ status }));
+      const html = await headerHtml(ctx({ status }));
       expect(html).not.toContain(`href="/listing/${LISTING_ID}"`);
       expect(html).toContain('not currently available');
     }
   });
 
-  it('uses the snapshot and shows no public link for a REMOVED listing', () => {
-    const html = headerHtml(
+  it('uses the snapshot and shows no public link for a REMOVED listing', async () => {
+    const html = await headerHtml(
       ctx({ id: null, status: 'removed', coverUrl: null, title: 'Gone Coat' }),
     );
     expect(html).toContain('Gone Coat');
@@ -73,8 +74,8 @@ describe('ConversationHeader', () => {
     expect(html).not.toContain('<img');
   });
 
-  it('never renders a profile/seller/owner id', () => {
-    const html = headerHtml(ctx());
+  it('never renders a profile/seller/owner id', async () => {
+    const html = await headerHtml(ctx());
     for (const key of [
       'sellerProfileId',
       'buyerProfileId',
@@ -96,24 +97,24 @@ const msg = (over: Partial<Msg>): Msg => ({
   ...over,
 });
 
-const listHtml = (messages: Msg[]) =>
+const listHtml = async (messages: Msg[]) =>
   renderToStaticMarkup(
-    createElement(ConversationMessages, {
+    await ConversationMessages({
       messages,
       counterpartyName: 'Nordic Thrift',
     }),
   );
 
 describe('ConversationMessages', () => {
-  it('renders a truthful empty state with no composer', () => {
-    const html = listHtml([]);
+  it('renders a truthful empty state with no composer', async () => {
+    const html = await listHtml([]);
     expect(html).toContain('No messages yet.');
     expect(html).not.toContain('<textarea');
     expect(html).not.toContain('<form');
   });
 
-  it('labels the viewer as "You" and the counterparty by public name', () => {
-    const html = listHtml([
+  it('labels the viewer as "You" and the counterparty by public name', async () => {
+    const html = await listHtml([
       msg({ id: 'm1', body: 'mine', sentByViewer: true }),
       msg({ id: 'm2', body: 'theirs', sentByViewer: false }),
     ]);
@@ -123,23 +124,23 @@ describe('ConversationMessages', () => {
     expect(html).toContain('<time'); // per-message timestamp
   });
 
-  it('renders bodies as plain text — HTML-like content is ESCAPED, not injected', () => {
-    const html = listHtml([
+  it('renders bodies as plain text — HTML-like content is ESCAPED, not injected', async () => {
+    const html = await listHtml([
       msg({ body: '<script>alert(1)</script> & <b>x</b>' }),
     ]);
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;'); // escaped
   });
 
-  it('preserves intentional newlines and renders Unicode/emoji', () => {
-    const html = listHtml([msg({ body: 'line1\nline2\n\nЋао 🧥' })]);
+  it('preserves intentional newlines and renders Unicode/emoji', async () => {
+    const html = await listHtml([msg({ body: 'line1\nline2\n\nЋао 🧥' })]);
     expect(html).toContain('whitespace-pre-line');
     expect(html).toContain('line1\nline2');
     expect(html).toContain('Ћао 🧥');
   });
 
-  it('never renders a sender profile id', () => {
-    const html = listHtml([msg({ body: 'hi' })]);
+  it('never renders a sender profile id', async () => {
+    const html = await listHtml([msg({ body: 'hi' })]);
     for (const key of ['senderProfileId', 'sender_profile_id', 'profileId']) {
       expect(html).not.toContain(key);
     }
@@ -166,9 +167,9 @@ describe('InboxCard link', () => {
     lastActivityAt: new Date('2026-07-29T10:00:00.000Z'),
   };
 
-  it('is a SINGLE primary link to the thread with a descriptive accessible name', () => {
+  it('is a SINGLE primary link to the thread with a descriptive accessible name', async () => {
     const html = renderToStaticMarkup(
-      createElement(InboxCard, { conversation: summary }),
+      await InboxCard({ conversation: summary }),
     );
     expect(html).toContain(`href="/messages/${CONV_ID}"`);
     expect(html).toContain(

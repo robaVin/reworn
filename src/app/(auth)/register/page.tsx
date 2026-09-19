@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { PasswordStrengthHint } from '@/components/auth/PasswordStrengthHint';
@@ -21,6 +22,9 @@ import { Alert } from '@/components/ui/Alert';
  * claimed as a permanent consent ledger entry.
  */
 export default function RegisterPage() {
+  const t = useTranslations('Auth');
+  const tc = useTranslations('Common');
+  const tNav = useTranslations('Nav');
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,20 +41,20 @@ export default function RegisterPage() {
     setFieldError(null);
 
     if (!displayName.trim()) {
-      setFieldError('Please enter a display name.');
+      setFieldError(t('errDisplayNameRequired'));
       return;
     }
     if (password.length < 8) {
-      setFieldError('Password must be at least 8 characters.');
+      setFieldError(t('errPasswordMinLength'));
       return;
     }
     if (password !== confirm) {
       setConfirm('');
-      setFieldError('Passwords do not match.');
+      setFieldError(t('errPasswordMismatch'));
       return;
     }
     if (!acceptedTerms) {
-      setFieldError('Please accept the terms to continue.');
+      setFieldError(t('errAcceptTerms'));
       return;
     }
 
@@ -70,7 +74,7 @@ export default function RegisterPage() {
       setPassword('');
       setConfirm('');
       if (!res.ok) {
-        setError(data.error ?? 'Please check your details and try again.');
+        setError(data.error ?? t('errCheckDetails'));
         return;
       }
       // Enumeration-safe: same outcome path whether or not the email exists.
@@ -80,7 +84,7 @@ export default function RegisterPage() {
     } catch {
       setPassword('');
       setConfirm('');
-      setError('Something went wrong. Please try again.');
+      setError(tc('somethingWrong'));
     } finally {
       setPending(false);
     }
@@ -88,19 +92,19 @@ export default function RegisterPage() {
 
   return (
     <AuthCard
-      title="Create your account"
-      subtitle="Free for buyers. Everyone starts with a buyer account — seller access opens with a subscription later."
+      title={t('registerTitle')}
+      subtitle={t('registerSubtitle')}
       footer={
         <>
-          Already have an account?{' '}
+          {t('alreadyHaveAccount')}{' '}
           <Link href="/login" className="font-semibold text-terracotta-strong">
-            Log in
+            {tNav('login')}
           </Link>
         </>
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <Field id="displayName" label="Display name">
+        <Field id="displayName" label={t('displayNameLabel')}>
           <TextInput
             id="displayName"
             name="displayName"
@@ -112,7 +116,7 @@ export default function RegisterPage() {
             disabled={pending}
           />
         </Field>
-        <Field id="email" label="Email">
+        <Field id="email" label={t('emailLabel')}>
           <TextInput
             id="email"
             name="email"
@@ -126,8 +130,8 @@ export default function RegisterPage() {
         </Field>
         <Field
           id="password"
-          label="Password"
-          hint="At least 8 characters. Confirmation is checked in your browser only."
+          label={t('passwordLabel')}
+          hint={t('passwordHintRegister')}
         >
           <PasswordInput
             id="password"
@@ -144,7 +148,7 @@ export default function RegisterPage() {
         <div id="password-strength">
           <PasswordStrengthHint password={password} />
         </div>
-        <Field id="confirm" label="Confirm password">
+        <Field id="confirm" label={t('confirmPasswordLabel')}>
           <PasswordInput
             id="confirm"
             name="confirm"
@@ -167,11 +171,9 @@ export default function RegisterPage() {
             required
           />
           <span>
-            I agree to the terms of use and privacy policy.
+            {t('agreeTerms')}
             <span className="mt-1 block text-xs text-muted">
-              Acceptance is recorded in this browser session for the form only.
-              A durable legal consent record is not stored yet and arrives in a
-              later increment.
+              {t('consentDeferredNote')}
             </span>
           </span>
         </label>
@@ -183,7 +185,7 @@ export default function RegisterPage() {
         )}
 
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? 'Creating…' : 'Create account'}
+          {pending ? t('creating') : tNav('register')}
         </Button>
       </form>
 
@@ -192,10 +194,8 @@ export default function RegisterPage() {
       </div>
 
       <div className="mt-6">
-        <Alert tone="info" title="Buyer role only">
-          You cannot choose seller or admin at registration. Seller privileges
-          require a real subscription later; admin is granted only by verified
-          operators.
+        <Alert tone="info" title={t('buyerRoleTitle')}>
+          {t('buyerRoleBody')}
         </Alert>
       </div>
     </AuthCard>

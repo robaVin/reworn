@@ -11,14 +11,14 @@ import { Alert } from '@/components/ui/Alert';
 
 function VerifyEmailForm() {
   const tAuth = useTranslations('Auth');
+  const tc = useTranslations('Common');
+  const tNav = useTranslations('Nav');
   const params = useSearchParams();
   const preset = params.get('email') ?? '';
   const [email, setEmail] = useState(preset);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(
-    preset
-      ? 'If those details are valid, check your email to verify your account.'
-      : null,
+    preset ? tAuth('verifyPresetMessage') : null,
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -34,20 +34,17 @@ function VerifyEmailForm() {
         body: JSON.stringify({ email }),
       });
       if (res.status === 429) {
-        setError('Too many requests. Please wait a moment and try again.');
+        setError(tAuth('tooManyRequests'));
         return;
       }
       const data = (await res.json()) as { message?: string; error?: string };
       if (!res.ok) {
-        setError(data.error ?? 'Please provide a valid email address.');
+        setError(data.error ?? tAuth('errInvalidEmail'));
         return;
       }
-      setMessage(
-        data.message ??
-          'If that email needs verification, a new message has been sent.',
-      );
+      setMessage(data.message ?? tAuth('verifyResentMessage'));
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(tc('somethingWrong'));
     } finally {
       setPending(false);
     }
@@ -55,20 +52,19 @@ function VerifyEmailForm() {
 
   return (
     <AuthCard
-      title="Check your email"
-      subtitle="We sent a verification link if the details were valid. Open it to activate your account, then log in."
+      title={tAuth('checkEmailTitle')}
+      subtitle={tAuth('verifySubtitle')}
       footer={
         <>
-          Ready to continue?{' '}
+          {tAuth('readyToContinue')}{' '}
           <Link href="/login" className="font-semibold text-terracotta-strong">
-            Log in
+            {tNav('login')}
           </Link>
         </>
       }
     >
-      <Alert tone="success" title="Verification email">
-        {message ??
-          'Enter your email below if you need another verification message.'}
+      <Alert tone="success" title={tAuth('verificationEmailTitle')}>
+        {message ?? tAuth('verifyEnterEmailPrompt')}
       </Alert>
 
       {/* Enumeration-safe guidance for the already-registered case: shown to
@@ -83,7 +79,7 @@ function VerifyEmailForm() {
       </p>
 
       <form onSubmit={onResend} className="mt-6 space-y-4">
-        <Field id="email" label="Email">
+        <Field id="email" label={tAuth('emailLabel')}>
           <TextInput
             id="email"
             type="email"
@@ -105,7 +101,7 @@ function VerifyEmailForm() {
           disabled={pending}
           className="w-full"
         >
-          {pending ? 'Sending…' : 'Resend verification email'}
+          {pending ? tAuth('sending') : tAuth('resendVerification')}
         </Button>
       </form>
     </AuthCard>
@@ -113,10 +109,12 @@ function VerifyEmailForm() {
 }
 
 export default function VerifyEmailPage() {
+  const tAuth = useTranslations('Auth');
+  const tc = useTranslations('Common');
   return (
     <Suspense
       fallback={
-        <AuthCard title="Check your email" subtitle="Loading…">
+        <AuthCard title={tAuth('checkEmailTitle')} subtitle={tc('loading')}>
           <div className="animate-pulse-soft h-24 rounded-xl bg-sand" />
         </AuthCard>
       }

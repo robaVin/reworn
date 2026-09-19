@@ -19,6 +19,25 @@ export type SendMessageState =
 
 export const INITIAL_SEND_STATE: SendMessageState = { status: 'idle' };
 
+/**
+ * Maps a send-failure kind to its stable catalog key under `Messages.sendError`.
+ * Pure and client-safe — the consumer translates the returned key with next-intl.
+ */
+export function sendErrorMessageKey(kind: SendErrorKind): string {
+  switch (kind) {
+    case 'empty':
+    case 'tooLong':
+    case 'controlChar':
+    case 'notFound':
+    case 'rateLimited':
+      return kind;
+    case 'validationError':
+    case 'unexpected':
+    default:
+      return 'generic';
+  }
+}
+
 /** Safe, generic user-facing message for a send failure (no ids/internals). */
 export function sendErrorMessage(kind: SendErrorKind): string {
   switch (kind) {

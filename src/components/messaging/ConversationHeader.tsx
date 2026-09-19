@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 import type { ConversationDTO } from '@/modules/messaging/dto';
 import { formatPrice } from '@/lib/format';
 
@@ -13,21 +14,26 @@ import { formatPrice } from '@/lib/format';
  * (published) — a paused/archived/removed listing would 404 there for the
  * participant, so it is shown as text with an "unavailable" note instead.
  */
-export function ConversationHeader({ context }: { context: ConversationDTO }) {
+export async function ConversationHeader({
+  context,
+}: {
+  context: ConversationDTO;
+}) {
+  const t = await getTranslations('Messages');
   const { listing, counterparty } = context;
   const removed = listing.status === 'removed';
   const linkable = listing.status === 'published' && listing.id !== null;
 
   const titleNote = removed
-    ? ' (no longer available)'
+    ? ` (${t('listingRemovedNote')})`
     : linkable
       ? ''
-      : ' (not currently available)';
+      : ` (${t('listingUnavailableNote')})`;
 
   return (
     <header className="border-b border-line pb-6">
       <p className="text-xs uppercase tracking-wide text-muted">
-        Conversation with
+        {t('conversationWith')}
       </p>
       <h1 className="mt-1 font-display text-2xl font-bold text-ink">
         {counterparty.displayName}
@@ -56,7 +62,7 @@ export function ConversationHeader({ context }: { context: ConversationDTO }) {
               aria-hidden
               className="grid h-full w-full place-items-center px-1 text-center text-[10px] leading-tight text-muted"
             >
-              No image
+              {t('noImage')}
             </span>
           )}
         </div>
@@ -77,7 +83,7 @@ export function ConversationHeader({ context }: { context: ConversationDTO }) {
               href={`/listing/${listing.id}`}
               className="mt-2 inline-block text-sm font-semibold text-terracotta-strong hover:underline"
             >
-              View listing
+              {t('viewListing')}
             </Link>
           )}
         </div>

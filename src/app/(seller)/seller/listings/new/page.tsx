@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { env } from '@/lib/env';
 import { requireAnyRolePage } from '@/modules/auth/page-guards';
 import {
@@ -9,7 +10,10 @@ import { CreateListingForm } from '@/components/seller/CreateListingForm';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 
-export const metadata: Metadata = { title: 'New listing' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Sell');
+  return { title: t('meta.newListingTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function NewListingPage() {
@@ -22,18 +26,18 @@ export default async function NewListingPage() {
   const seller = await resolveSellerForUser(ctx.userId);
   const categories =
     seller && seller.status === 'active' ? await listActiveCategories() : [];
+  const t = await getTranslations('Sell');
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 lg:px-10">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-        Seller studio
+        {t('sellerStudio')}
       </p>
       <h1 className="mt-3 font-display text-3xl font-bold text-ink sm:text-[34px]">
-        Create a listing
+        {t('newListing.heading')}
       </h1>
       <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">
-        Save a draft any time; publish when it&apos;s ready. Buyers contact you
-        directly — ReWorn doesn&apos;t process the sale.
+        {t('newListing.intro')}
       </p>
 
       <div className="mt-8">
@@ -54,12 +58,11 @@ export default async function NewListingPage() {
   );
 }
 
-function SellerProfileRequired() {
+async function SellerProfileRequired() {
+  const t = await getTranslations('Sell');
   return (
-    <Alert tone="info" title="Seller profile required">
-      Your account has the seller role but no seller profile yet. In-app seller
-      onboarding arrives in a later increment. For development, an operator can
-      provision one:
+    <Alert tone="info" title={t('newListing.profileRequiredTitle')}>
+      {t('newListing.profileRequiredBody')}
       <code className="mt-2 block rounded-lg bg-sand px-3 py-2 text-xs text-ink">
         npm run dev:seller:provision -- --email you@example.com
       </code>
@@ -67,36 +70,37 @@ function SellerProfileRequired() {
   );
 }
 
-function SellerNotActive({ status }: { status: string }) {
+async function SellerNotActive({ status }: { status: string }) {
+  const t = await getTranslations('Sell');
   return (
-    <Alert tone="warning" title="Seller account not active">
-      Your seller account is currently <strong>{status}</strong>, so you
-      can&apos;t create or publish listings. Please contact support.
+    <Alert tone="warning" title={t('notActive.title')}>
+      {t.rich('notActive.body', {
+        status,
+        strong: (chunks) => <strong>{chunks}</strong>,
+      })}
       <div className="mt-3">
         <Button href="/seller" variant="outline" size="sm">
-          Back to seller area
+          {t('newListing.backToSeller')}
         </Button>
       </div>
     </Alert>
   );
 }
 
-function EntitlementNotice({ enforced }: { enforced: boolean }) {
+async function EntitlementNotice({ enforced }: { enforced: boolean }) {
+  const t = await getTranslations('Sell');
   if (!enforced) {
     return (
-      <Alert tone="info" title="Development testing access">
-        Subscription enforcement is off in this environment, so publishing is
-        gated only by an <strong>active seller</strong> account. Subscription
-        and weekly-quota enforcement arrive in a later increment — there is no
-        subscription or payment behind this yet.
+      <Alert tone="info" title={t('entitlement.devTitle')}>
+        {t.rich('entitlement.devBody', {
+          strong: (chunks) => <strong>{chunks}</strong>,
+        })}
       </Alert>
     );
   }
   return (
-    <Alert tone="info" title="Publishing requires a subscription">
-      You can save drafts freely. Publishing requires an active seller
-      subscription; the bank payment integration is awaiting configuration, so
-      publishing is unavailable until it is connected.
+    <Alert tone="info" title={t('entitlement.subTitle')}>
+      {t('entitlement.subBody')}
     </Alert>
   );
 }

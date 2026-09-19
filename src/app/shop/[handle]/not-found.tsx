@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 
@@ -8,15 +9,15 @@ export const metadata: Metadata = {
 };
 
 /** Unknown, malformed, or reserved handles all render the same state. */
-export default function ShopNotFound() {
+export default async function ShopNotFound() {
+  const t = await getTranslations('Shop');
   return (
     <main className="mx-auto max-w-shell px-4 py-16 sm:px-8 lg:px-10">
       <EmptyState
-        title="This seller isn’t available"
-        action={<Button href="/browse">Browse the marketplace</Button>}
+        title={t('notFoundTitle')}
+        action={<Button href="/browse">{t('browseMarketplace')}</Button>}
       >
-        We couldn’t find a seller at this address. It may have moved or never
-        existed.
+        {t('notFoundBody')}
       </EmptyState>
     </main>
   );

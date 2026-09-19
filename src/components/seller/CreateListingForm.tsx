@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Field, TextInput, Textarea, Select } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
@@ -25,28 +26,6 @@ interface CategoryOption {
   id: string;
   name: string;
 }
-
-const CONDITION_LABELS: Record<(typeof LISTING_CONDITIONS)[number], string> = {
-  new: 'New with tags',
-  like_new: 'Like new',
-  very_good: 'Very good',
-  good: 'Good',
-  fair: 'Fair',
-};
-
-const GENDER_LABELS: Record<(typeof LISTING_GENDERS)[number], string> = {
-  women: 'Women',
-  men: 'Men',
-  kids: 'Kids',
-  unisex: 'Unisex',
-};
-
-const DELIVERY_LABELS: Record<(typeof DELIVERY_METHODS)[number], string> = {
-  unspecified: 'Not specified',
-  shipping: 'Shipping',
-  pickup: 'Local pickup',
-  both: 'Shipping or local pickup',
-};
 
 /** Placeholder title so a draft can be bootstrapped before the user types one. */
 const DEFAULT_DRAFT_TITLE = 'Untitled listing';
@@ -128,6 +107,7 @@ export function CreateListingForm({
   initial,
 }: CreateListingFormProps) {
   const router = useRouter();
+  const t = useTranslations('Sell');
 
   const [fields, setFields] = useState<Fields>({
     ...emptyFields,
@@ -261,13 +241,11 @@ export function CreateListingForm({
       await flush();
       const id = controller.listingId;
       if (!id) {
-        setFormError('Could not save your listing. Please try again.');
+        setFormError(t('error.couldNotSave'));
         return;
       }
       if (controller.state === 'error') {
-        setFormError(
-          'Your latest changes could not be saved. Fix the highlighted fields, then publish.',
-        );
+        setFormError(t('error.latestChangesFailed'));
         return;
       }
       const res = await transitionListingAction(id, 'publish');
@@ -275,12 +253,12 @@ export function CreateListingForm({
         if (res.fieldErrors) setPublishFieldErrors(res.fieldErrors);
         setFormError(
           res.error === 'listing_incomplete'
-            ? 'A published listing needs all required fields. Complete the highlighted fields.'
+            ? t('error.incomplete')
             : res.error === 'subscription_required'
-              ? 'Publishing requires an active seller subscription, which is not available yet. Your draft is saved.'
+              ? t('error.subscriptionRequired')
               : res.status === 403
-                ? 'Your seller account is not currently allowed to publish.'
-                : 'Could not publish. Please try again.',
+                ? t('error.notAllowed')
+                : t('error.couldNotPublish'),
         );
         return;
       }
@@ -293,7 +271,7 @@ export function CreateListingForm({
   async function onSaveAndExit() {
     await flush();
     if (controller.state === 'error' || !controller.listingId) {
-      setFormError('Could not save your draft. Please try again.');
+      setFormError(t('error.couldNotSaveDraft'));
       return;
     }
     router.push('/seller/listings');
@@ -317,16 +295,13 @@ export function CreateListingForm({
           🌿
         </div>
         <h2 className="mt-4 font-display text-2xl font-bold text-ink">
-          Your listing is live
+          {t('published.title')}
         </h2>
-        <p className="mt-2 text-sm text-muted">
-          Buyers can now find it and message you directly. Payment and delivery
-          are arranged between you and the buyer.
-        </p>
+        <p className="mt-2 text-sm text-muted">{t('published.body')}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button href="/seller/listings">View my listings</Button>
+          <Button href="/seller/listings">{t('published.viewListings')}</Button>
           <Button href="/seller/listings/new" variant="outline">
-            Create another
+            {t('published.createAnother')}
           </Button>
         </div>
       </div>
@@ -341,7 +316,7 @@ export function CreateListingForm({
     >
       {formError && (
         <div id="form-error">
-          <Alert tone="danger" title="Please review">
+          <Alert tone="danger" title={t('alert.pleaseReview')}>
             {formError}
           </Alert>
         </div>
@@ -349,10 +324,10 @@ export function CreateListingForm({
 
       <fieldset className="space-y-5" disabled={busy}>
         <legend className="font-display text-lg font-semibold text-ink">
-          Item details
+          {t('legend.itemDetails')}
         </legend>
 
-        <Field id="title" label="Title" error={err('title')}>
+        <Field id="title" label={t('field.title')} error={err('title')}>
           <TextInput
             id="title"
             value={fields.title}
@@ -360,30 +335,38 @@ export function CreateListingForm({
             required
             maxLength={140}
             aria-invalid={!!err('title')}
-            placeholder="e.g. Wool overcoat"
+            placeholder={t('field.titlePlaceholder')}
           />
         </Field>
 
-        <Field id="description" label="Description" error={err('description')}>
+        <Field
+          id="description"
+          label={t('field.description')}
+          error={err('description')}
+        >
           <Textarea
             id="description"
             value={fields.description}
             onChange={set('description')}
             maxLength={4000}
             aria-invalid={!!err('description')}
-            placeholder="Condition details, measurements, flaws, styling…"
+            placeholder={t('field.descriptionPlaceholder')}
           />
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="categoryId" label="Category" error={err('categoryId')}>
+          <Field
+            id="categoryId"
+            label={t('field.category')}
+            error={err('categoryId')}
+          >
             <Select
               id="categoryId"
               value={fields.categoryId}
               onChange={set('categoryId')}
               aria-invalid={!!err('categoryId')}
             >
-              <option value="">Choose a category…</option>
+              <option value="">{t('field.categoryPlaceholder')}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -392,23 +375,27 @@ export function CreateListingForm({
             </Select>
           </Field>
 
-          <Field id="condition" label="Condition" error={err('condition')}>
+          <Field
+            id="condition"
+            label={t('field.condition')}
+            error={err('condition')}
+          >
             <Select
               id="condition"
               value={fields.condition}
               onChange={set('condition')}
               aria-invalid={!!err('condition')}
             >
-              <option value="">Choose a condition…</option>
+              <option value="">{t('field.conditionPlaceholder')}</option>
               {LISTING_CONDITIONS.map((c) => (
                 <option key={c} value={c}>
-                  {CONDITION_LABELS[c]}
+                  {t(`condition.${c}`)}
                 </option>
               ))}
             </Select>
           </Field>
 
-          <Field id="brand" label="Brand (optional)" error={err('brand')}>
+          <Field id="brand" label={t('field.brand')} error={err('brand')}>
             <TextInput
               id="brand"
               value={fields.brand}
@@ -417,33 +404,41 @@ export function CreateListingForm({
             />
           </Field>
 
-          <Field id="size" label="Size" error={err('size')}>
+          <Field id="size" label={t('field.size')} error={err('size')}>
             <TextInput
               id="size"
               value={fields.size}
               onChange={set('size')}
               maxLength={40}
-              placeholder="e.g. M, 40, UK 8"
+              placeholder={t('field.sizePlaceholder')}
             />
           </Field>
 
-          <Field id="gender" label="Department" error={err('gender')}>
+          <Field
+            id="gender"
+            label={t('field.department')}
+            error={err('gender')}
+          >
             <Select id="gender" value={fields.gender} onChange={set('gender')}>
               {LISTING_GENDERS.map((g) => (
                 <option key={g} value={g}>
-                  {GENDER_LABELS[g]}
+                  {t(`gender.${g}`)}
                 </option>
               ))}
             </Select>
           </Field>
 
-          <Field id="location" label="Location" error={err('location')}>
+          <Field
+            id="location"
+            label={t('field.location')}
+            error={err('location')}
+          >
             <TextInput
               id="location"
               value={fields.location}
               onChange={set('location')}
               maxLength={120}
-              placeholder="e.g. Skopje"
+              placeholder={t('field.locationPlaceholder')}
             />
           </Field>
         </div>
@@ -451,14 +446,15 @@ export function CreateListingForm({
 
       <fieldset className="space-y-5" disabled={busy}>
         <legend className="font-display text-lg font-semibold text-ink">
-          Price
+          {t('legend.price')}
         </legend>
-        <p className="text-xs text-muted">
-          The price is informational — you agree payment and delivery directly
-          with the buyer. ReWorn never takes a cut.
-        </p>
+        <p className="text-xs text-muted">{t('priceHelper')}</p>
         <div className="grid gap-5 sm:grid-cols-[1fr_auto]">
-          <Field id="price" label="Asking price" error={err('priceMinor')}>
+          <Field
+            id="price"
+            label={t('field.askingPrice')}
+            error={err('priceMinor')}
+          >
             <TextInput
               id="price"
               value={fields.price}
@@ -468,7 +464,7 @@ export function CreateListingForm({
               placeholder="0.00"
             />
           </Field>
-          <Field id="currency" label="Currency">
+          <Field id="currency" label={t('field.currency')}>
             <Select
               id="currency"
               value={fields.currency}
@@ -483,14 +479,11 @@ export function CreateListingForm({
 
       <fieldset className="space-y-5" disabled={busy}>
         <legend className="font-display text-lg font-semibold text-ink">
-          Delivery
+          {t('legend.delivery')}
         </legend>
-        <p className="text-xs text-muted">
-          Informational only. You arrange hand-over directly with the buyer —
-          ReWorn never handles shipping or payment.
-        </p>
+        <p className="text-xs text-muted">{t('deliveryHelper')}</p>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="deliveryMethod" label="How you’ll hand it over">
+          <Field id="deliveryMethod" label={t('field.deliveryHandover')}>
             <Select
               id="deliveryMethod"
               value={fields.deliveryMethod}
@@ -498,14 +491,14 @@ export function CreateListingForm({
             >
               {DELIVERY_METHODS.map((m) => (
                 <option key={m} value={m}>
-                  {DELIVERY_LABELS[m]}
+                  {t(`deliveryMethod.${m}`)}
                 </option>
               ))}
             </Select>
           </Field>
           <Field
             id="deliveryNote"
-            label="Delivery note (optional)"
+            label={t('field.deliveryNote')}
             error={err('deliveryNote')}
           >
             <TextInput
@@ -514,7 +507,7 @@ export function CreateListingForm({
               onChange={set('deliveryNote')}
               maxLength={200}
               aria-invalid={!!err('deliveryNote')}
-              placeholder="e.g. Ships from Skopje; local pickup welcome"
+              placeholder={t('field.deliveryNotePlaceholder')}
             />
           </Field>
         </div>
@@ -530,10 +523,10 @@ export function CreateListingForm({
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <Button onClick={onPublish} disabled={busy}>
-          {publishing ? 'Publishing…' : 'Publish listing'}
+          {publishing ? t('button.publishing') : t('button.publish')}
         </Button>
         <Button variant="outline" onClick={onSaveAndExit} disabled={busy}>
-          Save and exit
+          {t('button.saveAndExit')}
         </Button>
         <SaveIndicator
           state={controller.state}
@@ -552,31 +545,32 @@ function SaveIndicator({
   state: SaveState;
   onRetry: () => void;
 }) {
+  const t = useTranslations('Sell');
   if (state === 'error') {
     return (
       <span
         className="flex items-center gap-2 text-xs text-danger"
         role="status"
       >
-        Save failed
+        {t('save.failed')}
         <button
           type="button"
           onClick={onRetry}
           className="font-semibold underline underline-offset-2"
         >
-          Retry
+          {t('save.retry')}
         </button>
       </span>
     );
   }
   const label =
     state === 'saving'
-      ? 'Saving…'
+      ? t('save.saving')
       : state === 'saved'
-        ? 'Saved'
+        ? t('save.saved')
         : state === 'unsaved'
-          ? 'Unsaved changes'
-          : 'Not saved yet';
+          ? t('save.unsaved')
+          : t('save.notSaved');
   return (
     <span className="text-xs text-muted" role="status" aria-live="polite">
       {label}

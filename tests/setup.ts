@@ -6,7 +6,66 @@
  * These are fake values used only by the test runner — never real secrets.
  */
 
+import { vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
+
+/**
+ * Global next-intl mock for component/unit tests.
+ *
+ * Components now resolve UI copy through next-intl. In the node test harness
+ * there is no request/provider context, so `getTranslations`/`useTranslations`
+ * are mocked to return a translator backed by the REAL English catalog
+ * (messages/en.json). Rendered components therefore show the actual English
+ * strings, and existing assertions on English text keep passing — while the
+ * en/sq/mk catalogs and their parity are validated separately in i18n.test.ts.
+ */
+const intl = await vi.hoisted(async () => {
+  const EN = (await import('../messages/en.json')).default as Record<
+    string,
+    unknown
+  >;
+  const resolve = (ns: string | undefined, key: string): unknown => {
+    const base = (ns ? (EN[ns] as Record<string, unknown>) : EN) ?? {};
+    return key
+      .split('.')
+      .reduce<unknown>(
+        (o, k) =>
+          o && typeof o === 'object'
+            ? (o as Record<string, unknown>)[k]
+            : undefined,
+        base,
+      );
+  };
+  const makeT = (ns?: string) => {
+    const t = (key: string, values?: Record<string, unknown>): string => {
+      const v = resolve(ns, key);
+      if (typeof v !== 'string') return key;
+      return values
+        ? v.replace(/\{(\w+)\}/g, (_, p) => String(values[p] ?? `{${p}}`))
+        : v;
+    };
+    // Minimal t.rich for tests: drop tag markup, keep inner text.
+    t.rich = (key: string): string => {
+      const v = resolve(ns, key);
+      return typeof v === 'string' ? v.replace(/<\/?[a-zA-Z]+>/g, '') : key;
+    };
+    t.has = (key: string): boolean => typeof resolve(ns, key) === 'string';
+    return t;
+  };
+  return { EN, makeT };
+});
+
+vi.mock('next-intl', () => ({
+  useTranslations: (ns?: string) => intl.makeT(ns),
+  useLocale: () => 'en',
+  NextIntlClientProvider: ({ children }: { children: unknown }) => children,
+}));
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (arg?: string | { namespace?: string }) =>
+    intl.makeT(typeof arg === 'string' ? arg : arg?.namespace),
+  getLocale: async () => 'en',
+  getMessages: async () => intl.EN,
+}));
 
 /**
  * Node 18 does not expose the Web Crypto API as a global without

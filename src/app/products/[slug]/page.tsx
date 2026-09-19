@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { getPublicListingBySlug } from '@/modules/catalog/public-catalog';
@@ -26,7 +27,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const listing = await getPublicListingBySlug(slug);
   if (!listing) {
-    return { title: 'Product not found', robots: { index: false } };
+    const t = await getTranslations('Listing');
+    return { title: t('metaNotFound'), robots: { index: false } };
   }
 
   const path = canonicalPath(listing.slug ?? slug);

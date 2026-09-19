@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MessageSellerCta } from '@/components/marketplace/MessageSellerCta';
 
@@ -8,29 +7,30 @@ import { MessageSellerCta } from '@/components/marketplace/MessageSellerCta';
 
 const LISTING_ID = '11111111-1111-1111-1111-111111111111';
 
-const markup = (state: 'guest' | 'owner' | 'buyer') =>
+// MessageSellerCta is an async server component; call it and await its element.
+const markup = async (state: 'guest' | 'owner' | 'buyer') =>
   renderToStaticMarkup(
-    createElement(MessageSellerCta, { listingId: LISTING_ID, state }),
+    await MessageSellerCta({ listingId: LISTING_ID, state }),
   );
 
 describe('MessageSellerCta', () => {
-  it('owner sees a non-interactive "your listing" note (no form, no submit)', () => {
-    const html = markup('owner');
+  it('owner sees a non-interactive "your listing" note (no form, no submit)', async () => {
+    const html = await markup('owner');
     expect(html).toContain('This is your listing');
     expect(html).not.toContain('<form');
     expect(html).not.toContain('type="submit"');
   });
 
-  it('guest sees a sign-in link that returns to this listing', () => {
-    const html = markup('guest');
+  it('guest sees a sign-in link that returns to this listing', async () => {
+    const html = await markup('guest');
     expect(html).toContain('href="/login?next=');
     expect(html).toContain(encodeURIComponent(`/listing/${LISTING_ID}`));
     expect(html).not.toContain('<form');
   });
 
-  it('guest with a returnPath returns to the canonical product URL', () => {
+  it('guest with a returnPath returns to the canonical product URL', async () => {
     const html = renderToStaticMarkup(
-      createElement(MessageSellerCta, {
+      await MessageSellerCta({
         listingId: LISTING_ID,
         state: 'guest',
         returnPath: '/products/wool-overcoat-abc12345',
@@ -42,8 +42,8 @@ describe('MessageSellerCta', () => {
     expect(html).not.toContain(encodeURIComponent(`/listing/${LISTING_ID}`));
   });
 
-  it('buyer sees a form whose ONLY field is the listing id', () => {
-    const html = markup('buyer');
+  it('buyer sees a form whose ONLY field is the listing id', async () => {
+    const html = await markup('buyer');
     expect(html).toContain('<form');
     expect(html).toContain('name="listingId"');
     expect(html).toContain(`value="${LISTING_ID}"`);
@@ -53,9 +53,9 @@ describe('MessageSellerCta', () => {
     expect(html).toContain('Message seller');
   });
 
-  it('no CTA state leaks a profile, seller, or auth id', () => {
+  it('no CTA state leaks a profile, seller, or auth id', async () => {
     for (const state of ['guest', 'owner', 'buyer'] as const) {
-      const html = markup(state);
+      const html = await markup(state);
       for (const key of [
         'buyerProfileId',
         'sellerProfileId',

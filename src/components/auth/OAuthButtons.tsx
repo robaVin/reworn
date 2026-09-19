@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { Alert } from '@/components/ui/Alert';
@@ -17,12 +18,14 @@ export function OAuthButtons({
   next?: string;
   mode?: 'login' | 'register';
 }) {
+  const t = useTranslations('Auth');
   if (!isSupabaseConfigured()) {
     return (
-      <Alert tone="warning" title="Google sign-in is unavailable here">
-        Authentication is not configured in this environment, so Google sign-
-        {mode === 'register' ? 'up' : 'in'} cannot start. Connect a Supabase
-        project (see <code>.env.example</code>) to enable it.
+      <Alert tone="warning" title={t('googleUnavailableTitle')}>
+        {t.rich('oauthUnavailableBody', {
+          action: mode === 'register' ? t('googleSignUp') : t('googleSignIn'),
+          code: (chunks) => <code>{chunks}</code>,
+        })}
       </Alert>
     );
   }
@@ -36,20 +39,18 @@ export function OAuthButtons({
       <div className="relative flex items-center gap-3">
         <div className="h-px flex-1 bg-line" />
         <span className="text-xs uppercase tracking-[0.12em] text-muted">
-          Or
+          {t('orDivider')}
         </span>
         <div className="h-px flex-1 bg-line" />
       </div>
       <Button href={href} variant="outline" className="w-full">
-        Continue with Google
+        {t('continueWithGoogle')}
       </Button>
-      <p className="text-xs text-muted">
-        Google must be enabled in your Supabase Auth providers. If the provider
-        is not configured, you will see a safe error — never a fake success.
-      </p>
+      <p className="text-xs text-muted">{t('oauthProviderNote')}</p>
       <p className="sr-only">
-        Alternative: use email and password on this page, or{' '}
-        <Link href="/register">create an account</Link>.
+        {t.rich('oauthSrAlternative', {
+          link: (chunks) => <Link href="/register">{chunks}</Link>,
+        })}
       </p>
     </div>
   );
