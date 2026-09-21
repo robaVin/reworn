@@ -82,9 +82,9 @@ describe('InboxCard', () => {
   it('does not show a handle for a buyer counterparty', async () => {
     const html = await render({
       ...base,
-      counterparty: { kind: 'buyer', displayName: 'ReWorn member' },
+      counterparty: { kind: 'buyer', displayName: 'Galerija member' },
     });
-    expect(html).toContain('ReWorn member');
+    expect(html).toContain('Galerija member');
     expect(html).not.toContain('@');
   });
 

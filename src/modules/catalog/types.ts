@@ -18,7 +18,7 @@ export interface ListingCardData {
   category: string;
   condition: string;
   /** Asking price in MINOR units (cents/deni). Informational only — payment
-   *  happens directly between buyer and seller, outside ReWorn. */
+   *  happens directly between buyer and seller, outside Galerija. */
   priceMinor: number;
   /** ISO-4217 currency code. */
   currency: string;

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
 
@@ -32,38 +33,54 @@ export async function Hero() {
           className="blob -bottom-36 right-40 h-[300px] w-[300px] bg-forest"
         />
 
-        <div className="relative z-10 max-w-[560px]">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
-            {t('eyebrow')}
-          </p>
-          <h1 className="mt-4 font-display text-4xl font-bold leading-[0.98] tracking-tight text-ink sm:text-6xl lg:text-[68px]">
-            {t('title')}
-          </h1>
-          <p className="mt-4 max-w-[44ch] text-base leading-relaxed text-muted">
-            {t('description')}
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Button href="/#edit" size="lg">
-              {t('shopEdit')}
-            </Button>
-            <Button href="/sell" variant="outline" size="lg">
-              {t('startSelling')}
-            </Button>
+        {/* Text stays left; a single boutique photograph anchors the right.
+            On mobile the editorial column (headline + CTAs) comes first and the
+            photo stacks beneath it. */}
+        <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
+          <div className="max-w-[560px]">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-terracotta-strong">
+              {t('eyebrow')}
+            </p>
+            <h1 className="mt-4 font-display text-4xl font-bold leading-[0.98] tracking-tight text-ink sm:text-6xl lg:text-[68px]">
+              {t('title')}
+            </h1>
+            <p className="mt-4 max-w-[44ch] text-base leading-relaxed text-muted">
+              {t('description')}
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button href="/#edit" size="lg">
+                {t('shopEdit')}
+              </Button>
+              <Button href="/sell" variant="outline" size="lg">
+                {t('startSelling')}
+              </Button>
+            </div>
+
+            <dl className="mt-9 flex flex-wrap gap-7">
+              {PRODUCT_FACTS.map((fact) => (
+                <div key={fact.label}>
+                  <dt className="sr-only">{fact.label}</dt>
+                  <dd className="font-display text-[26px] font-bold text-ink">
+                    {fact.value}
+                  </dd>
+                  <dd className="text-xs tracking-[0.05em] text-muted">
+                    {fact.label}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
-          <dl className="mt-9 flex flex-wrap gap-7">
-            {PRODUCT_FACTS.map((fact) => (
-              <div key={fact.label}>
-                <dt className="sr-only">{fact.label}</dt>
-                <dd className="font-display text-[26px] font-bold text-ink">
-                  {fact.value}
-                </dd>
-                <dd className="text-xs tracking-[0.05em] text-muted">
-                  {fact.label}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <div className="relative aspect-listing w-full overflow-hidden rounded-card border border-line shadow-soft lg:aspect-auto lg:h-full lg:min-h-[440px]">
+            <Image
+              src="/photos/hero-rack.jpg"
+              alt={t('heroPhotoAlt')}
+              fill
+              priority
+              sizes="(min-width: 1024px) 48vw, 100vw"
+              className="object-cover object-center"
+            />
+          </div>
         </div>
       </div>
     </section>

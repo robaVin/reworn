@@ -12,7 +12,7 @@
 export const PREVIEW_MAX = 140;
 
 /** Fallback label when a buyer has not set a public display name. */
-export const BUYER_FALLBACK_LABEL = 'ReWorn member';
+export const BUYER_FALLBACK_LABEL = 'Galerija member';
 
 export interface CounterpartyDTO {
   /** Which side the OTHER participant is, from the viewer's perspective. */

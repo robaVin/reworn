@@ -4,13 +4,15 @@ import {
   EditSection,
   EditSectionSkeleton,
 } from '@/components/home/EditSection';
+import { InsideGalerija } from '@/components/home/InsideGalerija';
+import { SustainabilityBand } from '@/components/home/SustainabilityBand';
 import { SellerBand } from '@/components/home/SellerBand';
 
 // EditSection reads real published listings, so this route is dynamic.
 export const dynamic = 'force-dynamic';
 
 /**
- * ReWorn homepage — the permanent Sustainable production interface. The static
+ * Galerija homepage — the permanent Sustainable production interface. The static
  * Hero is the instant shell (first byte); "the edit" (real published listings +
  * categories) streams into its own Suspense boundary, so the homepage never
  * blanks on the catalog query.
@@ -22,6 +24,8 @@ export default function HomePage() {
       <Suspense fallback={<EditSectionSkeleton />}>
         <EditSection />
       </Suspense>
+      <InsideGalerija />
+      <SustainabilityBand />
       <SellerBand />
     </main>
   );

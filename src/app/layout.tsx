@@ -32,23 +32,23 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   ),
   title: {
-    default: 'ReWorn — Give great clothes a second life',
-    template: '%s · ReWorn',
+    default: 'Galerija — Give great clothes a second life',
+    template: '%s · Galerija',
   },
   description:
     'Buy and sell pre-loved fashion. Browse thousands of second-hand ' +
     'clothes, shoes, bags, accessories and jewellery.',
-  applicationName: 'ReWorn',
+  applicationName: 'Galerija',
   // Site-wide Open Graph defaults; listing/shop pages override title/image.
   openGraph: {
-    siteName: 'ReWorn',
+    siteName: 'Galerija',
     type: 'website',
     locale: 'en',
   },
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'ReWorn',
+    title: 'Galerija',
     statusBarStyle: 'default',
   },
   formatDetection: { telephone: false },

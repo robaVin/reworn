@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 /**
  * Terracotta announcement bar. Copy is a truthful marketplace message —
- * ReWorn is a classifieds marketplace and must not advertise shipping,
+ * Galerija is a classifieds marketplace and must not advertise shipping,
  * checkout or platform-managed purchases.
  */
 export async function AnnouncementBar() {

@@ -7,7 +7,7 @@ import { COMPANY } from '@/config/company';
  * Site footer. Every link points at a real route — no dead navigation.
  * The Legal column links the compliance documentation (terms, privacy, cookies,
  * refunds, payments, contact). Labels are localized (en/sq/mk); routes and the
- * ReWorn brand are not.
+ * Galerija brand are not.
  */
 export async function SiteFooter() {
   const t = await getTranslations('Footer');
@@ -85,7 +85,9 @@ export async function SiteFooter() {
       </div>
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-2 px-4 py-5 text-[13px] text-muted sm:px-8 lg:px-10">
-          <span>© {new Date().getFullYear()} ReWorn</span>
+          <span>
+            © {new Date().getFullYear()} {COMPANY.tradingName}
+          </span>
           <span>{t('securePayments')}</span>
         </div>
       </div>

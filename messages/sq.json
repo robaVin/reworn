@@ -65,7 +65,23 @@
     "emptyAction": "Shto një artikull",
     "emptyBody": "Ende nuk është publikuar asgjë — artikujt e saposhtuar do të shfaqen këtu të parët.",
     "sellBandHeading": "Pastrimi i garderobës mund të bëjë mirë.",
-    "sellBandBody": "Shto artikujt e tu të përdorur për pak minuta. Blerësit të shkruajnë drejtpërdrejt — çmimin dhe dorëzimin i bini dakord mes jush."
+    "sellBandBody": "Shto artikujt e tu të përdorur për pak minuta. Blerësit të shkruajnë drejtpërdrejt — çmimin dhe dorëzimin i bini dakord mes jush.",
+    "heroPhotoAlt": "Një raft me fustane të përdorura me ngjyra në butikun Galerija.",
+    "insideEyebrow": "Brenda Galerija",
+    "insideHeading": "Përzgjedhur me kujdes",
+    "insideBody": "Një vështrim në botën tonë — ku çdo copë ka një histori dhe çdo detaj ka rëndësi.",
+    "insidePhoto1Alt": "Një pasqyrë e artë me hark pranë rafteve me veshje mbi një tapet me motive brenda butikut Galerija.",
+    "insidePhoto2Alt": "Qese pazari me markën Galerija dhe këpucë të vendosura mbi një tapet me motive.",
+    "insidePhoto3Alt": "Perde të tejdukshme dhe rafte me veshje me ngjyra në një cep të butikut Galerija.",
+    "insideCta": "Shfleto koleksionin",
+    "insideCaptionStyles": "Stile plot ngjyra",
+    "insideCaptionDetails": "Detaje të menduara",
+    "insideCaptionCloset": "Një garderobë më e vetëdijshme",
+    "sustainabilityEyebrow": "Një e nesërme më e ndritur",
+    "sustainabilityHeading": "Modë që bën ndryshimin",
+    "sustainabilityBody": "Duke zgjedhur të përdorurën, ndihmon që veshjet e mira të qëndrojnë në qarkullim dhe larg deponive — një e ardhme më e qëndrueshme, copë pas cope.",
+    "sustainabilityCta": "Blej në mënyrë të qëndrueshme",
+    "sustainabilityPhotoAlt": "Një raft me veshje të përdorura pranë një dritareje me diell në butikun Galerija."
   },
   "Footer": {
     "description": "Një treg klasifikatash për modën e përdorur. Blerësit dhe shitësit lidhen drejtpërdrejt — çdo copë e rihapur e mban veshjen e mirë në qarkullim.",
@@ -111,7 +127,7 @@
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
     },
     "inboxTitle": "Mesazhet",
-    "conversationMetaTitle": "Bisedë — ReWorn",
+    "conversationMetaTitle": "Bisedë — Galerija",
     "emptyInboxTitle": "Ende asnjë bisedë",
     "emptyInboxBody": "Kur i shkruani një shitësi për një listim, biseda do të shfaqet këtu.",
     "olderConversations": "Bisedat më të vjetra",
@@ -171,7 +187,7 @@
     "loginRequiredNext": "Ju lutemi hyni për të vazhduar te faqja që kërkuat.",
     "invalidCredentials": "Email-i ose fjalëkalimi janë të pasaktë.",
     "loginTitle": "Mirë se erdhe përsëri",
-    "loginSubtitle": "Hyni në llogarinë tuaj ReWorn.",
+    "loginSubtitle": "Hyni në llogarinë tuaj Galerija.",
     "noAccount": "Nuk keni llogari?",
     "createOne": "Krijoni një",
     "signInRequired": "Kërkohet hyrja",
@@ -243,7 +259,7 @@
   },
   "Account": {
     "title": "Llogaria juaj",
-    "signedInWithSession": "I kyçur me sesionin tuaj real ReWorn.",
+    "signedInWithSession": "I kyçur me sesionin tuaj real Galerija.",
     "profile": "Profili",
     "emailLabel": "Email",
     "rolesLabel": "Rolet",
@@ -354,7 +370,7 @@
     "emptyBody": "Ky shitës ende nuk ka publikuar asnjë artikull. Kontrolloni sërish së shpejti.",
     "browseMarketplace": "Shfleto tregun",
     "metaTitle": "{shopName} — Shitës",
-    "metaDescription": "Bli modë të përdorur nga {shopName} në ReWorn.",
+    "metaDescription": "Bli modë të përdorur nga {shopName} në Galerija.",
     "metaNotFound": "Shitësi nuk u gjet",
     "notFoundTitle": "Ky shitës nuk është i disponueshëm",
     "notFoundBody": "Nuk gjetëm një shitës në këtë adresë. Mund të jetë zhvendosur ose nuk ka ekzistuar kurrë."
@@ -407,8 +423,8 @@
       "deliveryNote": "Shënim për dorëzimin (opsional)",
       "deliveryNotePlaceholder": "p.sh. Dërgohet nga Shkupi; mirëpritet marrja personale"
     },
-    "priceHelper": "Çmimi është informativ — pagesën dhe dorëzimin i bini dakord drejtpërdrejt me blerësin. ReWorn nuk merr kurrë komision.",
-    "deliveryHelper": "Vetëm informative. Dorëzimin e organizoni drejtpërdrejt me blerësin — ReWorn nuk merret kurrë me dërgesën ose pagesën.",
+    "priceHelper": "Çmimi është informativ — pagesën dhe dorëzimin i bini dakord drejtpërdrejt me blerësin. Galerija nuk merr kurrë komision.",
+    "deliveryHelper": "Vetëm informative. Dorëzimin e organizoni drejtpërdrejt me blerësin — Galerija nuk merret kurrë me dërgesën ose pagesën.",
     "button": {
       "publish": "Publikoni shpalljen",
       "publishing": "Duke publikuar…",
@@ -484,18 +500,18 @@
       "default": "Abonohu"
     },
     "meta": {
-      "sellTitle": "Shitni në ReWorn",
+      "sellTitle": "Shitni në Galerija",
       "listingsTitle": "Shpalljet tuaja",
       "newListingTitle": "Shpallje e re",
       "editTitle": "Modifiko shpalljen",
       "subscriptionTitle": "Abonimi",
       "pricingTitle": "Çmimet",
-      "pricingDescription": "Planet e abonimit të shitësit për ReWorn — publikoni shpallje me një plan mujor."
+      "pricingDescription": "Planet e abonimit të shitësit për Galerija — publikoni shpallje me një plan mujor."
     },
     "page": {
-      "eyebrow": "Shitni në ReWorn",
+      "eyebrow": "Shitni në Galerija",
       "heading": "Pastrimi i garderobës tuaj mund të bëjë mirë.",
-      "intro": "ReWorn është një treg shpalljesh: ju mbani 100% të asaj që shisni. Blerësit ju kontaktojnë drejtpërdrejt dhe pagesa e dorëzimi mbeten mes jush dhe blerësit."
+      "intro": "Galerija është një treg shpalljesh: ju mbani 100% të asaj që shisni. Blerësit ju kontaktojnë drejtpërdrejt dhe pagesa e dorëzimi mbeten mes jush dhe blerësit."
     },
     "devHint": {
       "title": "Akses testimi për zhvillim",
@@ -559,7 +575,7 @@
     },
     "newListing": {
       "heading": "Krijo një shpallje",
-      "intro": "Ruani një skicë në çdo kohë; publikoni kur të jetë gati. Blerësit ju kontaktojnë drejtpërdrejt — ReWorn nuk e përpunon shitjen.",
+      "intro": "Ruani një skicë në çdo kohë; publikoni kur të jetë gati. Blerësit ju kontaktojnë drejtpërdrejt — Galerija nuk e përpunon shitjen.",
       "profileRequiredTitle": "Kërkohet profil shitësi",
       "profileRequiredBody": "Llogaria juaj ka rolin e shitësit, por ende nuk ka profil shitësi. Regjistrimi i shitësit brenda aplikacionit vjen në një increment të mëvonshëm. Për zhvillim, një operator mund të krijojë një:",
       "backToSeller": "Kthehu te zona e shitësit"
@@ -603,8 +619,8 @@
     },
     "pricing": {
       "eyebrow": "Çmimet",
-      "heading": "Shitni në ReWorn",
-      "intro": "Shfletimi dhe mesazhet janë gjithmonë falas. Shitësit zgjedhin një plan për të publikuar shpallje. Pagesat përpunohen në mënyrë të sigurt nga {gateway} në {currency}; ReWorn nuk i ruan kurrë të dhënat e kartës suaj.",
+      "heading": "Shitni në Galerija",
+      "intro": "Shfletimi dhe mesazhet janë gjithmonë falas. Shitësit zgjedhin një plan për të publikuar shpallje. Pagesat përpunohen në mënyrë të sigurt nga {gateway} në {currency}; Galerija nuk i ruan kurrë të dhënat e kartës suaj.",
       "comingSoonTitle": "Planet së shpejti",
       "comingSoonBody": "Planet e abonimit ende nuk janë të disponueshme. Ju lutemi kontrolloni sërish së shpejti.",
       "perDays": "/ {days} ditë",

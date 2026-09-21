@@ -4,7 +4,7 @@ import type { PublicListingDetail } from './public-catalog';
 /**
  * Build schema.org Product structured data from a public listing. Pure and
  * fully testable. Includes ONLY truthful, available data — no ratings, reviews,
- * shipping prices, return policy, checkout, or inventory quantities (ReWorn is a
+ * shipping prices, return policy, checkout, or inventory quantities (Galerija is a
  * classifieds marketplace; there is no platform transaction). Second-hand items
  * map to `UsedCondition` (`new` maps to `NewCondition`). A published listing is
  * always available -> `InStock`.

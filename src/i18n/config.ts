@@ -1,7 +1,7 @@
 /**
  * Internationalization configuration — pure, client-safe constants.
  *
- * ReWorn ships three UI languages. English is the default and the fallback for
+ * Galerija ships three UI languages. English is the default and the fallback for
  * any missing message. The selected locale is a UI-presentation concern only:
  * it NEVER changes URLs, currency/business values, or user-generated content
  * (listing titles, messages, usernames, brand names).
@@ -21,7 +21,7 @@ export const LOCALE_COOKIE = 'NEXT_LOCALE';
 
 /**
  * Endonyms shown in the language selector — each language named in itself.
- * The ReWorn brand name is never translated.
+ * The Galerija brand name is never translated.
  */
 export const LOCALE_LABELS: Record<Locale, string> = {
   en: 'English',

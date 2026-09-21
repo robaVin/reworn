@@ -1,6 +1,6 @@
 /**
  * Public delivery-method labels — pure and shared by the PDP and its tests.
- * ReWorn never brokers delivery; these strings only describe what the seller
+ * Galerija never brokers delivery; these strings only describe what the seller
  * offers, and the buyer arranges hand-over directly.
  */
 export const DELIVERY_METHOD_LABELS: Record<string, string> = {

@@ -13,8 +13,8 @@
  */
 export const COMPANY = {
   /** Public brand / trading name. */
-  tradingName: 'ReWorn',
-  /** Registered legal entity that operates ReWorn and holds the CaSys contract. */
+  tradingName: 'Galerija',
+  /** Registered legal entity that operates Galerija and holds the CaSys contract. */
   legalName: '[REGISTERED LEGAL ENTITY NAME]',
   /** Registered seat / address. */
   address: '[REGISTERED ADDRESS, North Macedonia]',

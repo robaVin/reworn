@@ -531,7 +531,7 @@ describe('summaries, counterparty, and DTO privacy', () => {
     const found = page.items.find((c) => c.id === convId);
     expect(found).toBeTruthy();
     expect(found!.counterparty.kind).toBe('buyer');
-    expect(found!.counterparty.displayName).toBe('ReWorn member'); // BUYER has no displayName
+    expect(found!.counterparty.displayName).toBe('Galerija member'); // BUYER has no displayName
     expect(found!.counterparty.handle).toBeUndefined();
   });
 
