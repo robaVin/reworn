@@ -682,9 +682,15 @@
   },
   "Favorites": {
     "title": "Saved items",
-    "emptyTitle": "Saving arrives with the catalogue",
+    "emptyTitle": "No saved items yet",
     "browse": "Browse the edit",
-    "emptyBody": "When listings go live you’ll keep your favourite pieces here. This area is connected to your real account — it’s the feature that is still on its way."
+    "emptyBody": "Tap the heart on any listing to keep it here. Your saved items sync to your account across devices.",
+    "soldBadge": "Sold",
+    "saveAria": "Save item",
+    "removeAria": "Remove from saved items",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "removing": "Removing…"
   },
   "System": {
     "errorEyebrow": "Something went wrong",

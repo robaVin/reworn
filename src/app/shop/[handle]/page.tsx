@@ -17,6 +17,7 @@ import {
   publicCardToListingCard,
   productHref,
 } from '@/components/marketplace/listing-card-data';
+import { savedStateForCards } from '@/modules/saved/collection';
 import { Button } from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
@@ -82,6 +83,7 @@ export default async function ShopPage({
   ]);
 
   const cards = page.items.map(publicCardToListingCard);
+  const { savedIds, authenticated } = await savedStateForCards(cards);
   const memberSince = new Intl.DateTimeFormat('en', {
     year: 'numeric',
     month: 'long',
@@ -126,6 +128,8 @@ export default async function ShopPage({
             <ListingGrid
               listings={cards}
               hrefFor={productHref}
+              savedIds={savedIds}
+              authenticated={authenticated}
               priorityCount={4}
             />
             <nav

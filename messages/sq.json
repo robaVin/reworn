@@ -682,9 +682,15 @@
   },
   "Favorites": {
     "title": "Artikujt e ruajtur",
-    "emptyTitle": "Ruajtja vjen së bashku me katalogun",
+    "emptyTitle": "Ende s'ke artikuj të ruajtur",
     "browse": "Shfleto koleksionin",
-    "emptyBody": "Kur listimet të bëhen aktive, do t’i mbani copat tuaja të preferuara këtu. Kjo zonë është e lidhur me llogarinë tuaj reale — është veçoria që është ende në rrugë e sipër."
+    "emptyBody": "Prek zemrën te çdo shpallje për ta mbajtur këtu. Artikujt e ruajtur sinkronizohen me llogarinë tënde në të gjitha pajisjet.",
+    "soldBadge": "E shitur",
+    "saveAria": "Ruaj artikullin",
+    "removeAria": "Hiq nga të ruajturat",
+    "saved": "E ruajtur",
+    "saving": "Duke ruajtur…",
+    "removing": "Duke hequr…"
   },
   "System": {
     "errorEyebrow": "Diçka shkoi keq",

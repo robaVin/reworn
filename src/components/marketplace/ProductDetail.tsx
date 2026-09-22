@@ -31,12 +31,16 @@ export async function ProductDetail({
   absoluteUrl,
   cta,
   related,
+  saveControl,
 }: {
   listing: PublicListingDetail;
   canonicalPath: string;
   absoluteUrl: string;
   cta: ReactNode;
   related: ReactNode;
+  /** The Save (wishlist) heart. Provided by the page for a published listing;
+   *  omitted for a sold listing (no availability/save action on sold). */
+  saveControl?: ReactNode;
 }) {
   const t = await getTranslations('Listing');
   const tCat = await getTranslations('Categories');
@@ -104,9 +108,12 @@ export async function ProductDetail({
               {listing.brand}
             </p>
           )}
-          <h1 className="mt-1 font-display text-3xl font-bold text-ink">
-            {listing.title}
-          </h1>
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <h1 className="font-display text-3xl font-bold text-ink">
+              {listing.title}
+            </h1>
+            {saveControl && <div className="shrink-0">{saveControl}</div>}
+          </div>
 
           <div className="mt-4 flex items-end gap-3">
             <span className="text-2xl font-bold text-ink">

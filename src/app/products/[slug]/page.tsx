@@ -4,9 +4,11 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { getPublicListingBySlug } from '@/modules/catalog/public-catalog';
 import { getAuthContext } from '@/modules/auth/session';
+import { getSavedListingIds } from '@/modules/saved/service';
 import { resolveMessageCtaState } from '@/modules/messaging/conversation-actions';
 import { env } from '@/lib/env';
 import { ProductDetail } from '@/components/marketplace/ProductDetail';
+import { SaveButton } from '@/components/marketplace/SaveButton';
 import { MessageSellerCta } from '@/components/marketplace/MessageSellerCta';
 import {
   RelatedProducts,
@@ -73,11 +75,31 @@ export default async function ProductDetailPage({
   const path = canonicalPath(listing.slug ?? slug);
   const absoluteUrl = new URL(path, env.NEXT_PUBLIC_APP_URL).toString();
 
+  // Save (wishlist) heart — only on an available (published) listing; a sold
+  // listing offers no save/availability action. Saved-state is one bounded
+  // lookup for this single listing; anonymous viewers make no query.
+  let saveControl: React.ReactNode = undefined;
+  if (listing.status === 'published') {
+    const auth = await getAuthContext();
+    const saved = auth
+      ? (await getSavedListingIds(auth.userId, [listing.id])).has(listing.id)
+      : false;
+    saveControl = (
+      <SaveButton
+        listingId={listing.id}
+        initialSaved={saved}
+        authenticated={!!auth}
+        returnPath={path}
+      />
+    );
+  }
+
   return (
     <ProductDetail
       listing={listing}
       canonicalPath={path}
       absoluteUrl={absoluteUrl}
+      saveControl={saveControl}
       cta={
         listing.status === 'sold' ? (
           <SoldNote />

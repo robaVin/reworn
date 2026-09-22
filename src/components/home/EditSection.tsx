@@ -15,6 +15,7 @@ import {
   publicCardToListingCard,
   productHref,
 } from '@/components/marketplace/listing-card-data';
+import { savedStateForCards } from '@/modules/saved/collection';
 
 /** How many real listings the homepage previews (bounded). */
 const HOME_LISTING_COUNT = 8;
@@ -36,6 +37,7 @@ export async function EditSection() {
     getTranslations('Categories'),
   ]);
   const cards = page.items.map(publicCardToListingCard);
+  const { savedIds, authenticated } = await savedStateForCards(cards);
   // Localize the DISPLAY label by canonical slug; the slug (identity) is
   // unchanged, and an unknown slug falls back to its stored English name.
   const categoryLabel = (slug: string, name: string) =>
@@ -81,7 +83,13 @@ export async function EditSection() {
           {t('emptyBody')}
         </ListingGridEmpty>
       ) : (
-        <ListingGrid listings={cards} hrefFor={productHref} priorityCount={4} />
+        <ListingGrid
+          listings={cards}
+          hrefFor={productHref}
+          priorityCount={4}
+          savedIds={savedIds}
+          authenticated={authenticated}
+        />
       )}
     </section>
   );

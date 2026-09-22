@@ -7,7 +7,7 @@ import type { PublicListingCard } from '@/modules/catalog/public-catalog';
  * PublicListingCard already excludes seller/profile ids, email, etc.
  */
 
-const CONDITION_LABELS: Record<string, string> = {
+export const CONDITION_LABELS: Record<string, string> = {
   new: 'New with tags',
   like_new: 'Like new',
   very_good: 'Very good',

@@ -42,13 +42,19 @@ describe('publicCardToListingCard', () => {
 });
 
 describe('ListingCard link', () => {
-  it('renders a single canonical product link', () => {
+  it('renders a single canonical product link (the save heart adds its own control)', () => {
     const view = publicCardToListingCard(card);
     const html = renderToStaticMarkup(
       createElement(ListingCard, { listing: view, href: productHref(view) }),
     );
     const hrefs = html.match(/href="[^"]+"/g) ?? [];
-    expect(hrefs).toEqual(['href="/products/silk-slip-dress-abc12345"']);
+    // Exactly one navigation link to the listing — canonical slug, no legacy id
+    // route. (The anonymous save heart renders a separate /login link, which is
+    // not a listing-navigation link and is asserted elsewhere.)
+    const navLinks = hrefs.filter(
+      (h) => h.startsWith('href="/products/') || h.startsWith('href="/listing/'),
+    );
+    expect(navLinks).toEqual(['href="/products/silk-slip-dress-abc12345"']);
     expect(html).not.toContain('/listing/');
   });
 });

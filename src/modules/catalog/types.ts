@@ -28,4 +28,10 @@ export interface ListingCardData {
   tintHue: number;
   /** Optional editorial tag, e.g. "New in". */
   tag?: string;
+  /**
+   * Public lifecycle status, when the surface needs to distinguish it (only
+   * `/saved` sets this, to badge a saved-then-SOLD listing). Collection grids
+   * leave it undefined — they render published listings only.
+   */
+  status?: 'published' | 'sold';
 }

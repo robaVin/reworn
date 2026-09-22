@@ -144,6 +144,7 @@ export const ACTION_LIMITS = {
   messageSend: { max: 20, windowSeconds: 60 },
   conversationStart: { max: 20, windowSeconds: 60 },
   listingWrite: { max: 120, windowSeconds: 60 },
+  savedItemWrite: { max: 60, windowSeconds: 60 },
   checkout: { max: 15, windowSeconds: 60 },
   subscription: { max: 30, windowSeconds: 60 },
 } as const;

@@ -17,14 +17,24 @@ export function ListingGrid({
   listings,
   hrefFor,
   priorityCount = 0,
+  savedIds,
+  authenticated = false,
 }: {
   listings: ListingCardData[];
   /** Maps a listing to its detail URL; omit for non-interactive samples. */
   hrefFor?: (listing: ListingCardData) => string;
   /** How many leading (above-the-fold) covers load with `priority`. */
   priorityCount?: number;
+  /**
+   * The subset of these listing ids the viewer has saved — computed by the page
+   * in ONE query (never per card). Omit for anonymous viewers (no saved state).
+   */
+  savedIds?: ReadonlySet<string>;
+  /** Whether the viewer is signed in (drives the heart's save vs login flow). */
+  authenticated?: boolean;
 }) {
   const t = useTranslations('Listing');
+  const tFav = useTranslations('Favorites');
   return (
     <div className={gridClasses}>
       {listings.map((listing, i) => (
@@ -38,6 +48,9 @@ export function ListingGrid({
             href={hrefFor?.(listing)}
             priority={i < priorityCount}
             sizeLabel={t('sizeLabel')}
+            saved={savedIds?.has(listing.id) ?? false}
+            authenticated={authenticated}
+            soldLabel={tFav('soldBadge')}
           />
         </div>
       ))}

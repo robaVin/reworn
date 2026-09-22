@@ -4,6 +4,7 @@ import {
   type RelatedQuery,
 } from '@/modules/catalog/public-catalog';
 import { publicCardToListingCard, productHref } from './listing-card-data';
+import { savedStateForCards } from '@/modules/saved/collection';
 import { ListingGrid, ListingGridSkeleton } from './ListingGrid';
 
 /**
@@ -18,6 +19,7 @@ export async function RelatedProducts({ query }: { query: RelatedQuery }) {
 
   const t = await getTranslations('Listing');
   const cards = related.map(publicCardToListingCard);
+  const { savedIds, authenticated } = await savedStateForCards(cards);
   return (
     <section
       aria-labelledby="related-heading"
@@ -30,7 +32,12 @@ export async function RelatedProducts({ query }: { query: RelatedQuery }) {
         {t('relatedHeading')}
       </h2>
       <div className="mt-6">
-        <ListingGrid listings={cards} hrefFor={productHref} />
+        <ListingGrid
+          listings={cards}
+          hrefFor={productHref}
+          savedIds={savedIds}
+          authenticated={authenticated}
+        />
       </div>
     </section>
   );

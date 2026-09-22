@@ -61,6 +61,9 @@ model Profile {
   sellerConversations Conversation[] @relation("SellerConversations")
   sentMessages        Message[]      @relation("MessageSender")
 
+  // Wishlist: listings this user has saved (Increment: Saved Items).
+  savedItems SavedItem[]
+
   @@index([status])
   @@map("profiles")
 }
@@ -421,6 +424,7 @@ model Listing {
   category      Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images        ListingImage[]
   conversations Conversation[]
+  savedBy       SavedItem[]
 
   // Seller-dashboard path. The PUBLIC browse path (published-only keyset by
   // created_at/price/category/location + a GIN full-text index and a generated
@@ -545,6 +549,36 @@ model Message {
   // Deterministic chronological retrieval + keyset pagination within a conversation.
   @@index([conversationId, createdAt, id], map: "messages_conversation_chrono_idx")
   @@map("messages")
+}
+
+// -----------------------------------------------------------------------------
+// Saved items (wishlist) — a user's set of saved listings
+// -----------------------------------------------------------------------------
+
+/// A listing a user has saved (their wishlist). One row per (user, listing);
+/// the composite UNIQUE makes saving idempotent and race-safe. `userId` IS the
+/// Profile (auth) uuid and is ALWAYS derived server-side from the authenticated
+/// session — never supplied by the client. Follows the repo's join-table
+/// convention (UUID id + composite @@unique, like UserRole / ListingUsage).
+///
+/// Saving is independent of listing lifecycle: the relation persists when a
+/// listing is paused/archived/sold, but `/saved` reuses the PUBLIC visibility
+/// contract (published or sold only), so hidden statuses never leak — and a
+/// listing that returns to `published` reappears automatically.
+model SavedItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  // At most one save per (user, listing) — the concurrency backstop.
+  @@unique([userId, listingId], map: "saved_items_user_listing_key")
+  // "My saved listings, newest first" + the bounded existence lookups.
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("saved_items")
 }
 
 // -----------------------------------------------------------------------------

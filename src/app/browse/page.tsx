@@ -17,6 +17,7 @@ import {
   publicCardToListingCard,
   productHref,
 } from '@/components/marketplace/listing-card-data';
+import { savedStateForCards } from '@/modules/saved/collection';
 import { FilterBar } from '@/components/marketplace/FilterBar';
 import { Button } from '@/components/ui/Button';
 
@@ -65,6 +66,7 @@ export default async function BrowsePage({
   ]);
 
   const cards = page.items.map(publicCardToListingCard);
+  const { savedIds, authenticated } = await savedStateForCards(cards);
   const nextHref =
     page.nextCursor && buildBrowseHref(query, { cursor: page.nextCursor });
 
@@ -100,6 +102,8 @@ export default async function BrowsePage({
               listings={cards}
               hrefFor={productHref}
               priorityCount={4}
+              savedIds={savedIds}
+              authenticated={authenticated}
             />
             <nav
               aria-label={t('paginationLabel')}
