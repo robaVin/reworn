@@ -52,7 +52,8 @@ describe('ListingCard link', () => {
     // route. (The anonymous save heart renders a separate /login link, which is
     // not a listing-navigation link and is asserted elsewhere.)
     const navLinks = hrefs.filter(
-      (h) => h.startsWith('href="/products/') || h.startsWith('href="/listing/'),
+      (h) =>
+        h.startsWith('href="/products/') || h.startsWith('href="/listing/'),
     );
     expect(navLinks).toEqual(['href="/products/silk-slip-dress-abc12345"']);
     expect(html).not.toContain('/listing/');
