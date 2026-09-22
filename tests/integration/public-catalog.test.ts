@@ -753,3 +753,32 @@ describe('free-text category-aware search (FIX 2)', () => {
     expect(t).toContain('Leather boots');
   });
 });
+
+describe('sold listings — public visibility', () => {
+  it('a sold listing is excluded from browse/search but its detail stays viewable, flagged sold', async () => {
+    const soldId = await mkListing({
+      title: 'SOLD showcase item',
+      priceMinor: 7000,
+      status: 'sold',
+    });
+    // Never available inventory (browse + free-text search).
+    const browse = await pub.listPublishedListings(q({}, 50));
+    expect(browse.items.some((i) => i.id === soldId)).toBe(false);
+    const search = await pub.listPublishedListings(
+      q({ q: 'SOLD showcase' }, 50),
+    );
+    expect(search.items.some((i) => i.id === soldId)).toBe(false);
+    // Detail remains resolvable (Option A) and carries the sold status so the
+    // page can render a prominent SOLD state with no availability actions.
+    const detail = await pub.getPublicListing(soldId);
+    expect(detail).not.toBeNull();
+    expect(detail?.status).toBe('sold');
+  });
+
+  it('draft/paused/archived remain fully hidden from the public detail read', async () => {
+    for (const status of ['draft', 'paused', 'archived'] as const) {
+      const id = await mkListing({ title: `hidden-${status}-detail`, status });
+      expect(await pub.getPublicListing(id)).toBeNull();
+    }
+  });
+});

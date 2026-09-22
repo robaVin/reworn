@@ -506,8 +506,15 @@ export async function sendConversationMessage(
 export async function listConversationSummariesForCurrentUser(
   userId: string,
   cursor?: string,
+  opts: { limit?: number } = {},
 ): Promise<Page<ConversationSummaryDTO>> {
   const cur = decodeSummaryCursor(cursor, userId);
+  // Existing callers get the full inbox page; a bounded `limit` (e.g. the
+  // dashboard's recent-conversations preview) never exceeds it.
+  const pageSize =
+    opts.limit !== undefined
+      ? Math.min(Math.max(opts.limit, 1), SUMMARIES_PAGE_SIZE)
+      : SUMMARIES_PAGE_SIZE;
 
   const rows = await timeSpan('db.conversations', () =>
     prisma.conversation.findMany({
@@ -530,12 +537,12 @@ export async function listConversationSummariesForCurrentUser(
         ],
       },
       orderBy: [{ lastMessageAt: 'desc' }, { id: 'desc' }],
-      take: SUMMARIES_PAGE_SIZE + 1,
+      take: pageSize + 1,
       select: summarySelect,
     }),
   );
 
-  const page = rows.slice(0, SUMMARIES_PAGE_SIZE);
+  const page = rows.slice(0, pageSize);
   const coverKeys = page
     .map((r) => r.listing?.images[0]?.storageKey)
     .filter((k): k is string => Boolean(k));
@@ -553,7 +560,7 @@ export async function listConversationSummariesForCurrentUser(
 
   const last = page[page.length - 1];
   const nextCursor =
-    rows.length > SUMMARIES_PAGE_SIZE && last
+    rows.length > pageSize && last
       ? encodeSummaryCursor(userId, {
           lastMessageAt: last.lastMessageAt.toISOString(),
           id: last.id,

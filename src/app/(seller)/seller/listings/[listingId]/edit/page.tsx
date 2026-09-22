@@ -8,6 +8,7 @@ import {
 } from '@/modules/catalog/listing-service';
 import { isEditable } from '@/modules/catalog/listing-status';
 import { CreateListingForm } from '@/components/seller/CreateListingForm';
+import { ListingLifecycleActions } from '@/components/seller/ListingLifecycleActions';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 
@@ -51,13 +52,13 @@ export default async function EditListingPage({
         {editable ? t('edit.headingEdit') : t('edit.headingListing')}
       </h1>
 
-      <div className="mt-8">
+      <div className="mt-8 space-y-8">
         {editable ? (
           <CreateListingForm
             categories={categories}
             initial={{
               id: listing.id,
-              status: 'draft',
+              status: listing.status === 'paused' ? 'paused' : 'draft',
               fields: {
                 title: listing.title,
                 description: listing.description ?? '',
@@ -87,12 +88,23 @@ export default async function EditListingPage({
             >
               {t('edit.readOnlyBody', { status: listing.status })}
             </Alert>
-            <div className="mt-4">
+            <div>
               <Button href="/seller/listings" variant="outline">
                 {t('edit.backToListings')}
               </Button>
             </div>
           </>
+        )}
+
+        {/* Owner-only lifecycle controls (mark sold, relist, pause, archive).
+            Server-authoritative: the action re-verifies role + ownership and the
+            state machine rejects invalid transitions. Not shown for a fresh
+            draft (its go-live action lives in the form above). */}
+        {listing.status !== 'draft' && (
+          <ListingLifecycleActions
+            listingId={listing.id}
+            status={listing.status}
+          />
         )}
       </div>
     </main>

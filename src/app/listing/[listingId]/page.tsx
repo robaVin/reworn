@@ -10,9 +10,10 @@ export const dynamic = 'force-dynamic';
  *
  * Unknown, malformed, or non-public ids fall through to `notFound()`, preserving
  * the existing indistinguishable behavior (a draft/paused/archived listing looks
- * exactly like a missing one). `getPublicListing` already hard-filters
- * `status='published'` and rejects malformed ids, so a non-owner can never tell
- * a hidden listing exists.
+ * exactly like a missing one). `getPublicListing` hard-filters to the publicly
+ * viewable statuses (`published` or seller-declared `sold`) and rejects malformed
+ * ids, so a non-owner can never tell a hidden listing exists; a sold listing
+ * redirects to its canonical PDP, which renders a prominent SOLD state.
  */
 export default async function LegacyListingRedirect({
   params,

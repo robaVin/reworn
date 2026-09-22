@@ -58,6 +58,13 @@ export interface PublicListingDetail extends PublicListingCard {
   deliveryNote: string | null;
   originalPriceMinor: number | null;
   createdAt: Date;
+  /**
+   * Public lifecycle status — only ever 'published' or 'sold' (the detail read
+   * exposes no other status). A 'sold' detail stays viewable with a prominent
+   * SOLD state and NO availability/contact actions; it is a seller-declared
+   * unavailable state, never a processed transaction.
+   */
+  status: 'published' | 'sold';
   seller: PublicSellerProfile;
   images: { url: string; width: number; height: number }[];
 }
@@ -314,6 +321,7 @@ interface PublicDetailRawRow {
   deliveryMethod: string;
   deliveryNote: string | null;
   createdAt: Date;
+  status: string;
   categorySlug: string | null;
   categoryName: string | null;
   sellerHandle: string;
@@ -354,6 +362,7 @@ async function fetchPublicDetail(
              l.delivery_method::text AS "deliveryMethod",
              l.delivery_note AS "deliveryNote",
              l.created_at AS "createdAt",
+             l.status::text AS "status",
              c.slug AS "categorySlug",
              c.name AS "categoryName",
              s.handle AS "sellerHandle",
@@ -371,7 +380,14 @@ async function fetchPublicDetail(
       FROM listings l
       LEFT JOIN categories c ON c.id = l.category_id
       JOIN seller_profiles s ON s.id = l.seller_id
-      WHERE l.status = 'published' AND ${predicate}
+      -- Public detail is viewable for available (published) OR seller-declared
+      -- SOLD listings, so existing links/messages keep resolving with a clear
+      -- SOLD state. NEVER broadened beyond these two — draft/paused/archived
+      -- stay private to the owner (enforced here and by RLS). Compared as TEXT so
+      -- the literal 'sold' never coerces to the enum type: the query stays valid
+      -- (matching only published) even against a database where migration 0019
+      -- has not yet been applied — code can never hard-break ahead of the migration.
+      WHERE l.status::text IN ('published', 'sold') AND ${predicate}
       LIMIT 1
     `),
   );
@@ -401,6 +417,7 @@ async function fetchPublicDetail(
     deliveryNote: r.deliveryNote,
     originalPriceMinor: r.originalPriceMinor,
     createdAt: r.createdAt,
+    status: r.status === 'sold' ? 'sold' : 'published',
     seller: {
       handle: r.sellerHandle,
       shopName: r.sellerShopName,

@@ -89,13 +89,12 @@ export function buildHeaderNav(
 
   const menu: NavLink[] = [];
   if (canActAsSeller(roles)) {
-    // Seller destinations: truthful shells until Increment #6 / catalog.
-    // Every destination re-enforces requireAnyRolePage(['seller','admin']).
-    menu.push(
-      { label: t('sellerDashboard'), href: '/seller' },
-      { label: t('listings'), href: '/seller/listings' },
-      { label: t('subscription'), href: '/seller/subscription' },
-    );
+    // Consolidated: Seller Studio is the single seller entry in the dropdown.
+    // Listings and Subscription are reached from the dashboard ("View all
+    // listings" / "Manage subscription"); their routes remain live and each
+    // still re-enforces requireAnyRolePage(['seller','admin']). The Nav.listings
+    // and Nav.subscription i18n keys are intentionally retained.
+    menu.push({ label: t('sellerDashboard'), href: '/seller' });
   }
   menu.push(
     { label: t('messages'), href: '/messages' },

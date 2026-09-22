@@ -6,25 +6,41 @@
  * cannot disagree about what is allowed.
  *
  *   draft ──publish──▶ published ──pause──▶ paused
- *     │                   │                   │
- *     └──archive──▶ archived ◀──archive───────┘
- *                     │  ▲   └──────archive────┘
- *                relist│  │
- *                     ▼  │
- *                   draft │  paused ──republish──▶ published
+ *     │                   │  ▲                │
+ *     │            markSold│  │markAvailable  │markSold
+ *     │                   ▼  │                ▼
+ *     │                   sold ◀──markSold────┘
+ *     └──archive──▶ archived ◀──archive──(draft/published/paused/sold)
+ *                     │
+ *                relist│  (archived → draft)
+ *                     ▼
+ *                   draft        paused ──republish──▶ published
+ *
+ * `sold` is a SELLER-DECLARED state: the owner marks the item no longer
+ * available. It is NOT a processed transaction — Galerija never brokers the
+ * sale. `markAvailable` (sold → published) re-enters the public catalogue and
+ * therefore re-runs the SAME publish entitlement/completeness gate as publish/
+ * republish (enforced in the listing service), and the service clears soldAt.
  */
 
 export const LISTING_STATUSES = [
   'draft',
   'published',
   'paused',
+  'sold',
   'archived',
 ] as const;
 
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
 export type ListingTransition =
-  'publish' | 'pause' | 'republish' | 'archive' | 'relist';
+  | 'publish'
+  | 'pause'
+  | 'republish'
+  | 'archive'
+  | 'relist'
+  | 'markSold'
+  | 'markAvailable';
 
 /** from → (action → to). The single source of truth for legal transitions. */
 const TRANSITIONS: Record<
@@ -32,8 +48,9 @@ const TRANSITIONS: Record<
   Partial<Record<ListingTransition, ListingStatus>>
 > = {
   draft: { publish: 'published', archive: 'archived' },
-  published: { pause: 'paused', archive: 'archived' },
-  paused: { republish: 'published', archive: 'archived' },
+  published: { pause: 'paused', markSold: 'sold', archive: 'archived' },
+  paused: { republish: 'published', markSold: 'sold', archive: 'archived' },
+  sold: { markAvailable: 'published', archive: 'archived' },
   archived: { relist: 'draft' },
 };
 

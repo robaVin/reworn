@@ -130,4 +130,6 @@ export const listingTransitionSchema = z.enum([
   'republish',
   'archive',
   'relist',
+  'markSold',
+  'markAvailable',
 ]);

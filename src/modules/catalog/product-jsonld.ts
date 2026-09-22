@@ -7,7 +7,8 @@ import type { PublicListingDetail } from './public-catalog';
  * shipping prices, return policy, checkout, or inventory quantities (Galerija is a
  * classifieds marketplace; there is no platform transaction). Second-hand items
  * map to `UsedCondition` (`new` maps to `NewCondition`). A published listing is
- * always available -> `InStock`.
+ * available -> `InStock`; a seller-declared SOLD listing -> `SoldOut` (it is not
+ * a processed transaction, only an owner declaration that it is unavailable).
  *
  * The returned object is serialized for the page by {@link
  * safeJsonLdString} / the `JsonLd` component, which neutralizes any HTML-like
@@ -56,7 +57,10 @@ export function buildProductJsonLd(
       '@type': 'Offer',
       price: minorToMajor(listing.priceMinor),
       priceCurrency: listing.currency,
-      availability: 'https://schema.org/InStock',
+      availability:
+        listing.status === 'sold'
+          ? 'https://schema.org/SoldOut'
+          : 'https://schema.org/InStock',
       url: canonicalUrl,
     };
   }

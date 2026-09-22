@@ -24,6 +24,7 @@ const base: PublicListingDetail = {
   deliveryNote: 'Tracked post',
   originalPriceMinor: null,
   createdAt: new Date('2026-01-02T00:00:00.000Z'),
+  status: 'published',
   seller: { handle: 'aurora', shopName: 'Aurora', joinedAt: new Date() },
   images: [{ url: 'signed://1', width: 800, height: 800 }],
 };
@@ -54,6 +55,13 @@ describe('buildProductJsonLd', () => {
   it('maps a new item to NewCondition', () => {
     const ld = buildProductJsonLd({ ...base, condition: 'new' }, URL);
     expect(ld.itemCondition).toBe('https://schema.org/NewCondition');
+  });
+
+  it('marks a sold listing as SoldOut (not InStock)', () => {
+    const ld = buildProductJsonLd({ ...base, status: 'sold' }, URL);
+    expect(ld.offers).toMatchObject({
+      availability: 'https://schema.org/SoldOut',
+    });
   });
 
   it('omits fields that are absent rather than inventing them', () => {

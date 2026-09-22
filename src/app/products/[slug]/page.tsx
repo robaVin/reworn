@@ -79,9 +79,13 @@ export default async function ProductDetailPage({
       canonicalPath={path}
       absoluteUrl={absoluteUrl}
       cta={
-        <Suspense fallback={<CtaSkeleton />}>
-          <SellerMessageCta listingId={listing.id} returnPath={path} />
-        </Suspense>
+        listing.status === 'sold' ? (
+          <SoldNote />
+        ) : (
+          <Suspense fallback={<CtaSkeleton />}>
+            <SellerMessageCta listingId={listing.id} returnPath={path} />
+          </Suspense>
+        )
       }
       related={
         <Suspense fallback={<RelatedProductsSkeleton />}>
@@ -131,5 +135,19 @@ function CtaSkeleton() {
       aria-hidden
       className="mt-2 h-11 w-full rounded-control bg-sand sm:w-52"
     />
+  );
+}
+
+/**
+ * Shown in place of the "Message seller" control on a SOLD listing. The item is
+ * no longer available, so no availability/contact action is offered; existing
+ * conversations remain reachable from /messages.
+ */
+async function SoldNote() {
+  const t = await getTranslations('Listing');
+  return (
+    <p className="mt-3 rounded-control border border-line bg-sand/60 px-3 py-2 text-sm text-muted">
+      {t('soldNote')}
+    </p>
   );
 }

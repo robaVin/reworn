@@ -238,6 +238,51 @@ export async function listSellerListings(
   });
 }
 
+/**
+ * Real, authoritative status counts for the authenticated seller, from ONE
+ * grouped query (no per-status round-trips, no loading of rows). `archived` is
+ * intentionally excluded from all four dashboard metrics. Returns all-zero when
+ * the user has no seller profile yet (never throws, never fabricates).
+ */
+export interface SellerListingCounts {
+  active: number;
+  sold: number;
+  draft: number;
+  paused: number;
+}
+
+export async function countSellerListingsByStatus(
+  userId: string,
+): Promise<SellerListingCounts> {
+  const empty: SellerListingCounts = {
+    active: 0,
+    sold: 0,
+    draft: 0,
+    paused: 0,
+  };
+  const seller = await resolveSellerForUser(userId);
+  if (!seller) return empty;
+
+  const rows = await timeSpan('db.statusCounts', () =>
+    prisma.listing.groupBy({
+      by: ['status'],
+      where: { sellerId: seller.id },
+      _count: { _all: true },
+    }),
+  );
+
+  const counts = { ...empty };
+  for (const r of rows) {
+    const n = r._count._all;
+    if (r.status === 'published') counts.active = n;
+    else if (r.status === 'sold') counts.sold = n;
+    else if (r.status === 'draft') counts.draft = n;
+    else if (r.status === 'paused') counts.paused = n;
+    // 'archived' is deliberately not surfaced in any of the four cards.
+  }
+  return counts;
+}
+
 /** A seller-dashboard card: the essentials plus a signed cover-image URL. */
 export interface SellerListingCard {
   id: string;
@@ -255,15 +300,23 @@ export interface SellerListingCard {
  */
 export async function listSellerListingCards(
   userId: string,
+  opts: { limit?: number } = {},
 ): Promise<SellerListingCard[]> {
   const seller = await resolveSellerForUser(userId);
   if (!seller) return [];
+
+  // Existing callers pass no limit → the full page dataset (unchanged). The
+  // dashboard passes a small bound so a preview never loads every listing.
+  const take =
+    opts.limit !== undefined
+      ? Math.min(Math.max(opts.limit, 1), SELLER_LISTINGS_MAX)
+      : SELLER_LISTINGS_MAX;
 
   const rows = await timeSpan('db.cards', () =>
     prisma.listing.findMany({
       where: { sellerId: seller.id },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-      take: SELLER_LISTINGS_MAX,
+      take,
       select: {
         id: true,
         title: true,
@@ -465,6 +518,17 @@ async function transitionListingInner(
     }
   }
 
+  // soldAt is server-owned and tracks ONLY the current sold state: set it when
+  // the listing enters `sold`; clear it when it leaves `sold` for any available/
+  // archived state (relist or archive). Never read from the client.
+  const enteringSold = nextStatus === 'sold';
+  const leavingSold = listing.status === 'sold' && nextStatus !== 'sold';
+  const soldAtData: Prisma.ListingUpdateInput = enteringSold
+    ? { soldAt: new Date() }
+    : leavingSold
+      ? { soldAt: null }
+      : {};
+
   // First publish assigns a STABLE public slug (generated once, never changed).
   // Republish/other transitions keep the existing slug.
   const firstPublish = nextStatus === 'published' && listing.slug === null;
@@ -477,6 +541,7 @@ async function transitionListingInner(
         ...(nextStatus === 'published' && listing.publishedAt === null
           ? { publishedAt: new Date() }
           : {}),
+        ...soldAtData,
       },
     });
   }

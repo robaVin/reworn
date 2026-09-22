@@ -15,9 +15,13 @@ describe('listing state machine', () => {
     ['draft', 'publish', 'published'],
     ['draft', 'archive', 'archived'],
     ['published', 'pause', 'paused'],
+    ['published', 'markSold', 'sold'],
     ['published', 'archive', 'archived'],
     ['paused', 'republish', 'published'],
+    ['paused', 'markSold', 'sold'],
     ['paused', 'archive', 'archived'],
+    ['sold', 'markAvailable', 'published'],
+    ['sold', 'archive', 'archived'],
     ['archived', 'relist', 'draft'],
   ];
 
@@ -30,10 +34,18 @@ describe('listing state machine', () => {
     ['draft', 'pause'],
     ['draft', 'republish'],
     ['draft', 'relist'],
+    ['draft', 'markSold'],
     ['published', 'publish'],
     ['published', 'relist'],
+    ['published', 'markAvailable'],
     ['paused', 'pause'],
+    ['sold', 'markSold'],
+    ['sold', 'pause'],
+    ['sold', 'publish'],
+    ['sold', 'relist'],
     ['archived', 'publish'],
+    ['archived', 'markSold'],
+    ['archived', 'markAvailable'],
     ['archived', 'archive'],
   ];
 
@@ -51,22 +63,38 @@ describe('listing state machine', () => {
     ]);
     expect(availableTransitions('published').sort()).toEqual([
       'archive',
+      'markSold',
       'pause',
+    ]);
+    expect(availableTransitions('paused').sort()).toEqual([
+      'archive',
+      'markSold',
+      'republish',
+    ]);
+    expect(availableTransitions('sold').sort()).toEqual([
+      'archive',
+      'markAvailable',
     ]);
     expect(availableTransitions('archived')).toEqual(['relist']);
   });
 
-  it('only published is publicly visible', () => {
+  it('only published is publicly visible (sold is NOT available inventory)', () => {
     expect(isPubliclyVisible('published')).toBe(true);
-    for (const s of ['draft', 'paused', 'archived'] as ListingStatus[]) {
+    for (const s of [
+      'draft',
+      'paused',
+      'sold',
+      'archived',
+    ] as ListingStatus[]) {
       expect(isPubliclyVisible(s)).toBe(false);
     }
   });
 
-  it('draft and paused are editable; published and archived are not', () => {
+  it('draft and paused are editable; published/sold/archived are not', () => {
     expect(isEditable('draft')).toBe(true);
     expect(isEditable('paused')).toBe(true);
     expect(isEditable('published')).toBe(false);
+    expect(isEditable('sold')).toBe(false);
     expect(isEditable('archived')).toBe(false);
   });
 });

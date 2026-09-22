@@ -33,6 +33,7 @@ const base: PublicListingDetail = {
   deliveryNote: 'Ships from Skopje',
   originalPriceMinor: null,
   createdAt: new Date('2026-01-02T00:00:00.000Z'),
+  status: 'published',
   seller: {
     handle: 'aurora',
     shopName: 'Aurora Vintage',

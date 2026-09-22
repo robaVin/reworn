@@ -488,3 +488,124 @@ describe('listing RLS (read path)', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('listing service — sold lifecycle & soldAt (server-owned)', () => {
+  async function freshPublished(title: string): Promise<string> {
+    const d = await svc.createDraftListing(SELLER, { ...baseInput(), title });
+    const p = await svc.transitionListing(SELLER, d.id, 'publish');
+    return p.id;
+  }
+
+  let soldId: string;
+
+  it('markSold sets status=sold and stamps soldAt; browse/anon exclude it', async () => {
+    soldId = await freshPublished('Sold Coat 001');
+    const before = await prisma.listing.findUniqueOrThrow({
+      where: { id: soldId },
+    });
+    expect(before.soldAt).toBeNull();
+
+    const sold = await svc.transitionListing(SELLER, soldId, 'markSold');
+    expect(sold.status).toBe('sold');
+    expect(sold.soldAt).not.toBeNull();
+
+    // Not available inventory: excluded from public browse and hidden from anon.
+    const page = await svc.listPublishedListings({ take: 60 });
+    expect(page.items.some((l) => l.id === soldId)).toBe(false);
+    expect(await svc.getListingForViewer(null, soldId)).toBeNull();
+    // The owner still sees their own sold listing.
+    expect(
+      await svc.getListingForViewer(
+        { userId: SELLER, roles: ['seller'] },
+        soldId,
+      ),
+    ).not.toBeNull();
+
+    // It counts as Sold, not Active.
+    const counts = await svc.countSellerListingsByStatus(SELLER);
+    expect(counts.sold).toBeGreaterThanOrEqual(1);
+  });
+
+  it('markAvailable relists (published) and CLEARS soldAt, re-running the publish gate', async () => {
+    const relisted = await svc.transitionListing(
+      SELLER,
+      soldId,
+      'markAvailable',
+    );
+    expect(relisted.status).toBe('published');
+    expect(relisted.soldAt).toBeNull();
+    const page = await svc.listPublishedListings({ take: 60 });
+    expect(page.items.some((l) => l.id === soldId)).toBe(true);
+  });
+
+  it('re-marking sold stamps a fresh soldAt; sold->archived clears it', async () => {
+    const soldAgain = await svc.transitionListing(SELLER, soldId, 'markSold');
+    expect(soldAgain.soldAt).not.toBeNull();
+    const archived = await svc.transitionListing(SELLER, soldId, 'archive');
+    expect(archived.status).toBe('archived');
+    expect(archived.soldAt).toBeNull();
+  });
+
+  it('rejects invalid transitions out of sold (markSold/pause/publish/relist)', async () => {
+    const id = await freshPublished('Sold Coat 002');
+    await svc.transitionListing(SELLER, id, 'markSold');
+    for (const bad of ['markSold', 'pause', 'publish', 'relist'] as const) {
+      await expect(
+        svc.transitionListing(SELLER, id, bad),
+      ).rejects.toBeInstanceOf(InvalidListingTransitionError);
+    }
+  });
+
+  it('a non-owner cannot markSold / markAvailable / archive (404 hides existence)', async () => {
+    const id = await freshPublished('Owned Coat 003');
+    await expect(
+      svc.transitionListing(OTHER_SELLER, id, 'markSold'),
+    ).rejects.toMatchObject({ status: 404 });
+
+    // The real owner marks it sold; the other seller still cannot act on it.
+    await svc.transitionListing(SELLER, id, 'markSold');
+    await expect(
+      svc.transitionListing(OTHER_SELLER, id, 'markAvailable'),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      svc.transitionListing(OTHER_SELLER, id, 'archive'),
+    ).rejects.toMatchObject({ status: 404 });
+
+    // Unchanged by the hostile attempts.
+    const row = await prisma.listing.findUniqueOrThrow({ where: { id } });
+    expect(row.status).toBe('sold');
+    expect(row.soldAt).not.toBeNull();
+  });
+});
+
+describe('listing service — seller-scoped dashboard counts', () => {
+  it('counts are scoped to the authenticated seller; no profile => all zero', async () => {
+    const buyerCounts = await svc.countSellerListingsByStatus(BUYER);
+    expect(buyerCounts).toEqual({ active: 0, sold: 0, draft: 0, paused: 0 });
+
+    const s = await svc.countSellerListingsByStatus(SELLER);
+    expect(s.active + s.sold + s.draft + s.paused).toBeGreaterThanOrEqual(1);
+  });
+
+  it('archived listings are excluded from all four counts', async () => {
+    const before = await svc.countSellerListingsByStatus(OTHER_SELLER);
+    const d = await svc.createDraftListing(OTHER_SELLER, {
+      ...baseInput(),
+      title: 'Archive me 77',
+    });
+    const mid = await svc.countSellerListingsByStatus(OTHER_SELLER);
+    expect(mid.draft).toBe(before.draft + 1);
+
+    await svc.transitionListing(OTHER_SELLER, d.id, 'archive');
+    const after = await svc.countSellerListingsByStatus(OTHER_SELLER);
+    // Archiving removes it from every dashboard metric (back to baseline).
+    expect(after).toEqual(before);
+  });
+
+  it('listSellerListingCards respects a bounded preview limit', async () => {
+    const cards = await svc.listSellerListingCards(SELLER, { limit: 3 });
+    expect(cards.length).toBeLessThanOrEqual(3);
+    // Bounded but non-empty (SELLER has multiple listings by now).
+    expect(cards.length).toBeGreaterThanOrEqual(1);
+  });
+});

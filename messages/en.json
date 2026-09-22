@@ -360,7 +360,9 @@
       "shipping": "Shipping available",
       "pickup": "Collection available",
       "both": "Shipping or collection available"
-    }
+    },
+    "soldLabel": "Sold",
+    "soldNote": "This item has been sold and is no longer available."
   },
   "Shop": {
     "sellerEyebrow": "Seller",
@@ -428,7 +430,8 @@
     "button": {
       "publish": "Publish listing",
       "publishing": "Publishing…",
-      "saveAndExit": "Save and exit"
+      "saveAndExit": "Save and exit",
+      "republish": "Republish listing"
     },
     "save": {
       "failed": "Save failed",
@@ -541,19 +544,33 @@
       "button": "Payment setup unavailable"
     },
     "dashboard": {
-      "heading": "Your seller space",
-      "intro": "Access granted. Operational metrics and publishing tools connect as their domains ship — nothing here is simulated marketplace data.",
-      "subscriptionTitle": "Subscription",
-      "subscriptionBody": "Plan selection, weekly listing quota and renewals open with Increment #6.",
-      "openSubscription": "Open subscription",
-      "listingsTitle": "Listings",
-      "listingsBody": "Create, preview and publish listings once the catalogue domain is connected. No listings yet.",
-      "openListings": "Open listings",
-      "inquiriesTitle": "Inquiries",
-      "inquiriesBody": "Buyer messages about your pieces arrive with the messaging increment.",
-      "openMessages": "Open messages",
-      "noMetricsTitle": "No fabricated metrics",
-      "noMetricsBody": "Active listings, views, saved-by-buyers counts and quota usage will appear here from real services — never from design fixtures."
+      "welcome": "Welcome back, {name}",
+      "welcomeGeneric": "Welcome to Seller Studio",
+      "subtitle": "Your listings, plan and conversations in one place.",
+      "backToShopping": "Back to shopping",
+      "onboardingTitle": "Set up selling to get started",
+      "onboardingBody": "Your account can sell, but you don't have a seller profile yet. Start a listing and we'll guide you through the rest.",
+      "metricActive": "Active listings",
+      "metricSold": "Sold items",
+      "metricDrafts": "Drafts",
+      "metricPaused": "Paused",
+      "viewAllListings": "View all listings",
+      "listingsEmpty": "You haven't listed anything yet.",
+      "sellFirstItem": "Sell your first item",
+      "sellHeading": "Sell an item",
+      "sellBody": "Ready to give another piece a second life? List it in a few minutes.",
+      "sellCta": "Sell an item",
+      "planHeading": "Seller plan",
+      "planCurrent": "Current plan",
+      "planStatus": "Status",
+      "planQuota": "Weekly listing quota",
+      "planCancelling": "Cancellation scheduled at the end of the current period.",
+      "planNone": "No active plan yet.",
+      "planManage": "Manage subscription",
+      "planChoose": "Choose a plan",
+      "conversationsHeading": "Recent conversations",
+      "conversationsEmpty": "No conversations yet.",
+      "viewMessages": "View messages"
     },
     "status": {
       "draft": "Draft",
@@ -630,6 +647,37 @@
       "choosePlan": "Choose {name}",
       "legal": "By subscribing you agree to our <terms>Terms of Service</terms> and <refunds>Refunds & Cancellation policy</refunds>. Manage or cancel anytime from your <subscription>subscription page</subscription>.",
       "backToBrowse": "Back to browse"
+    },
+    "lifecycle": {
+      "heading": "Manage listing",
+      "intro": "Update where this listing appears. Changes take effect immediately.",
+      "working": "Working…",
+      "cancel": "Cancel",
+      "error": "Something went wrong. Please try again.",
+      "action": {
+        "markSold": "Mark as sold",
+        "markAvailable": "Mark as available again",
+        "pause": "Pause listing",
+        "archive": "Archive",
+        "relist": "Relist as draft"
+      },
+      "confirm": {
+        "markSold": {
+          "title": "Mark as sold?",
+          "body": "This listing will no longer appear as available in the marketplace. Existing conversations stay accessible. Galerija doesn't process the sale — this only marks the item sold.",
+          "cta": "Mark as sold"
+        },
+        "markAvailable": {
+          "title": "Mark as available again?",
+          "body": "This republishes the listing to the marketplace. Your seller access and any subscription rules still apply.",
+          "cta": "Mark as available"
+        },
+        "archive": {
+          "title": "Archive listing?",
+          "body": "Archived listings are hidden from the marketplace and your active lists. You can relist them later.",
+          "cta": "Archive"
+        }
+      }
     }
   },
   "Favorites": {

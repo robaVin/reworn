@@ -124,9 +124,15 @@ export async function ProductDetail({
           </div>
           <p className="mt-1 text-xs text-muted">{t('priceDisclaimer')}</p>
 
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-control border border-forest/30 bg-forest/5 px-2.5 py-1 text-sm font-medium text-forest">
-            <span aria-hidden>●</span> {t('available')}
-          </p>
+          {listing.status === 'sold' ? (
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-control border border-ink/20 bg-ink/5 px-2.5 py-1 text-sm font-semibold text-ink">
+              <span aria-hidden>✓</span> {t('soldLabel')}
+            </p>
+          ) : (
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-control border border-forest/30 bg-forest/5 px-2.5 py-1 text-sm font-medium text-forest">
+              <span aria-hidden>●</span> {t('available')}
+            </p>
+          )}
 
           <dl className="mt-6 grid grid-cols-2 gap-3 text-sm">
             {listing.size && (

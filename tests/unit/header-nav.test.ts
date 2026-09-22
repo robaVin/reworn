@@ -70,13 +70,12 @@ describe('buildHeaderNav — seller', () => {
     roles: ['buyer', 'seller'] as const,
   };
 
-  it('adds dashboard, listings and subscription but not admin', () => {
+  it('shows the consolidated Seller dashboard entry only (listings/subscription moved into the dashboard)', () => {
     const hrefs = buildHeaderNav(seller, t).menu.map((l) => l.href);
-    expect(hrefs.slice(0, 3)).toEqual([
-      '/seller',
-      '/seller/listings',
-      '/seller/subscription',
-    ]);
+    // Dropdown consolidated: dashboard + the always-present entries, no admin.
+    expect(hrefs).toEqual(['/seller', '/messages', '/account', '/saved']);
+    expect(hrefs).not.toContain('/seller/listings');
+    expect(hrefs).not.toContain('/seller/subscription');
     expect(hrefs).not.toContain('/admin');
   });
 

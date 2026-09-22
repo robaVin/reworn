@@ -360,7 +360,9 @@
       "shipping": "Dërgesa e disponueshme",
       "pickup": "Marrja personale e disponueshme",
       "both": "Dërgesë ose marrje personale"
-    }
+    },
+    "soldLabel": "E shitur",
+    "soldNote": "Ky artikull është shitur dhe nuk është më i disponueshëm."
   },
   "Shop": {
     "sellerEyebrow": "Shitësi",
@@ -428,7 +430,8 @@
     "button": {
       "publish": "Publikoni shpalljen",
       "publishing": "Duke publikuar…",
-      "saveAndExit": "Ruani dhe dilni"
+      "saveAndExit": "Ruani dhe dilni",
+      "republish": "Ripublikoni shpalljen"
     },
     "save": {
       "failed": "Ruajtja dështoi",
@@ -541,19 +544,33 @@
       "button": "Konfigurimi i pagesës i padisponueshëm"
     },
     "dashboard": {
-      "heading": "Hapësira juaj e shitësit",
-      "intro": "Aksesi u dha. Metrikat operacionale dhe mjetet e publikimit lidhen kur të nisen fushat e tyre — asgjë këtu nuk janë të dhëna të simuluara të tregut.",
-      "subscriptionTitle": "Abonimi",
-      "subscriptionBody": "Zgjedhja e planit, kuota javore e shpalljeve dhe rinovimet hapen me Increment #6.",
-      "openSubscription": "Hap abonimin",
-      "listingsTitle": "Shpalljet",
-      "listingsBody": "Krijoni, parashikoni dhe publikoni shpallje pasi të lidhet fusha e katalogut. Ende asnjë shpallje.",
-      "openListings": "Hap shpalljet",
-      "inquiriesTitle": "Kërkesat",
-      "inquiriesBody": "Mesazhet e blerësve për artikujt tuaj vijnë me increment-in e mesazheve.",
-      "openMessages": "Hap mesazhet",
-      "noMetricsTitle": "Pa metrika të trilluara",
-      "noMetricsBody": "Shpalljet aktive, shikimet, numri i ruajtjeve nga blerësit dhe përdorimi i kuotës do të shfaqen këtu nga shërbime reale — kurrë nga të dhëna dizajni."
+      "welcome": "Mirë se u ktheve, {name}",
+      "welcomeGeneric": "Mirë se erdhe te Studio e shitësit",
+      "subtitle": "Shpalljet, plani dhe bisedat e tua në një vend.",
+      "backToShopping": "Kthehu te blerjet",
+      "onboardingTitle": "Fillo shitjen për të nisur",
+      "onboardingBody": "Llogaria jote mund të shesë, por ende s'ke një profil shitësi. Fillo një shpallje dhe do të të udhëheqim për pjesën tjetër.",
+      "metricActive": "Shpallje aktive",
+      "metricSold": "Të shitura",
+      "metricDrafts": "Skica",
+      "metricPaused": "Në pauzë",
+      "viewAllListings": "Shiko të gjitha shpalljet",
+      "listingsEmpty": "Ende s'ke shtuar asnjë shpallje.",
+      "sellFirstItem": "Shit artikullin tënd të parë",
+      "sellHeading": "Shit një artikull",
+      "sellBody": "Gati t'i japësh një copë tjetër jetë të dytë? Shtoje për pak minuta.",
+      "sellCta": "Shit një artikull",
+      "planHeading": "Plani i shitësit",
+      "planCurrent": "Plani aktual",
+      "planStatus": "Statusi",
+      "planQuota": "Kuota javore e shpalljeve",
+      "planCancelling": "Anulimi është planifikuar në fund të periudhës aktuale.",
+      "planNone": "Ende s'ke një plan aktiv.",
+      "planManage": "Menaxho abonimin",
+      "planChoose": "Zgjidh një plan",
+      "conversationsHeading": "Biseda të fundit",
+      "conversationsEmpty": "Ende s'ka biseda.",
+      "viewMessages": "Shiko mesazhet"
     },
     "status": {
       "draft": "Skicë",
@@ -630,6 +647,37 @@
       "choosePlan": "Zgjidh {name}",
       "legal": "Duke u abonuar, ju pranoni <terms>Kushtet e Shërbimit</terms> dhe <refunds>politikën e Rimbursimeve dhe Anulimit</refunds>. Menaxhoni ose anuloni në çdo kohë nga <subscription>faqja juaj e abonimit</subscription>.",
       "backToBrowse": "Kthehu te shfletimi"
+    },
+    "lifecycle": {
+      "heading": "Menaxho shpalljen",
+      "intro": "Ndrysho ku shfaqet kjo shpallje. Ndryshimet hyjnë në fuqi menjëherë.",
+      "working": "Duke punuar…",
+      "cancel": "Anulo",
+      "error": "Diçka shkoi keq. Provo përsëri.",
+      "action": {
+        "markSold": "Shëno si të shitur",
+        "markAvailable": "Bëje sërish të disponueshëm",
+        "pause": "Vendos në pauzë",
+        "archive": "Arkivo",
+        "relist": "Rikthe si skicë"
+      },
+      "confirm": {
+        "markSold": {
+          "title": "Shëno si të shitur?",
+          "body": "Kjo shpallje nuk do të shfaqet më si e disponueshme në treg. Bisedat ekzistuese mbeten të arritshme. Galerija nuk e përpunon shitjen — kjo vetëm e shënon artikullin si të shitur.",
+          "cta": "Shëno si të shitur"
+        },
+        "markAvailable": {
+          "title": "Bëje sërish të disponueshëm?",
+          "body": "Kjo e ripublikon shpalljen në treg. Qasja jote si shitës dhe rregullat e abonimit vazhdojnë të vlejnë.",
+          "cta": "Bëje të disponueshëm"
+        },
+        "archive": {
+          "title": "Arkivo shpalljen?",
+          "body": "Shpalljet e arkivuara fshihen nga tregu dhe nga listat e tua aktive. Mund t'i rikthesh më vonë.",
+          "cta": "Arkivo"
+        }
+      }
     }
   },
   "Favorites": {

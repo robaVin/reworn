@@ -401,6 +401,12 @@ model Listing {
   status      ListingStatus @default(draft)
   /// Set the first time the listing is published; retained thereafter.
   publishedAt DateTime?     @map("published_at") @db.Timestamptz(6)
+  /// Server timestamp of the seller's SOLD declaration. Set when the listing
+  /// enters `sold`; cleared (null) when it returns to an available state.
+  /// Server-owned — NEVER accepted from the client. This records only that the
+  /// owner marked the item sold/unavailable: Galerija does not process the sale,
+  /// so it never implies a verified transaction, amount, buyer, or payment.
+  soldAt      DateTime?     @map("sold_at") @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -632,6 +638,7 @@ enum ListingStatus {
   draft
   published
   paused
+  sold
   archived
 
   @@map("listing_status")

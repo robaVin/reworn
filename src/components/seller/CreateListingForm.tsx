@@ -94,10 +94,11 @@ const emptyFields: Fields = {
 
 export interface CreateListingFormProps {
   categories: CategoryOption[];
-  /** Present in EDIT mode: an existing draft to continue. */
+  /** Present in EDIT mode: an existing editable listing to continue. */
   initial?: {
     id: string;
-    status: 'draft' | 'published';
+    /** Editable statuses reach this form; `paused` re-goes-live via republish. */
+    status: 'draft' | 'paused' | 'published';
     fields: Partial<Fields>;
   };
 }
@@ -113,7 +114,7 @@ export function CreateListingForm({
     ...emptyFields,
     ...initial?.fields,
   });
-  const [status, setStatus] = useState<'draft' | 'published'>(
+  const [status, setStatus] = useState<'draft' | 'paused' | 'published'>(
     initial?.status ?? 'draft',
   );
   const [publishing, setPublishing] = useState(false);
@@ -248,7 +249,13 @@ export function CreateListingForm({
         setFormError(t('error.latestChangesFailed'));
         return;
       }
-      const res = await transitionListingAction(id, 'publish');
+      // A paused listing returns to the marketplace via `republish` (the state
+      // machine rejects `publish` from paused); a draft goes live via `publish`.
+      // Both re-run the same server-side entitlement + completeness gate.
+      const res = await transitionListingAction(
+        id,
+        status === 'paused' ? 'republish' : 'publish',
+      );
       if (!res.ok) {
         if (res.fieldErrors) setPublishFieldErrors(res.fieldErrors);
         setFormError(
@@ -523,7 +530,11 @@ export function CreateListingForm({
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <Button onClick={onPublish} disabled={busy}>
-          {publishing ? t('button.publishing') : t('button.publish')}
+          {publishing
+            ? t('button.publishing')
+            : status === 'paused'
+              ? t('button.republish')
+              : t('button.publish')}
         </Button>
         <Button variant="outline" onClick={onSaveAndExit} disabled={busy}>
           {t('button.saveAndExit')}

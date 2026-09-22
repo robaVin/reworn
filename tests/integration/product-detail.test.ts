@@ -378,6 +378,7 @@ describe('optimized detail read parity', () => {
       deliveryNote: p.deliveryNote,
       originalPriceMinor: p.originalPriceMinor,
       createdAt: p.createdAt,
+      status: 'published',
       seller: {
         handle: p.seller.handle,
         shopName: p.seller.shopName,
