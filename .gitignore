@@ -66,3 +66,7 @@ Thumbs.db
 .turbo/
 tmp/
 temp/
+
+# Raw source screenshots for the homepage photography (optimized copies live in
+# public/photos/, which IS tracked). Kept locally, excluded from the repo.
+/images/

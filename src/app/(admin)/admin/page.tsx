@@ -1,6 +1,7 @@
 import { requireAdminPage } from '@/modules/auth/page-guards';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,25 @@ export default async function AdminHomePage() {
         Admin access confirmed by the server-side role guard. Management tools
         arrive in later increments.
       </p>
+
+      {/* The one live admin section. */}
+      <div className="mt-8">
+        <Card>
+          <h2 className="font-display text-lg font-semibold text-ink">
+            Homepage Images
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Replace the photographs shown on the Galerija homepage. Each of the
+            five fixed slots keeps its bundled default until you upload a
+            replacement.
+          </p>
+          <div className="mt-4">
+            <Button href="/admin/homepage-images">
+              Manage homepage images
+            </Button>
+          </div>
+        </Card>
+      </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[

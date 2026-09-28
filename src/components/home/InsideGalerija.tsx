@@ -1,6 +1,13 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
+import type { HomepageOverride } from '@/modules/homepage-media/service';
+
+interface InsideMedia {
+  inside_1?: HomepageOverride;
+  inside_2?: HomepageOverride;
+  inside_3?: HomepageOverride;
+}
 
 /**
  * "Inside Galerija" — an editorial band pairing a short brand statement with
@@ -8,26 +15,31 @@ import { Button } from '@/components/ui/Button';
  * energy; the surrounding UI keeps the calm Sustainable tokens
  * (cream/sand, line borders, rounded-card, shadow-soft). No new palette is
  * derived from the images.
+ *
+ * `media` carries admin overrides for the three inside slots; any absent slot
+ * falls back to its bundled public/photos default + localized alt. Layout,
+ * crop, captions and design are unchanged.
  */
-export async function InsideGalerija() {
+export async function InsideGalerija({ media }: { media?: InsideMedia }) {
   const t = await getTranslations('Home');
 
   // Alt text resolves from literal keys (type-safe with next-intl). Alt stays
   // tied to each photograph; captions read left-to-right in the mockup order.
+  // An admin override replaces the image + alt for its slot; else the default.
   const photos = [
     {
-      src: '/photos/inside-corner.jpg',
-      alt: t('insidePhoto3Alt'),
+      src: media?.inside_1?.url ?? '/photos/inside-corner.jpg',
+      alt: media?.inside_1?.alt ?? t('insidePhoto3Alt'),
       caption: t('insideCaptionStyles'),
     },
     {
-      src: '/photos/inside-bags.jpg',
-      alt: t('insidePhoto2Alt'),
+      src: media?.inside_2?.url ?? '/photos/inside-bags.jpg',
+      alt: media?.inside_2?.alt ?? t('insidePhoto2Alt'),
       caption: t('insideCaptionDetails'),
     },
     {
-      src: '/photos/inside-mirror.jpg',
-      alt: t('insidePhoto1Alt'),
+      src: media?.inside_3?.url ?? '/photos/inside-mirror.jpg',
+      alt: media?.inside_3?.alt ?? t('insidePhoto1Alt'),
       caption: t('insideCaptionCloset'),
     },
   ];

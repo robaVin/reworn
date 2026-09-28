@@ -64,6 +64,9 @@ model Profile {
   // Wishlist: listings this user has saved (Increment: Saved Items).
   savedItems SavedItem[]
 
+  // Homepage-image overrides this admin last updated (audit trail).
+  homepageMediaUpdates HomepageMedia[]
+
   @@index([status])
   @@map("profiles")
 }
@@ -579,6 +582,48 @@ model SavedItem {
   // "My saved listings, newest first" + the bounded existence lookups.
   @@index([userId, createdAt(sort: Desc)])
   @@map("saved_items")
+}
+
+// -----------------------------------------------------------------------------
+// Homepage media (admin overrides for the fixed homepage image slots)
+// -----------------------------------------------------------------------------
+
+/// The five fixed homepage image slots discovered in the components. Admin may
+/// override the picture in each; the enum makes the set DB-enforced and closed.
+enum HomepageSlot {
+  hero
+  inside_1
+  inside_2
+  inside_3
+  story
+
+  @@map("homepage_slot")
+}
+
+/// An admin's override for ONE homepage image slot. At most one row per slot
+/// (the slot IS the primary key). When no row exists the homepage falls back to
+/// the bundled `public/photos/*` default, so an empty table never breaks the
+/// page. `storageKey` is a server-generated, immutable, versioned object key in
+/// the private image bucket (`homepage/<slot>/<uuid>.webp`); reads are signed at
+/// render, exactly like listing images. This table is admin-managed system
+/// config: it is written and read only through the privileged server path
+/// (locked down by RLS), never by a browser client.
+model HomepageMedia {
+  slot        HomepageSlot @id
+  storageKey  String       @map("storage_key")
+  /// Admin-entered plain-text alt (1-300 chars; DB CHECK). Required on override;
+  /// the localized source alt remains the fallback when there is no row.
+  altText     String       @map("alt_text")
+  width       Int
+  height      Int
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// The admin who last changed this slot (audit trail). SetNull so deleting a
+  /// profile never blocks; the override keeps working.
+  updatedById String?      @map("updated_by") @db.Uuid
+
+  updatedBy Profile? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("homepage_media")
 }
 
 // -----------------------------------------------------------------------------

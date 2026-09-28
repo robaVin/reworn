@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
+import type { HomepageOverride } from '@/modules/homepage-media/service';
 
 /**
  * Editorial hero — the Sustainable prototype's `.hero` with blurred
@@ -10,8 +11,11 @@ import { Button } from '@/components/ui/Button';
  * items listed", "2.1M garments rehomed") are NOT shown as real metrics.
  * The statistics band keeps the prototype's layout but carries truthful
  * product facts; real marketplace metrics replace them when they exist.
+ *
+ * `media` is the admin override for the hero image; absent → the bundled
+ * public/photos default + localized alt. Layout/crop is unchanged.
  */
-export async function Hero() {
+export async function Hero({ media }: { media?: HomepageOverride }) {
   const t = await getTranslations('Home');
   // Numeric values are locale-neutral; only the label + "Direct" word localize.
   const PRODUCT_FACTS = [
@@ -73,8 +77,8 @@ export async function Hero() {
 
           <div className="relative aspect-listing w-full overflow-hidden rounded-card border border-line shadow-soft lg:aspect-auto lg:h-full lg:min-h-[440px]">
             <Image
-              src="/photos/hero-rack.jpg"
-              alt={t('heroPhotoAlt')}
+              src={media?.url ?? '/photos/hero-rack.jpg'}
+              alt={media?.alt ?? t('heroPhotoAlt')}
               fill
               priority
               sizes="(min-width: 1024px) 48vw, 100vw"

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/Button';
+import type { HomepageOverride } from '@/modules/homepage-media/service';
 
 /**
  * Sustainability story band — a wide boutique photograph paired with a truthful
@@ -8,8 +9,15 @@ import { Button } from '@/components/ui/Button';
  * Sustainable tokens (sand→surface gradient, line borders, rounded-card, forest
  * decorative accent). Makes no fabricated impact metrics; the copy mirrors the
  * hero's truthful "in circulation, out of landfill" framing.
+ *
+ * `media` is the admin override for the story image; absent → the bundled
+ * public/photos default + localized alt. Layout/crop is unchanged.
  */
-export async function SustainabilityBand() {
+export async function SustainabilityBand({
+  media,
+}: {
+  media?: HomepageOverride;
+}) {
   const t = await getTranslations('Home');
   return (
     <section
@@ -19,8 +27,8 @@ export async function SustainabilityBand() {
       <div className="grid items-stretch overflow-hidden rounded-card border border-line bg-gradient-to-r from-sand to-surface lg:grid-cols-[1.15fr_0.85fr]">
         <div className="relative aspect-[16/10] lg:aspect-auto lg:min-h-[320px]">
           <Image
-            src="/photos/story-rack.jpg"
-            alt={t('sustainabilityPhotoAlt')}
+            src={media?.url ?? '/photos/story-rack.jpg'}
+            alt={media?.alt ?? t('sustainabilityPhotoAlt')}
             fill
             loading="lazy"
             sizes="(min-width: 1024px) 55vw, 100vw"
