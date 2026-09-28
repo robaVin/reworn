@@ -33,8 +33,11 @@ export interface FeatureAccess {
 /**
  * Whether a seller may PUBLISH listings: an active seller, and — when
  * enforcement is on — a live subscription. When enforcement is off (the
- * documented dev bridge; forbidden in production), an active seller may publish
- * without a subscription.
+ * default, and permitted in every environment including production so an
+ * incomplete billing rollout never blocks existing sellers), an active seller
+ * may publish without a subscription. Enabling enforcement requires a live
+ * payment provider (see src/lib/env.ts), so `true` is only usable once billing
+ * is wired.
  */
 export function canPublish(input: PublishGateInput): boolean {
   return (

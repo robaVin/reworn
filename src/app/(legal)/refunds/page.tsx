@@ -11,7 +11,7 @@ import { COMPANY } from '@/config/company';
 export const metadata: Metadata = {
   title: 'Subscription, Refunds & Cancellation',
   description:
-    'Terms for the ReWorn seller subscription, including cancellation and refunds.',
+    'Terms for the Galerija seller subscription, including cancellation and refunds.',
   alternates: { canonical: '/refunds' },
   robots: { index: true, follow: true },
 };
