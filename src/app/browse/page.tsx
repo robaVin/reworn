@@ -71,7 +71,7 @@ export default async function BrowsePage({
     page.nextCursor && buildBrowseHref(query, { cursor: page.nextCursor });
 
   return (
-    <main className="mx-auto max-w-shell px-4 py-10 sm:px-8 lg:px-10">
+    <main className="mx-auto max-w-shell px-4 pb-12 pt-6 sm:px-8 lg:px-10">
       <h1 className="font-display text-3xl font-bold text-ink sm:text-[34px]">
         {t('heading')}
       </h1>
