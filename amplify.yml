@@ -17,6 +17,14 @@ frontend:
         # that imports @prisma/client. `prisma generate` reads schema.prisma only
         # and does NOT connect to the database. Migrations are NOT run here.
         - npx prisma generate
+        # Amplify console environment variables are available to the build
+        # environment but are not automatically exposed to Next.js SSR compute.
+        # Write only Galerija's explicitly required runtime variables into the
+        # Next.js-recognized production environment file. `env | grep` copies each
+        # value byte-for-byte (URLs with ?, & and = preserved); only variable
+        # NAMES appear in the command, so no values are printed to the build log.
+        # Ref: docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
+        - env | grep -E '^(NEXT_PUBLIC_APP_URL|NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL|DIRECT_URL|PAYMENT_PROVIDER|SUBSCRIPTION_ENFORCEMENT)=' > .env.production
     build:
       commands:
         - npm run build
