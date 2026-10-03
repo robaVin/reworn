@@ -269,9 +269,18 @@
     "emailLabel": "Email",
     "rolesLabel": "Roles",
     "moreSettingsTitle": "More account settings arrive later",
-    "moreSettingsBody": "Display-name editing, notification preferences, privacy controls and data-export requests will appear here when those services connect. Nothing below is simulated.",
+    "moreSettingsBody": "Notification preferences, privacy controls and data-export requests will appear here when those services connect. Nothing here is simulated.",
     "menuLabelAuthed": "Account menu",
-    "menuLabelGuest": "Account — log in or register"
+    "menuLabelGuest": "Account — log in or register",
+    "memberSince": "Member since",
+    "displayNameLabel": "Display name",
+    "displayNamePlaceholder": "Your name",
+    "displayNameHelp": "The name people see when you message them. Leave blank to appear as “galerija member”.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "saveError": "Couldn’t save. Please try again.",
+    "tooMany": "Too many changes — try again shortly."
   },
   "Browse": {
     "heading": "Browse the edit",

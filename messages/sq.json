@@ -269,9 +269,18 @@
     "emailLabel": "Email",
     "rolesLabel": "Rolet",
     "moreSettingsTitle": "Më shumë cilësime të llogarisë vijnë më vonë",
-    "moreSettingsBody": "Redaktimi i emrit të shfaqjes, preferencat e njoftimeve, kontrollet e privatësisë dhe kërkesat për eksportim të të dhënave do të shfaqen këtu kur ato shërbime të lidhen. Asgjë më poshtë nuk është e simuluar.",
+    "moreSettingsBody": "Preferencat e njoftimeve, kontrollet e privatësisë dhe kërkesat për eksport të të dhënave do të shfaqen këtu kur ato shërbime të lidhen. Asgjë këtu nuk është e simuluar.",
     "menuLabelAuthed": "Menyja e llogarisë",
-    "menuLabelGuest": "Llogaria — hyni ose regjistrohuni"
+    "menuLabelGuest": "Llogaria — hyni ose regjistrohuni",
+    "memberSince": "Anëtar që nga",
+    "displayNameLabel": "Emri i shfaqur",
+    "displayNamePlaceholder": "Emri juaj",
+    "displayNameHelp": "Emri që njerëzit shohin kur u shkruani. Lëreni bosh për t’u shfaqur si “galerija member”.",
+    "save": "Ruaj",
+    "saving": "Po ruhet…",
+    "saved": "U ruajt.",
+    "saveError": "Nuk u ruajt dot. Provoni përsëri.",
+    "tooMany": "Shumë ndryshime — provoni përsëri pas pak."
   },
   "Browse": {
     "heading": "Shfleto koleksionin",
