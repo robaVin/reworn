@@ -10,7 +10,7 @@ import { COMPANY } from '@/config/company';
 
 export const metadata: Metadata = {
   title: 'Cookie Policy',
-  description: 'How galerija uses cookies and similar technologies.',
+  description: 'How галерија uses cookies and similar technologies.',
   alternates: { canonical: '/cookies' },
   robots: { index: true, follow: true },
 };

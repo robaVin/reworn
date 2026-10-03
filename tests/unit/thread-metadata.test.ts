@@ -13,7 +13,7 @@ describe('/messages/[conversationId] metadata', () => {
     const md = await generateMetadata({
       params: Promise.resolve({ conversationId: CONV_ID }),
     });
-    expect(md.title).toBe('Conversation — galerija');
+    expect(md.title).toBe('Conversation — галерија');
     expect(md.robots).toMatchObject({ index: false, follow: false });
     expect(md.alternates?.canonical).toBe(`/messages/${CONV_ID}`);
     // No Open Graph, and nothing beyond the canonical route id.

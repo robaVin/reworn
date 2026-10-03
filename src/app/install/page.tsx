@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Get the app',
   description:
-    'Install galerija on your phone or computer — it adds to your home screen straight from the browser, with nothing to download from an app store.',
+    'Install галерија on your phone or computer — it adds to your home screen straight from the browser, with nothing to download from an app store.',
   alternates: { canonical: '/install' },
   robots: { index: true, follow: true },
 };

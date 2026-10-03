@@ -20,7 +20,7 @@ import {
  * Server Actions; rate-limited per user. No role or client state is trusted.
  */
 
-/** Trimmed, max 80 chars. Empty clears the name (-> NULL, "galerija member"). */
+/** Trimmed, max 80 chars. Empty clears the name (-> NULL, "галерија member"). */
 const displayNameSchema = z.string().trim().max(80);
 
 export async function updateDisplayNameAction(

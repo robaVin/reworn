@@ -12,7 +12,7 @@
     "noResults": "Nuk ka rezultate",
     "required": "Fushë e detyrueshme",
     "skipToContent": "Kalo te përmbajtja",
-    "brand": "galerija"
+    "brand": "галерија"
   },
   "LanguageSelector": {
     "label": "Gjuha",
@@ -72,13 +72,13 @@
     "emptyBody": "Ende nuk është publikuar asgjë — artikujt e saposhtuar do të shfaqen këtu të parët.",
     "sellBandHeading": "Pastrimi i garderobës mund të bëjë mirë.",
     "sellBandBody": "Shto artikujt e tu të përdorur për pak minuta. Blerësit të shkruajnë drejtpërdrejt — çmimin dhe dorëzimin i bini dakord mes jush.",
-    "heroPhotoAlt": "Një raft me fustane të përdorura me ngjyra në butikun galerija.",
-    "insideEyebrow": "Brenda galerija",
+    "heroPhotoAlt": "Një raft me fustane të përdorura me ngjyra në butikun галерија.",
+    "insideEyebrow": "Brenda галерија",
     "insideHeading": "Përzgjedhur me kujdes",
     "insideBody": "Një vështrim në botën tonë — ku çdo copë ka një histori dhe çdo detaj ka rëndësi.",
-    "insidePhoto1Alt": "Një pasqyrë e artë me hark pranë rafteve me veshje mbi një tapet me motive brenda butikut galerija.",
-    "insidePhoto2Alt": "Qese pazari me markën galerija dhe këpucë të vendosura mbi një tapet me motive.",
-    "insidePhoto3Alt": "Perde të tejdukshme dhe rafte me veshje me ngjyra në një cep të butikut galerija.",
+    "insidePhoto1Alt": "Një pasqyrë e artë me hark pranë rafteve me veshje mbi një tapet me motive brenda butikut галерија.",
+    "insidePhoto2Alt": "Qese pazari me markën галерија dhe këpucë të vendosura mbi një tapet me motive.",
+    "insidePhoto3Alt": "Perde të tejdukshme dhe rafte me veshje me ngjyra në një cep të butikut галерија.",
     "insideCta": "Shfleto koleksionin",
     "insideCaptionStyles": "Stile plot ngjyra",
     "insideCaptionDetails": "Detaje të menduara",
@@ -87,7 +87,7 @@
     "sustainabilityHeading": "Modë që bën ndryshimin",
     "sustainabilityBody": "Duke zgjedhur të përdorurën, ndihmon që veshjet e mira të qëndrojnë në qarkullim dhe larg deponive — një e ardhme më e qëndrueshme, copë pas cope.",
     "sustainabilityCta": "Blej në mënyrë të qëndrueshme",
-    "sustainabilityPhotoAlt": "Një raft me veshje të përdorura pranë një dritareje me diell në butikun galerija."
+    "sustainabilityPhotoAlt": "Një raft me veshje të përdorura pranë një dritareje me diell në butikun галерија."
   },
   "Footer": {
     "description": "Një treg klasifikatash për modën e përdorur. Blerësit dhe shitësit lidhen drejtpërdrejt — çdo copë e rihapur e mban veshjen e mirë në qarkullim.",
@@ -135,7 +135,7 @@
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
     },
     "inboxTitle": "Mesazhet",
-    "conversationMetaTitle": "Bisedë — galerija",
+    "conversationMetaTitle": "Bisedë — галерија",
     "emptyInboxTitle": "Ende asnjë bisedë",
     "emptyInboxBody": "Kur i shkruani një shitësi për një listim, biseda do të shfaqet këtu.",
     "olderConversations": "Bisedat më të vjetra",
@@ -195,7 +195,7 @@
     "loginRequiredNext": "Ju lutemi hyni për të vazhduar te faqja që kërkuat.",
     "invalidCredentials": "Email-i ose fjalëkalimi janë të pasaktë.",
     "loginTitle": "Mirë se erdhe përsëri",
-    "loginSubtitle": "Hyni në llogarinë tuaj galerija.",
+    "loginSubtitle": "Hyni në llogarinë tuaj галерија.",
     "noAccount": "Nuk keni llogari?",
     "createOne": "Krijoni një",
     "signInRequired": "Kërkohet hyrja",
@@ -267,7 +267,7 @@
   },
   "Account": {
     "title": "Llogaria juaj",
-    "signedInWithSession": "I kyçur me sesionin tuaj real galerija.",
+    "signedInWithSession": "I kyçur me sesionin tuaj real галерија.",
     "profile": "Profili",
     "emailLabel": "Email",
     "rolesLabel": "Rolet",
@@ -278,7 +278,7 @@
     "memberSince": "Anëtar që nga",
     "displayNameLabel": "Emri i shfaqur",
     "displayNamePlaceholder": "Emri juaj",
-    "displayNameHelp": "Emri që njerëzit shohin kur u shkruani. Lëreni bosh për t’u shfaqur si “galerija member”.",
+    "displayNameHelp": "Emri që njerëzit shohin kur u shkruani. Lëreni bosh për t’u shfaqur si “галерија member”.",
     "save": "Ruaj",
     "saving": "Po ruhet…",
     "saved": "U ruajt.",
@@ -392,7 +392,7 @@
     "emptyBody": "Ky shitës ende nuk ka publikuar asnjë artikull. Kontrolloni sërish së shpejti.",
     "browseMarketplace": "Shfleto tregun",
     "metaTitle": "{shopName} — Shitës",
-    "metaDescription": "Bli modë të përdorur nga {shopName} në galerija.",
+    "metaDescription": "Bli modë të përdorur nga {shopName} në галерија.",
     "metaNotFound": "Shitësi nuk u gjet",
     "notFoundTitle": "Ky shitës nuk është i disponueshëm",
     "notFoundBody": "Nuk gjetëm një shitës në këtë adresë. Mund të jetë zhvendosur ose nuk ka ekzistuar kurrë."
@@ -447,8 +447,8 @@
       "deliveryNote": "Shënim për dorëzimin (opsional)",
       "deliveryNotePlaceholder": "p.sh. Dërgohet nga Shkupi; mirëpritet marrja personale"
     },
-    "priceHelper": "Çmimi është informativ — pagesën dhe dorëzimin i bini dakord drejtpërdrejt me blerësin. galerija nuk merr kurrë komision.",
-    "deliveryHelper": "Vetëm informative. Dorëzimin e organizoni drejtpërdrejt me blerësin — galerija nuk merret kurrë me dërgesën ose pagesën.",
+    "priceHelper": "Çmimi është informativ — pagesën dhe dorëzimin i bini dakord drejtpërdrejt me blerësin. галерија nuk merr kurrë komision.",
+    "deliveryHelper": "Vetëm informative. Dorëzimin e organizoni drejtpërdrejt me blerësin — галерија nuk merret kurrë me dërgesën ose pagesën.",
     "button": {
       "publish": "Publikoni shpalljen",
       "publishing": "Duke publikuar…",
@@ -525,18 +525,18 @@
       "default": "Abonohu"
     },
     "meta": {
-      "sellTitle": "Shitni në galerija",
+      "sellTitle": "Shitni në галерија",
       "listingsTitle": "Shpalljet tuaja",
       "newListingTitle": "Shpallje e re",
       "editTitle": "Modifiko shpalljen",
       "subscriptionTitle": "Abonimi",
       "pricingTitle": "Çmimet",
-      "pricingDescription": "Planet e abonimit të shitësit për galerija — publikoni shpallje me një plan mujor."
+      "pricingDescription": "Planet e abonimit të shitësit për галерија — publikoni shpallje me një plan mujor."
     },
     "page": {
-      "eyebrow": "Shitni në galerija",
+      "eyebrow": "Shitni në галерија",
       "heading": "Pastrimi i garderobës tuaj mund të bëjë mirë.",
-      "intro": "galerija është një treg shpalljesh: ju mbani 100% të asaj që shisni. Blerësit ju kontaktojnë drejtpërdrejt dhe pagesa e dorëzimi mbeten mes jush dhe blerësit."
+      "intro": "галерија është një treg shpalljesh: ju mbani 100% të asaj që shisni. Blerësit ju kontaktojnë drejtpërdrejt dhe pagesa e dorëzimi mbeten mes jush dhe blerësit."
     },
     "devHint": {
       "title": "Akses testimi për zhvillim",
@@ -614,7 +614,7 @@
     },
     "newListing": {
       "heading": "Krijo një shpallje",
-      "intro": "Ruani një skicë në çdo kohë; publikoni kur të jetë gati. Blerësit ju kontaktojnë drejtpërdrejt — galerija nuk e përpunon shitjen.",
+      "intro": "Ruani një skicë në çdo kohë; publikoni kur të jetë gati. Blerësit ju kontaktojnë drejtpërdrejt — галерија nuk e përpunon shitjen.",
       "profileRequiredTitle": "Kërkohet profil shitësi",
       "profileRequiredBody": "Llogaria juaj ka rolin e shitësit, por ende nuk ka profil shitësi. Regjistrimi i shitësit brenda aplikacionit vjen në një increment të mëvonshëm. Për zhvillim, një operator mund të krijojë një:",
       "backToSeller": "Kthehu te zona e shitësit"
@@ -658,8 +658,8 @@
     },
     "pricing": {
       "eyebrow": "Çmimet",
-      "heading": "Shitni në galerija",
-      "intro": "Shfletimi dhe mesazhet janë gjithmonë falas. Shitësit zgjedhin një plan për të publikuar shpallje. Pagesat përpunohen në mënyrë të sigurt nga {gateway} në {currency}; galerija nuk i ruan kurrë të dhënat e kartës suaj.",
+      "heading": "Shitni në галерија",
+      "intro": "Shfletimi dhe mesazhet janë gjithmonë falas. Shitësit zgjedhin një plan për të publikuar shpallje. Pagesat përpunohen në mënyrë të sigurt nga {gateway} në {currency}; галерија nuk i ruan kurrë të dhënat e kartës suaj.",
       "comingSoonTitle": "Planet së shpejti",
       "comingSoonBody": "Planet e abonimit ende nuk janë të disponueshme. Ju lutemi kontrolloni sërish së shpejti.",
       "perDays": "/ {days} ditë",
@@ -686,7 +686,7 @@
       "confirm": {
         "markSold": {
           "title": "Shëno si të shitur?",
-          "body": "Kjo shpallje nuk do të shfaqet më si e disponueshme në treg. Bisedat ekzistuese mbeten të arritshme. galerija nuk e përpunon shitjen — kjo vetëm e shënon artikullin si të shitur.",
+          "body": "Kjo shpallje nuk do të shfaqet më si e disponueshme në treg. Bisedat ekzistuese mbeten të arritshme. галерија nuk e përpunon shitjen — kjo vetëm e shënon artikullin si të shitur.",
           "cta": "Shëno si të shitur"
         },
         "markAvailable": {
@@ -725,12 +725,12 @@
     "browse": "Shfleto koleksionin"
   },
   "Install": {
-    "title": "Merr aplikacionin galerija",
-    "intro": "galerija është një aplikacion ueb që instalohet drejtpërdrejt nga shfletuesi — nuk ka asgjë për të shkarkuar nga një dyqan aplikacionesh. Shtoje në ekranin bazë dhe hapet në dritaren e vet, si çdo aplikacion tjetër.",
-    "installCta": "Instalo galerija",
+    "title": "Merr aplikacionin галерија",
+    "intro": "галерија është një aplikacion ueb që instalohet drejtpërdrejt nga shfletuesi — nuk ka asgjë për të shkarkuar nga një dyqan aplikacionesh. Shtoje në ekranin bazë dhe hapet në dritaren e vet, si çdo aplikacion tjetër.",
+    "installCta": "Instalo галерија",
     "installHint": "Shfletuesi do të të kërkojë ta konfirmosh.",
     "installedTitle": "Gjithçka gati",
-    "installed": "galerija është instaluar në këtë pajisje. Hape nga ekrani bazë ose nga lista e aplikacioneve.",
+    "installed": "галерија është instaluar në këtë pajisje. Hape nga ekrani bazë ose nga lista e aplikacioneve.",
     "whatTitle": "Çfarë përfiton",
     "what1": "Hapet në dritaren e vet, pa shiritin e shfletuesit.",
     "what2": "Një ikonë në ekranin bazë, si çdo aplikacion i mirëfilltë.",
@@ -738,13 +738,13 @@
     "iosTitle": "Shtoje në iPhone ose iPad",
     "iosStep1": "Prek butonin Share (Shpërndaj) në shiritin e Safari-t.",
     "iosStep2": "Zgjidh “Add to Home Screen” (Shto në ekranin bazë).",
-    "iosStep3": "Prek “Add” (Shto) — galerija shfaqet në ekranin bazë.",
+    "iosStep3": "Prek “Add” (Shto) — галерија shfaqet në ekranin bazë.",
     "iosSafariNote": "Në iPhone dhe iPad kjo funksionon në Safari.",
     "desktopTitle": "Instalo në kompjuter",
-    "desktopBody": "Në Chrome ose Edge, kliko ikonën e instalimit në shiritin e adresës, ose hap menynë e shfletuesit dhe zgjidh “Install galerija”.",
+    "desktopBody": "Në Chrome ose Edge, kliko ikonën e instalimit në shiritin e adresës, ose hap menynë e shfletuesit dhe zgjidh “Install галерија”.",
     "genericTitle": "Shtoje në ekranin bazë",
     "genericBody": "Hap menynë e shfletuesit dhe zgjidh “Install” ose “Add to Home Screen”.",
-    "bannerTitle": "Instalo galerija",
+    "bannerTitle": "Instalo галерија",
     "bannerBody": "Shtoje në pajisjen tënde — falas, drejt nga shfletuesi.",
     "bannerBodyIos": "Shtoje në ekranin bazë.",
     "installShort": "Instalo",

@@ -12,7 +12,7 @@
     "noResults": "No results",
     "required": "Required field",
     "skipToContent": "Skip to content",
-    "brand": "galerija"
+    "brand": "галерија"
   },
   "LanguageSelector": {
     "label": "Language",
@@ -72,13 +72,13 @@
     "emptyBody": "Nothing has been published yet — freshly listed pieces will appear here first.",
     "sellBandHeading": "Your closet clean-out can do good.",
     "sellBandBody": "List your pre-loved pieces in minutes. Buyers message you directly — you agree on price and handover between yourselves.",
-    "heroPhotoAlt": "A rack of colourful pre-loved dresses at the galerija boutique.",
-    "insideEyebrow": "Inside galerija",
+    "heroPhotoAlt": "A rack of colourful pre-loved dresses at the галерија boutique.",
+    "insideEyebrow": "Inside галерија",
     "insideHeading": "Curated with care",
     "insideBody": "A glimpse into our world — where every piece has a story, and every detail matters.",
-    "insidePhoto1Alt": "A gold arch mirror beside racks of clothing on a patterned rug inside the galerija boutique.",
-    "insidePhoto2Alt": "galerija branded shopping bags and shoes arranged on a patterned rug.",
-    "insidePhoto3Alt": "Sheer curtains and racks of colourful clothing in a corner of the galerija boutique.",
+    "insidePhoto1Alt": "A gold arch mirror beside racks of clothing on a patterned rug inside the галерија boutique.",
+    "insidePhoto2Alt": "галерија branded shopping bags and shoes arranged on a patterned rug.",
+    "insidePhoto3Alt": "Sheer curtains and racks of colourful clothing in a corner of the галерија boutique.",
     "insideCta": "Browse the collection",
     "insideCaptionStyles": "Vibrant styles",
     "insideCaptionDetails": "Thoughtful details",
@@ -87,7 +87,7 @@
     "sustainabilityHeading": "Fashion that makes a difference",
     "sustainabilityBody": "By choosing second-hand, you help keep good clothing in circulation and out of landfill — a more circular future, one piece at a time.",
     "sustainabilityCta": "Shop sustainably",
-    "sustainabilityPhotoAlt": "A rack of pre-loved clothing by a sunlit window at the galerija boutique."
+    "sustainabilityPhotoAlt": "A rack of pre-loved clothing by a sunlit window at the галерија boutique."
   },
   "Footer": {
     "description": "A classifieds marketplace for pre-loved fashion. Buyers and sellers connect directly — every rehomed piece keeps good clothing in circulation.",
@@ -135,7 +135,7 @@
       "generic": "Something went wrong. Please try again."
     },
     "inboxTitle": "Messages",
-    "conversationMetaTitle": "Conversation — galerija",
+    "conversationMetaTitle": "Conversation — галерија",
     "emptyInboxTitle": "No conversations yet",
     "emptyInboxBody": "When you message a seller about a listing, the conversation will appear here.",
     "olderConversations": "Older conversations",
@@ -195,7 +195,7 @@
     "loginRequiredNext": "Please log in to continue to the page you requested.",
     "invalidCredentials": "Invalid email or password.",
     "loginTitle": "Welcome back",
-    "loginSubtitle": "Log in to your galerija account.",
+    "loginSubtitle": "Log in to your галерија account.",
     "noAccount": "No account?",
     "createOne": "Create one",
     "signInRequired": "Sign in required",
@@ -267,7 +267,7 @@
   },
   "Account": {
     "title": "Your account",
-    "signedInWithSession": "Signed in with your real galerija session.",
+    "signedInWithSession": "Signed in with your real галерија session.",
     "profile": "Profile",
     "emailLabel": "Email",
     "rolesLabel": "Roles",
@@ -278,7 +278,7 @@
     "memberSince": "Member since",
     "displayNameLabel": "Display name",
     "displayNamePlaceholder": "Your name",
-    "displayNameHelp": "The name people see when you message them. Leave blank to appear as “galerija member”.",
+    "displayNameHelp": "The name people see when you message them. Leave blank to appear as “галерија member”.",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Saved.",
@@ -392,7 +392,7 @@
     "emptyBody": "This seller hasn’t published any items yet. Check back soon.",
     "browseMarketplace": "Browse the marketplace",
     "metaTitle": "{shopName} — Seller",
-    "metaDescription": "Shop pre-loved fashion from {shopName} on galerija.",
+    "metaDescription": "Shop pre-loved fashion from {shopName} on галерија.",
     "metaNotFound": "Seller not found",
     "notFoundTitle": "This seller isn’t available",
     "notFoundBody": "We couldn’t find a seller at this address. It may have moved or never existed."
@@ -447,8 +447,8 @@
       "deliveryNote": "Delivery note (optional)",
       "deliveryNotePlaceholder": "e.g. Ships from Skopje; local pickup welcome"
     },
-    "priceHelper": "The price is informational — you agree payment and delivery directly with the buyer. galerija never takes a cut.",
-    "deliveryHelper": "Informational only. You arrange hand-over directly with the buyer — galerija never handles shipping or payment.",
+    "priceHelper": "The price is informational — you agree payment and delivery directly with the buyer. галерија never takes a cut.",
+    "deliveryHelper": "Informational only. You arrange hand-over directly with the buyer — галерија never handles shipping or payment.",
     "button": {
       "publish": "Publish listing",
       "publishing": "Publishing…",
@@ -525,18 +525,18 @@
       "default": "Subscribe"
     },
     "meta": {
-      "sellTitle": "Sell on galerija",
+      "sellTitle": "Sell on галерија",
       "listingsTitle": "Your listings",
       "newListingTitle": "New listing",
       "editTitle": "Edit listing",
       "subscriptionTitle": "Subscription",
       "pricingTitle": "Pricing",
-      "pricingDescription": "Seller subscription plans for galerija — publish listings on a monthly plan."
+      "pricingDescription": "Seller subscription plans for галерија — publish listings on a monthly plan."
     },
     "page": {
-      "eyebrow": "Sell on galerija",
+      "eyebrow": "Sell on галерија",
       "heading": "Your closet clean-out can do good.",
-      "intro": "galerija is a classifieds marketplace: you keep 100% of what you sell. Buyers contact you directly, and payment and delivery stay between you and the buyer."
+      "intro": "галерија is a classifieds marketplace: you keep 100% of what you sell. Buyers contact you directly, and payment and delivery stay between you and the buyer."
     },
     "devHint": {
       "title": "Development testing access",
@@ -614,7 +614,7 @@
     },
     "newListing": {
       "heading": "Create a listing",
-      "intro": "Save a draft any time; publish when it's ready. Buyers contact you directly — galerija doesn't process the sale.",
+      "intro": "Save a draft any time; publish when it's ready. Buyers contact you directly — галерија doesn't process the sale.",
       "profileRequiredTitle": "Seller profile required",
       "profileRequiredBody": "Your account has the seller role but no seller profile yet. In-app seller onboarding arrives in a later increment. For development, an operator can provision one:",
       "backToSeller": "Back to seller area"
@@ -658,8 +658,8 @@
     },
     "pricing": {
       "eyebrow": "Pricing",
-      "heading": "Sell on galerija",
-      "intro": "Browsing and messaging are always free. Sellers choose a plan to publish listings. Payments are processed securely by {gateway} in {currency}; galerija never stores your card details.",
+      "heading": "Sell on галерија",
+      "intro": "Browsing and messaging are always free. Sellers choose a plan to publish listings. Payments are processed securely by {gateway} in {currency}; галерија never stores your card details.",
       "comingSoonTitle": "Plans coming soon",
       "comingSoonBody": "Subscription plans aren't available yet. Please check back shortly.",
       "perDays": "/ {days} days",
@@ -686,7 +686,7 @@
       "confirm": {
         "markSold": {
           "title": "Mark as sold?",
-          "body": "This listing will no longer appear as available in the marketplace. Existing conversations stay accessible. galerija doesn't process the sale — this only marks the item sold.",
+          "body": "This listing will no longer appear as available in the marketplace. Existing conversations stay accessible. галерија doesn't process the sale — this only marks the item sold.",
           "cta": "Mark as sold"
         },
         "markAvailable": {
@@ -725,12 +725,12 @@
     "browse": "Browse the edit"
   },
   "Install": {
-    "title": "Get the galerija app",
-    "intro": "galerija is a web app that installs straight from your browser — there is nothing to download from an app store. Add it to your home screen and it opens in its own window, just like any other app.",
-    "installCta": "Install galerija",
+    "title": "Get the галерија app",
+    "intro": "галерија is a web app that installs straight from your browser — there is nothing to download from an app store. Add it to your home screen and it opens in its own window, just like any other app.",
+    "installCta": "Install галерија",
     "installHint": "Your browser will ask you to confirm.",
     "installedTitle": "You're all set",
-    "installed": "galerija is installed on this device. Open it from your home screen or app launcher.",
+    "installed": "галерија is installed on this device. Open it from your home screen or app launcher.",
     "whatTitle": "What you get",
     "what1": "Opens in its own window, without the browser bar.",
     "what2": "A home-screen icon, just like a native app.",
@@ -738,13 +738,13 @@
     "iosTitle": "Add to your iPhone or iPad",
     "iosStep1": "Tap the Share button in Safari’s toolbar.",
     "iosStep2": "Choose “Add to Home Screen”.",
-    "iosStep3": "Tap “Add” — galerija appears on your home screen.",
+    "iosStep3": "Tap “Add” — галерија appears on your home screen.",
     "iosSafariNote": "On iPhone and iPad this works in Safari.",
     "desktopTitle": "Install on your computer",
-    "desktopBody": "In Chrome or Edge, click the install icon in the address bar, or open the browser menu and choose “Install galerija”.",
+    "desktopBody": "In Chrome or Edge, click the install icon in the address bar, or open the browser menu and choose “Install галерија”.",
     "genericTitle": "Add to your home screen",
     "genericBody": "Open your browser’s menu and choose “Install” or “Add to Home Screen”.",
-    "bannerTitle": "Install galerija",
+    "bannerTitle": "Install галерија",
     "bannerBody": "Add it to your device — free, straight from your browser.",
     "bannerBodyIos": "Add it to your home screen.",
     "installShort": "Install",

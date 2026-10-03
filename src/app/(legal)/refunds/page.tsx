@@ -11,7 +11,7 @@ import { COMPANY } from '@/config/company';
 export const metadata: Metadata = {
   title: 'Subscription, Refunds & Cancellation',
   description:
-    'Terms for the galerija seller subscription, including cancellation and refunds.',
+    'Terms for the галерија seller subscription, including cancellation and refunds.',
   alternates: { canonical: '/refunds' },
   robots: { index: true, follow: true },
 };

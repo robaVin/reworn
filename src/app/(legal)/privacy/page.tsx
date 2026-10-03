@@ -11,7 +11,7 @@ import { COMPANY } from '@/config/company';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
-    'How galerija collects, uses and protects personal data, and how cardholder data is handled.',
+    'How галерија collects, uses and protects personal data, and how cardholder data is handled.',
   alternates: { canonical: '/privacy' },
   robots: { index: true, follow: true },
 };

@@ -13,7 +13,7 @@
  */
 export const COMPANY = {
   /** Public brand / trading name. */
-  tradingName: 'galerija',
+  tradingName: 'галерија',
   /** Registered legal entity that operates Galerija and holds the CaSys contract. */
   legalName: '[REGISTERED LEGAL ENTITY NAME]',
   /** Registered seat / address. */

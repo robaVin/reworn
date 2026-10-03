@@ -35,16 +35,16 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   ),
   title: {
-    default: 'galerija — Give great clothes a second life',
-    template: '%s · galerija',
+    default: 'галерија — Give great clothes a second life',
+    template: '%s · галерија',
   },
   description:
     'Buy and sell pre-loved fashion. Browse thousands of second-hand ' +
     'clothes, shoes, bags, accessories and jewellery.',
-  applicationName: 'galerija',
+  applicationName: 'галерија',
   // Site-wide Open Graph defaults; listing/shop pages override title/image.
   openGraph: {
-    siteName: 'galerija',
+    siteName: 'галерија',
     type: 'website',
     locale: 'en',
   },
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'galerija',
+    title: 'галерија',
     statusBarStyle: 'default',
   },
   formatDetection: { telephone: false },
