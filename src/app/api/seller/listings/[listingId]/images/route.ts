@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAnyRole } from '@/modules/auth/guards';
 import { AuthorizationError } from '@/modules/auth/errors';
-import { verifyCsrf } from '@/lib/security/csrf';
+import { verifyCsrfForRequest } from '@/lib/security/csrf';
 import { readBoundedBody, PayloadTooLargeError } from '@/lib/http/bounded-body';
 import { addListingImage } from '@/modules/catalog/image-service';
 import {
@@ -42,14 +42,7 @@ export async function POST(
   const { listingId } = await params;
 
   // Same-origin (CSRF) — middleware already enforces this; re-assert locally.
-  const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
-  const csrf = verifyCsrf(
-    request.method,
-    request.nextUrl.pathname,
-    request.headers.get('origin'),
-    request.headers.get('referer'),
-    appOrigin,
-  );
+  const csrf = verifyCsrfForRequest(request);
   if (!csrf.ok) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }

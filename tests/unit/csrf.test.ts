@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { verifyCsrf, isExemptFromCsrf } from '@/lib/security/csrf';
+import {
+  verifyCsrf,
+  isExemptFromCsrf,
+  buildAllowedOrigins,
+} from '@/lib/security/csrf';
 
 const APP = 'https://reworn.mk';
 const EVIL = 'https://evil.example';
@@ -121,6 +125,63 @@ describe('CSRF origin verification', () => {
 
     it('allows a same-origin upload POST', () => {
       expect(verifyCsrf('POST', UPLOAD, APP, null, APP).ok).toBe(true);
+    });
+  });
+
+  describe('multiple allowed origins', () => {
+    const CUSTOM = 'https://galerijamk.com';
+
+    it('accepts any origin in the allowed list', () => {
+      expect(verifyCsrf('POST', '/api/x', CUSTOM, null, [APP, CUSTOM]).ok).toBe(
+        true,
+      );
+      expect(verifyCsrf('POST', '/api/x', APP, null, [APP, CUSTOM]).ok).toBe(
+        true,
+      );
+    });
+
+    it('still rejects an origin that is in none of them', () => {
+      const r = verifyCsrf('POST', '/api/x', EVIL, null, [APP, CUSTOM]);
+      expect(r.ok).toBe(false);
+      expect(r.reason).toBe('origin_mismatch');
+    });
+  });
+
+  describe('buildAllowedOrigins (served-host resolution)', () => {
+    it('includes the actual served origin from forwarded headers', () => {
+      // The app is deployed with a stale NEXT_PUBLIC_APP_URL but served on a
+      // custom domain: the served origin must still be trusted.
+      const allowed = buildAllowedOrigins(
+        'https://old-amplify-url.example',
+        'galerijamk.com',
+        'https',
+      );
+      expect(allowed).toContain('https://galerijamk.com');
+      expect(
+        verifyCsrf('POST', '/', 'https://galerijamk.com', null, allowed).ok,
+      ).toBe(true);
+    });
+
+    it('defaults the proto to https and takes the first forwarded host', () => {
+      const allowed = buildAllowedOrigins(
+        APP,
+        'galerijamk.com, internal.local',
+        null,
+      );
+      expect(allowed).toContain('https://galerijamk.com');
+    });
+
+    it('is just the configured origin when there is no forwarded host', () => {
+      expect(buildAllowedOrigins(APP, null, null)).toEqual([APP]);
+    });
+
+    it('does not duplicate when configured and served origins match', () => {
+      expect(buildAllowedOrigins(APP, 'reworn.mk', 'https')).toEqual([APP]);
+    });
+
+    it('still rejects a foreign origin even with a served origin present', () => {
+      const allowed = buildAllowedOrigins(APP, 'galerijamk.com', 'https');
+      expect(verifyCsrf('POST', '/', EVIL, null, allowed).ok).toBe(false);
     });
   });
 });

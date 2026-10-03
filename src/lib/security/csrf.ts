@@ -17,6 +17,8 @@
  * and protected by SIGNATURE VERIFICATION instead — never by trusting Origin.
  */
 
+import type { NextRequest } from 'next/server';
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export interface CsrfResult {
@@ -61,14 +63,15 @@ export function isExemptFromCsrf(pathname: string): boolean {
  * @param pathname  request path (for exemptions)
  * @param origin    the `Origin` header
  * @param referer   the `Referer` header (fallback)
- * @param allowedOrigin the application's own origin
+ * @param allowedOrigins one origin, or several, any of which the request may
+ *                       legitimately carry (the app's own origin(s))
  */
 export function verifyCsrf(
   method: string,
   pathname: string,
   origin: string | null,
   referer: string | null,
-  allowedOrigin: string,
+  allowedOrigins: string | readonly string[],
 ): CsrfResult {
   if (SAFE_METHODS.has(method.toUpperCase())) return { ok: true };
   if (isExemptFromCsrf(pathname)) return { ok: true };
@@ -81,11 +84,62 @@ export function verifyCsrf(
     return { ok: false, reason: 'missing_origin_and_referer' };
   }
 
-  if (candidate !== allowedOrigin) {
+  const allowed =
+    typeof allowedOrigins === 'string' ? [allowedOrigins] : allowedOrigins;
+  if (!allowed.includes(candidate)) {
     return { ok: false, reason: 'origin_mismatch' };
   }
 
   return { ok: true };
+}
+
+/**
+ * The origins a same-origin, state-changing request may legitimately carry.
+ *
+ * Always includes the configured app origin (`NEXT_PUBLIC_APP_URL`). It ALSO
+ * includes the origin the request was actually served on — reconstructed from
+ * the platform edge's `x-forwarded-host` / `x-forwarded-proto` — so the check
+ * holds on the real public host (custom domain, `www`, the platform URL, a
+ * preview URL) even when `NEXT_PUBLIC_APP_URL` is unset or points at a different
+ * one of the app's own domains. This is the standard same-origin CSRF check:
+ * the forwarded host is set by the CDN/edge, not the client, and a genuine
+ * cross-site request still carries a foreign `Origin` that matches neither.
+ */
+export function buildAllowedOrigins(
+  configuredOrigin: string,
+  forwardedHost: string | null,
+  forwardedProto: string | null,
+): string[] {
+  const origins = [configuredOrigin];
+  const host = forwardedHost?.split(',')[0]?.trim();
+  if (host) {
+    const proto = forwardedProto?.split(',')[0]?.trim() || 'https';
+    const self = `${proto}://${host}`;
+    if (!origins.includes(self)) origins.push(self);
+  }
+  return origins;
+}
+
+/**
+ * Request-aware CSRF check: resolves the allowed origins (configured +
+ * actual-served) from the request, then verifies. Use this from middleware and
+ * route handlers instead of assembling the origin list by hand.
+ */
+export function verifyCsrfForRequest(request: NextRequest): CsrfResult {
+  const configuredOrigin =
+    process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
+  const allowed = buildAllowedOrigins(
+    configuredOrigin,
+    request.headers.get('x-forwarded-host'),
+    request.headers.get('x-forwarded-proto'),
+  );
+  return verifyCsrf(
+    request.method,
+    request.nextUrl.pathname,
+    request.headers.get('origin'),
+    request.headers.get('referer'),
+    allowed,
+  );
 }
 
 function refererOrigin(referer: string | null): string | null {

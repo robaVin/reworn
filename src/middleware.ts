@@ -4,7 +4,7 @@ import {
   generateNonce,
   securityHeaders,
 } from '@/lib/security/headers';
-import { verifyCsrf } from '@/lib/security/csrf';
+import { verifyCsrfForRequest } from '@/lib/security/csrf';
 import { checkRateLimit, clientIdentity } from '@/lib/security/rate-limit';
 import { refreshSession } from '@/lib/supabase/middleware';
 
@@ -39,16 +39,9 @@ const PERF = process.env.PERF_TRACE === '1';
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const startedAt = PERF ? performance.now() : 0;
   const { pathname } = request.nextUrl;
-  const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
 
   /* ---------------------------------------------------------------- CSRF */
-  const csrf = verifyCsrf(
-    request.method,
-    pathname,
-    request.headers.get('origin'),
-    request.headers.get('referer'),
-    appOrigin,
-  );
+  const csrf = verifyCsrfForRequest(request);
 
   if (!csrf.ok) {
     // Deliberately terse: do not tell an attacker which check failed.
