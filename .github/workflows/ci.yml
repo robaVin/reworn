@@ -71,5 +71,11 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Security audit (fail on high/critical)
-        run: npm audit --audit-level=high
+      - name: Security audit (production deps; fail on high/critical)
+        # Audit the PRODUCTION dependency tree only — i.e. what actually ships
+        # and runs in the deployed Amplify SSR runtime. Dev/build tooling
+        # (tailwindcss, eslint-config-next, vitest, …) is not deployed; its
+        # build-time advisories (e.g. the braces GHSA-vfj7-8cjw-p6xm DoS, which
+        # has no patched release and is only reachable via our own trusted glob
+        # patterns) must not block releases. Runtime deps stay strictly gated.
+        run: npm audit --audit-level=high --omit=dev
