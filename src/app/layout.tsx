@@ -6,6 +6,7 @@ import { LOCALE_HTML_LANG, normalizeLocale } from '@/i18n/config';
 import { AnnouncementBar } from '@/components/shell/AnnouncementBar';
 import { SiteHeader } from '@/components/shell/SiteHeader';
 import { SiteFooter } from '@/components/shell/SiteFooter';
+import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import './globals.css';
 
 /**
@@ -32,23 +33,27 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   ),
   title: {
-    default: 'Galerija — Give great clothes a second life',
-    template: '%s · Galerija',
+    default: 'galerija — Give great clothes a second life',
+    template: '%s · galerija',
   },
   description:
     'Buy and sell pre-loved fashion. Browse thousands of second-hand ' +
     'clothes, shoes, bags, accessories and jewellery.',
-  applicationName: 'Galerija',
+  applicationName: 'galerija',
   // Site-wide Open Graph defaults; listing/shop pages override title/image.
   openGraph: {
-    siteName: 'Galerija',
+    siteName: 'galerija',
     type: 'website',
     locale: 'en',
   },
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' }],
+    apple: '/icons/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
-    title: 'Galerija',
+    title: 'galerija',
     statusBarStyle: 'default',
   },
   formatDetection: { telephone: false },
@@ -70,7 +75,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#C06B4E',
+  themeColor: '#CE0037',
 };
 
 export default async function RootLayout({
@@ -102,6 +107,7 @@ export default async function RootLayout({
             {children}
           </div>
           <SiteFooter />
+          <ServiceWorkerRegistrar />
         </NextIntlClientProvider>
       </body>
     </html>
