@@ -23,6 +23,13 @@ export const LISTING_CONDITIONS = [
 
 export const LISTING_GENDERS = ['women', 'men', 'kids', 'unisex'] as const;
 
+/**
+ * Customer-facing departments. A NEW/published listing must be one of these;
+ * `unisex` stays a valid DB value for legacy/existing listings (migration 0005)
+ * but is never offered as a new choice — see `publishableListingSchema`.
+ */
+export const AUDIENCE_GENDERS = ['women', 'men', 'kids'] as const;
+
 export const DELIVERY_METHODS = [
   'unspecified',
   'shipping',
@@ -56,7 +63,15 @@ const currency = z
 const condition = z.enum(LISTING_CONDITIONS, {
   message: 'Choose a condition.',
 });
-const gender = z.enum(LISTING_GENDERS).default('unisex');
+// Draft: any stored value is accepted (incl. legacy `unisex`), and it is
+// OPTIONAL with NO silent default — an unclassified draft simply omits it (the
+// DB column's own default handles storage) and must be classified to publish.
+const draftGender = z.enum(LISTING_GENDERS).optional();
+// Publish: a real department is REQUIRED and `unisex` is rejected, so every
+// customer-facing listing is explicitly Women, Men or Kids.
+const publishGender = z.enum(AUDIENCE_GENDERS, {
+  message: 'Choose a department: Women, Men or Kids.',
+});
 const deliveryMethod = z.enum(DELIVERY_METHODS).optional();
 /**
  * Free-text delivery note: trimmed, length-capped ({@link DELIVERY_NOTE_MAX}),
@@ -90,7 +105,7 @@ export const draftListingSchema = z.object({
   color: optionalText(40),
   material: optionalText(60),
   condition: condition.optional(),
-  gender,
+  gender: draftGender,
   priceMinor: priceMinor.optional(),
   currency,
   originalPriceMinor,
@@ -114,7 +129,7 @@ export const publishableListingSchema = z.object({
   color: optionalText(40),
   material: optionalText(60),
   condition,
-  gender,
+  gender: publishGender,
   priceMinor,
   currency,
   originalPriceMinor,

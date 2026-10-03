@@ -91,7 +91,7 @@ function baseInput(): DraftListingInput {
     categoryId,
     size: 'M',
     condition: 'very_good',
-    gender: 'unisex',
+    gender: 'women',
     priceMinor: 24000,
     currency: 'MKD',
     location: 'Skopje',

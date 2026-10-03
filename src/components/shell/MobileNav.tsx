@@ -68,6 +68,22 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
         <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
           <div>
             <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+              {t('departments')}
+            </p>
+            {nav.departments.map((d) => (
+              <Link
+                key={d.href}
+                href={d.href}
+                onClick={close}
+                className={linkClasses}
+              >
+                {d.label}
+              </Link>
+            ))}
+          </div>
+
+          <div>
+            <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
               {t('marketplace')}
             </p>
             <Link href="/browse" onClick={close} className={linkClasses}>

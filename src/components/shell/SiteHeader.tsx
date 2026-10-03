@@ -3,7 +3,11 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { getAuthContext } from '@/modules/auth/session';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
-import { buildHeaderNav, type HeaderNav } from './nav-model';
+import {
+  buildHeaderNav,
+  type HeaderNav,
+  type NavTranslator,
+} from './nav-model';
 import { Wordmark } from './Wordmark';
 import { SearchField } from './SearchField';
 import { AccountMenu } from './AccountMenu';
@@ -33,7 +37,7 @@ export async function SiteHeader() {
     t,
   );
   return (
-    <Suspense fallback={<HeaderBar nav={anonymousNav} />}>
+    <Suspense fallback={<HeaderBar nav={anonymousNav} t={t} />}>
       <HeaderContent />
     </Suspense>
   );
@@ -55,12 +59,12 @@ async function HeaderContent() {
     },
     t,
   );
-  return <HeaderBar nav={nav} />;
+  return <HeaderBar nav={nav} t={t} />;
 }
 
 /** Presentational header bar — pure, so the shell fallback and the resolved
  * header share identical markup (no layout shift on swap). */
-function HeaderBar({ nav }: { nav: HeaderNav }) {
+function HeaderBar({ nav, t }: { nav: HeaderNav; t: NavTranslator }) {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-cream/85 backdrop-blur-xl">
       <div className="mx-auto flex max-w-shell items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-8 lg:px-10">
@@ -94,6 +98,25 @@ function HeaderBar({ nav }: { nav: HeaderNav }) {
         {/* Mobile: everything lives in the drawer */}
         <MobileNav nav={nav} />
       </div>
+
+      {/* Primary departments (desktop) — Women/Men/Kids into /browse?gender=…. */}
+      <nav
+        aria-label={t('departments')}
+        className="hidden border-t border-line/60 md:block"
+      >
+        <ul className="mx-auto flex max-w-shell gap-7 px-4 py-2.5 sm:px-8 lg:px-10">
+          {nav.departments.map((d) => (
+            <li key={d.href}>
+              <Link
+                href={d.href}
+                className="text-sm font-semibold text-ink transition-colors hover:text-terracotta-strong"
+              >
+                {d.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </header>
   );
 }

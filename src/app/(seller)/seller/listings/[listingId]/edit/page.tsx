@@ -68,7 +68,9 @@ export default async function EditListingPage({
                 size: listing.size ?? '',
                 color: listing.color ?? '',
                 material: listing.material ?? '',
-                gender: listing.gender,
+                // Legacy `unisex` listings show as unselected so the seller is
+                // prompted to pick Women/Men/Kids (never reclassified silently).
+                gender: listing.gender === 'unisex' ? '' : listing.gender,
                 price:
                   listing.priceMinor !== null
                     ? String(listing.priceMinor / 100)

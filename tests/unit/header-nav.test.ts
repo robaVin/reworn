@@ -33,6 +33,26 @@ describe('buildHeaderNav — logged out', () => {
   it('routes the sell CTA to the public start-selling entry', () => {
     expect(buildHeaderNav(loggedOut, t).sell.href).toBe('/sell');
   });
+
+  it('exposes Women/Men/Kids departments into /browse?gender=… (same for every user)', () => {
+    for (const identity of [
+      loggedOut,
+      { authenticated: true, email: 'a@b.co', roles: ['buyer'] as const },
+    ]) {
+      const nav = buildHeaderNav(identity, t);
+      expect(nav.departments.map((d) => d.href)).toEqual([
+        '/browse?gender=women',
+        '/browse?gender=men',
+        '/browse?gender=kids',
+      ]);
+      // Labels come from the injected translator (i18n-driven).
+      expect(nav.departments.map((d) => d.label)).toEqual([
+        'women',
+        'men',
+        'kids',
+      ]);
+    }
+  });
 });
 
 describe('buildHeaderNav — buyer', () => {

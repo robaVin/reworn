@@ -5,7 +5,10 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { buildBrowseHref } from '@/modules/catalog/browse-url';
 import type { BrowseQuery } from '@/modules/catalog/browse-query';
-import { LISTING_CONDITIONS, LISTING_GENDERS } from '@/modules/catalog/schemas';
+import {
+  LISTING_CONDITIONS,
+  AUDIENCE_GENDERS,
+} from '@/modules/catalog/schemas';
 import { majorToMinor, minorToMajor } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -294,7 +297,7 @@ export function FilterBar({
           className={selectClass}
         >
           <option value="">{t('everyone')}</option>
-          {LISTING_GENDERS.map((g) => (
+          {AUDIENCE_GENDERS.map((g) => (
             <option key={g} value={g}>
               {tListing(`gender.${g}`)}
             </option>

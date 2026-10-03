@@ -465,6 +465,7 @@ export const getPublicListingBySlug = cache(
 /** Ranking inputs for related products (all public, taken from the PDP DTO). */
 export interface RelatedQuery {
   listingId: string;
+  gender: string | null;
   brand: string | null;
   categorySlug: string | null;
   size: string | null;
@@ -474,8 +475,10 @@ export interface RelatedQuery {
 /**
  * Up to `limit` OTHER published listings related to the given one, ranked
  * deterministically:
- *   1. same brand, 2. same category, 3. same size, 4. nearest price,
- *   5. newest, 6. id tie-break.
+ *   1. same department (gender), 2. same brand, 3. same category, 4. same size,
+ *   5. nearest price, 6. newest, 7. id tie-break.
+ * The department leads because audience is the strongest relevance signal in a
+ * fashion marketplace (a women's item should surface women's items, not men's).
  * The current listing is excluded and only published rows are considered, so a
  * listing can never appear through any duplicate path. ONE bounded query
  * (`LIMIT`), covers batch-signed in ONE round-trip — no N+1.
@@ -484,7 +487,7 @@ export async function getRelatedListings(
   q: RelatedQuery,
   limit = 8,
 ): Promise<PublicListingCard[]> {
-  const key = `related:${q.listingId}:${q.brand ?? ''}:${q.categorySlug ?? ''}:${q.size ?? ''}:${q.priceMinor ?? ''}:${limit}`;
+  const key = `related:${q.listingId}:${q.gender ?? ''}:${q.brand ?? ''}:${q.categorySlug ?? ''}:${q.size ?? ''}:${q.priceMinor ?? ''}:${limit}`;
   return cachedCatalog(key, () => getRelatedListingsUncached(q, limit));
 }
 
@@ -514,6 +517,7 @@ async function getRelatedListingsUncached(
       LEFT JOIN categories c ON c.id = l.category_id
       WHERE l.status = 'published' AND l.id <> ${q.listingId}::uuid
       ORDER BY
+        COALESCE(${q.gender}::text IS NOT NULL AND l.gender::text = ${q.gender}, false) DESC,
         COALESCE(${q.brand}::text IS NOT NULL AND l.brand = ${q.brand}, false) DESC,
         COALESCE(${q.categorySlug}::text IS NOT NULL AND c.slug = ${q.categorySlug}, false) DESC,
         COALESCE(${q.size}::text IS NOT NULL AND l.size = ${q.size}, false) DESC,

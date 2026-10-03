@@ -186,7 +186,7 @@ beforeAll(async () => {
     material: 'leather',
     size: '42',
     condition: 'good',
-    gender: 'unisex',
+    gender: 'kids',
     priceMinor: 12000,
     location: 'Skopje',
     categoryId: shoesId,
@@ -366,6 +366,25 @@ describe('filters', () => {
   it('gender (single)', async () => {
     const page = await pub.listPublishedListings(q({ gender: 'women' }, 50));
     expect(titles(page).sort()).toEqual(['Silk scarf', 'Summer dress']);
+  });
+  it('gender men / kids (Women/Men/Kids departments)', async () => {
+    const men = await pub.listPublishedListings(q({ gender: 'men' }, 50));
+    expect(titles(men).sort()).toEqual(['Running shoes', 'Wool overcoat']);
+    const kids = await pub.listPublishedListings(q({ gender: 'kids' }, 50));
+    expect(titles(kids).sort()).toEqual(['Leather boots']);
+  });
+  it('a legacy unisex listing is excluded from a department but visible under "All"', async () => {
+    const women = await pub.listPublishedListings(q({ gender: 'women' }, 50));
+    expect(titles(women)).not.toContain('Denim jacket'); // unisex ≠ a department
+    const all = await pub.listPublishedListings(q({}, 50));
+    expect(titles(all)).toContain('Denim jacket'); // still discoverable with no filter
+  });
+  it('department composes with sort (men, price ascending)', async () => {
+    const page = await pub.listPublishedListings(
+      q({ gender: 'men', sort: 'price_asc' }, 50),
+    );
+    // Only men, ascending by price: Running shoes (5000) before Wool overcoat (24000).
+    expect(titles(page)).toEqual(['Running shoes', 'Wool overcoat']);
   });
   it('price range (inclusive)', async () => {
     const page = await pub.listPublishedListings(

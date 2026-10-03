@@ -11,6 +11,7 @@ const complete = {
   categoryId: '11111111-1111-1111-1111-111111111111',
   size: 'M',
   condition: 'very_good' as const,
+  gender: 'women' as const,
   priceMinor: 24000,
   location: 'Skopje',
 };
@@ -20,7 +21,7 @@ describe('draftListingSchema (lenient)', () => {
     const r = draftListingSchema.parse({ title: 'Just a title' });
     expect(r.title).toBe('Just a title');
     expect(r.currency).toBe('MKD'); // default
-    expect(r.gender).toBe('unisex'); // default
+    expect(r.gender).toBeUndefined(); // no silent default — must be chosen to publish
     expect(r.priceMinor).toBeUndefined();
     expect(r.categoryId).toBeUndefined();
   });
@@ -64,6 +65,7 @@ describe('publishableListingSchema (strict)', () => {
     'categoryId',
     'size',
     'condition',
+    'gender',
     'priceMinor',
     'location',
   ])('rejects when %s is missing', (field) => {
@@ -85,6 +87,36 @@ describe('publishableListingSchema (strict)', () => {
       publishableListingSchema.safeParse({ ...complete, condition: 'mint' })
         .success,
     ).toBe(false);
+  });
+});
+
+describe('department / audience (gender) rules', () => {
+  it('draft accepts Women/Men/Kids and legacy Unisex when provided', () => {
+    for (const g of ['women', 'men', 'kids', 'unisex'] as const) {
+      const r = draftListingSchema.parse({ title: 'x', gender: g });
+      expect(r.gender).toBe(g);
+    }
+  });
+
+  it('publish REQUIRES a real department (rejects missing and legacy unisex)', () => {
+    for (const bad of [undefined, 'unisex'] as const) {
+      const res = publishableListingSchema.safeParse({
+        ...complete,
+        gender: bad,
+      });
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.error.flatten().fieldErrors).toHaveProperty('gender');
+      }
+    }
+  });
+
+  it('publish accepts each of Women / Men / Kids', () => {
+    for (const g of ['women', 'men', 'kids'] as const) {
+      expect(
+        publishableListingSchema.safeParse({ ...complete, gender: g }).success,
+      ).toBe(true);
+    }
   });
 });
 

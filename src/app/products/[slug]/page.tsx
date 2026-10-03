@@ -114,6 +114,7 @@ export default async function ProductDetailPage({
           <RelatedProducts
             query={{
               listingId: listing.id,
+              gender: listing.gender,
               brand: listing.brand,
               categorySlug: listing.categorySlug,
               size: listing.size,

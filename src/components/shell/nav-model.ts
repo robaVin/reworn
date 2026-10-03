@@ -34,6 +34,8 @@ export interface HeaderNav {
   sell: NavLink;
   /** Account menu entries (auth entry points when logged out). */
   menu: NavLink[];
+  /** Primary department quick-links (Women/Men/Kids) → /browse?gender=…. */
+  departments: NavLink[];
   /** Whether the menu should append a logout action. */
   showLogout: boolean;
 }
@@ -72,6 +74,14 @@ export function buildHeaderNav(
     href: '/sell',
   };
 
+  // Primary departments — the same for every user. Each links into the existing
+  // /browse?gender=… architecture (no separate pages or queries).
+  const departments: NavLink[] = [
+    { label: t('women'), href: '/browse?gender=women' },
+    { label: t('men'), href: '/browse?gender=men' },
+    { label: t('kids'), href: '/browse?gender=kids' },
+  ];
+
   if (!authenticated) {
     return {
       authenticated: false,
@@ -83,6 +93,7 @@ export function buildHeaderNav(
         { label: t('login'), href: '/login' },
         { label: t('register'), href: '/register' },
       ],
+      departments,
       showLogout: false,
     };
   }
@@ -112,6 +123,7 @@ export function buildHeaderNav(
     messages,
     sell,
     menu,
+    departments,
     showLogout: true,
   };
 }

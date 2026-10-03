@@ -9,7 +9,7 @@ import { Alert } from '@/components/ui/Alert';
 import { ImageManager } from '@/components/seller/ImageManager';
 import {
   LISTING_CONDITIONS,
-  LISTING_GENDERS,
+  AUDIENCE_GENDERS,
   DELIVERY_METHODS,
 } from '@/modules/catalog/schemas';
 import {
@@ -84,7 +84,7 @@ const emptyFields: Fields = {
   size: '',
   color: '',
   material: '',
-  gender: 'unisex',
+  gender: '', // no silent default — the seller must choose Women/Men/Kids
   price: '',
   currency: 'MKD',
   location: '',
@@ -131,8 +131,10 @@ export function CreateListingForm({
     const f = fieldsRef.current;
     const p: Record<string, unknown> = {
       currency: f.currency,
-      gender: f.gender,
     };
+    // Only send a department once chosen — an unclassified draft omits it (no
+    // silent default); publishing later requires Women/Men/Kids server-side.
+    if (f.gender) p.gender = f.gender;
     const t = f.title.trim();
     if (t) p.title = t;
     else if (forCreate) p.title = DEFAULT_DRAFT_TITLE;
@@ -424,10 +426,19 @@ export function CreateListingForm({
           <Field
             id="gender"
             label={t('field.department')}
-            error={err('gender')}
+            error={err('gender') ? t('field.departmentRequired') : undefined}
           >
-            <Select id="gender" value={fields.gender} onChange={set('gender')}>
-              {LISTING_GENDERS.map((g) => (
+            <Select
+              id="gender"
+              value={fields.gender}
+              onChange={set('gender')}
+              required
+              aria-invalid={!!err('gender')}
+            >
+              <option value="" disabled>
+                {t('field.departmentPlaceholder')}
+              </option>
+              {AUDIENCE_GENDERS.map((g) => (
                 <option key={g} value={g}>
                   {t(`gender.${g}`)}
                 </option>

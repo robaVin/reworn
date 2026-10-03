@@ -48,6 +48,17 @@ describe('parseBrowseQuery — validation', () => {
     expect(q.gender).toBeUndefined();
   });
 
+  it('accepts the Women/Men/Kids departments', () => {
+    for (const g of ['women', 'men', 'kids'] as const) {
+      expect(parseBrowseQuery({ gender: g }).gender).toBe(g);
+    }
+  });
+
+  it('preserves backward-compatible ?gender=unisex URLs', () => {
+    // The UI no longer offers `unisex`, but legacy links must still resolve.
+    expect(parseBrowseQuery({ gender: 'unisex' }).gender).toBe('unisex');
+  });
+
   it('rejects negative prices, caps huge ones, drops reversed ranges', () => {
     expect(parseBrowseQuery({ minPrice: '-5' }).minPrice).toBeUndefined();
     expect(parseBrowseQuery({ maxPrice: '999999999999' }).maxPrice).toBe(

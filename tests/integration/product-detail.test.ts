@@ -197,6 +197,7 @@ describe('getRelatedListings ranking', () => {
     signSingleCalls = 0;
     const related = await pub.getRelatedListings({
       listingId: currentId,
+      gender: 'unisex', // all candidates share this → boost is uniform, order unchanged
       brand: 'Curr',
       categorySlug: 'clothing',
       size: 'M',
@@ -246,6 +247,7 @@ describe('getRelatedListings ranking', () => {
     const current = ids[0]!;
     const related = await pub.getRelatedListings({
       listingId: current,
+      gender: 'unisex', // uniform across candidates → ranking order preserved
       brand: 'Tie',
       categorySlug: 'clothing',
       size: 'M',

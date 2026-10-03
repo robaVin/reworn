@@ -52,7 +52,7 @@ function baseInput(): DraftListingInput {
     categoryId,
     size: 'M',
     condition: 'very_good',
-    gender: 'unisex',
+    gender: 'women',
     priceMinor: 24000,
     currency: 'MKD',
     location: 'Skopje',
@@ -608,4 +608,54 @@ describe('listing service — seller-scoped dashboard counts', () => {
     // Bounded but non-empty (SELLER has multiple listings by now).
     expect(cards.length).toBeGreaterThanOrEqual(1);
   });
+});
+
+describe('listing service — department (Women/Men/Kids) gate', () => {
+  it('blocks publishing a legacy unisex draft until a department is chosen; never reclassifies it silently', async () => {
+    const draft = await svc.createDraftListing(SELLER, {
+      ...baseInput(),
+      gender: 'unisex', // legacy / unclassified value
+    });
+
+    // A real department is REQUIRED to publish — surfaced as a gender field error.
+    await expect(
+      svc.transitionListing(SELLER, draft.id, 'publish'),
+    ).rejects.toBeInstanceOf(ListingIncompleteError);
+
+    // The listing is untouched: still a draft, still unisex (not reclassified).
+    const stillDraft = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(stillDraft.status).toBe('draft');
+    expect(stillDraft.gender).toBe('unisex');
+
+    // Once the seller chooses a department, it publishes.
+    await svc.updateListing(SELLER, draft.id, { gender: 'kids' });
+    const published = await svc.transitionListing(SELLER, draft.id, 'publish');
+    expect(published.status).toBe('published');
+    const row = await prisma.listing.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(row.gender).toBe('kids');
+  });
+
+  it.each(['women', 'men', 'kids'] as const)(
+    'publishes a new %s listing',
+    async (dept) => {
+      const draft = await svc.createDraftListing(SELLER, {
+        ...baseInput(),
+        gender: dept,
+      });
+      const published = await svc.transitionListing(
+        SELLER,
+        draft.id,
+        'publish',
+      );
+      expect(published.status).toBe('published');
+      const row = await prisma.listing.findUniqueOrThrow({
+        where: { id: draft.id },
+      });
+      expect(row.gender).toBe(dept);
+    },
+  );
 });
