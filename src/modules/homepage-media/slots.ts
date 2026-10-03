@@ -28,7 +28,7 @@ export function isHomepageSlot(value: unknown): value is HomepageSlot {
 
 export interface SlotMeta {
   label: string;
-  group: 'Hero' | 'Inside Galerija' | 'Story / editorial';
+  group: 'Hero' | 'Inside galerija' | 'Story / editorial';
   /** Bundled default image (public/photos/*) used when there is no override. */
   fallbackSrc: string;
 }
@@ -40,18 +40,18 @@ export const SLOT_META: Record<HomepageSlotName, SlotMeta> = {
     fallbackSrc: '/photos/hero-rack.jpg',
   },
   inside_1: {
-    label: 'Inside Galerija — 1',
-    group: 'Inside Galerija',
+    label: 'Inside galerija — 1',
+    group: 'Inside galerija',
     fallbackSrc: '/photos/inside-corner.jpg',
   },
   inside_2: {
-    label: 'Inside Galerija — 2',
-    group: 'Inside Galerija',
+    label: 'Inside galerija — 2',
+    group: 'Inside galerija',
     fallbackSrc: '/photos/inside-bags.jpg',
   },
   inside_3: {
-    label: 'Inside Galerija — 3',
-    group: 'Inside Galerija',
+    label: 'Inside galerija — 3',
+    group: 'Inside galerija',
     fallbackSrc: '/photos/inside-mirror.jpg',
   },
   story: {

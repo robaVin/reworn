@@ -13,7 +13,7 @@
  */
 export const COMPANY = {
   /** Public brand / trading name. */
-  tradingName: 'Galerija',
+  tradingName: 'galerija',
   /** Registered legal entity that operates Galerija and holds the CaSys contract. */
   legalName: '[REGISTERED LEGAL ENTITY NAME]',
   /** Registered seat / address. */
@@ -31,7 +31,7 @@ export const COMPANY = {
   siteUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://[YOUR-DOMAIN]',
 
   /** Customer support. */
-  supportEmail: '[SUPPORT EMAIL]',
+  supportEmail: 'galerija.209@gmail.com',
   supportPhone: '[SUPPORT PHONE, e.g. +389 …]',
   supportHours: 'Monday to Friday, 09:00–17:00 (CET)',
   /** Contact for data-protection / privacy requests (may equal supportEmail). */

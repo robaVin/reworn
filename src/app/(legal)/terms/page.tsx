@@ -11,7 +11,7 @@ import { COMPANY } from '@/config/company';
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description:
-    'The terms governing use of the Galerija marketplace and the seller subscription.',
+    'The terms governing use of the galerija marketplace and the seller subscription.',
   alternates: { canonical: '/terms' },
   robots: { index: true, follow: true },
 };
@@ -32,7 +32,7 @@ export default function TermsPage() {
         </>
       }
     >
-      <LegalSection heading="1. What Galerija is">
+      <LegalSection heading="1. What galerija is">
         <p>
           {COMPANY.tradingName} is a <strong>classifieds marketplace</strong>{' '}
           that lets sellers publish listings for pre-loved fashion items and

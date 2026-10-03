@@ -32,7 +32,7 @@ export default async function AdminHomePage() {
             Homepage Images
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Replace the photographs shown on the Galerija homepage. Each of the
+            Replace the photographs shown on the galerija homepage. Each of the
             five fixed slots keeps its bundled default until you upload a
             replacement.
           </p>

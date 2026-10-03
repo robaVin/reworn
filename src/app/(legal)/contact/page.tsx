@@ -10,7 +10,7 @@ import { COMPANY } from '@/config/company';
 export const metadata: Metadata = {
   title: 'Contact & Support',
   description:
-    'How to reach Galerija — support email, phone, and company details.',
+    'How to reach galerija — support email, phone, and company details.',
   alternates: { canonical: '/contact' },
   robots: { index: true, follow: true },
 };

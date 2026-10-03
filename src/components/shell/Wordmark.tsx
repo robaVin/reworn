@@ -1,23 +1,23 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { cn } from '@/lib/cn';
 
-/** Galerija monogram + wordmark, ported from the prototype's `.logo`. */
-export function Wordmark({ className }: { className?: string }) {
+/**
+ * Galerija wordmark. The brand is shown lowercase, in the Latin script for
+ * en/sq (`galerija`) and Cyrillic for mk (`галерија`) — see `Common.brand`.
+ * No monogram: the brand is the wordmark alone.
+ */
+export async function Wordmark({ className }: { className?: string }) {
+  const t = await getTranslations('Common');
   return (
     <Link
       href="/"
       className={cn(
-        'flex shrink-0 items-center gap-2 font-display text-2xl font-bold tracking-tight text-ink max-[480px]:text-lg',
+        'flex shrink-0 items-center font-display text-2xl font-bold tracking-tight text-ink max-[480px]:text-lg',
         className,
       )}
     >
-      <span
-        aria-hidden="true"
-        className="grid h-[30px] w-[30px] place-items-center rounded-lg bg-gradient-to-br from-terracotta to-forest font-sans text-[15px] font-black text-cream max-[480px]:h-[26px] max-[480px]:w-[26px] max-[480px]:text-[13px]"
-      >
-        G
-      </span>
-      Galerija
+      {t('brand')}
     </Link>
   );
 }

@@ -37,7 +37,7 @@ export function LanguageSelector({ className }: { className?: string }) {
             router.refresh();
           });
         }}
-        className="min-h-11 rounded-control border border-line bg-surface px-2 text-sm text-ink"
+        className="min-h-11 rounded-control border border-line bg-cream px-2 text-sm text-ink"
       >
         {LOCALES.map((l) => (
           <option key={l} value={l}>
