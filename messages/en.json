@@ -45,7 +45,8 @@
     "women": "Women",
     "men": "Men",
     "kids": "Kids",
-    "departments": "Departments"
+    "departments": "Departments",
+    "getApp": "Get the app"
   },
   "Search": {
     "placeholder": "Search brands, items, styles…",

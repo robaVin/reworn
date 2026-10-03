@@ -7,7 +7,13 @@ import type { HeaderNav } from './nav-model';
 import { Dialog } from '@/components/ui/Dialog';
 import { IconButton } from '@/components/ui/IconButton';
 import { LanguageSelector } from './LanguageSelector';
-import { CloseIcon, HeartIcon, MenuIcon, MessageIcon } from './icons';
+import {
+  CloseIcon,
+  DownloadIcon,
+  HeartIcon,
+  MenuIcon,
+  MessageIcon,
+} from './icons';
 
 /**
  * Mobile navigation drawer. Links are computed server-side (SiteHeader);
@@ -103,6 +109,10 @@ export function MobileNav({ nav }: { nav: HeaderNav }) {
             >
               <MessageIcon className="h-[18px] w-[18px]" />
               {nav.messages.label}
+            </Link>
+            <Link href="/install" onClick={close} className={linkClasses}>
+              <DownloadIcon className="h-[18px] w-[18px]" />
+              {t('getApp')}
             </Link>
           </div>
 

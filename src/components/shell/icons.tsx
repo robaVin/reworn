@@ -74,6 +74,15 @@ export function CloseIcon({ className }: { className?: string }) {
   );
 }
 
+export function DownloadIcon({ className }: { className?: string }) {
+  return (
+    <LineIcon className={className}>
+      <path d="M12 3v12m0 0l-4-4m4 4l4-4" />
+      <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+    </LineIcon>
+  );
+}
+
 export function LeafIcon({ className }: { className?: string }) {
   return (
     <LineIcon className={className}>
