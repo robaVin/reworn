@@ -1,14 +1,18 @@
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/cn';
 
 /**
  * Galerija wordmark. The brand is shown lowercase, in the Latin script for
  * en/sq (`galerija`) and Cyrillic for mk (`галерија`) — see `Common.brand`.
  * No monogram: the brand is the wordmark alone.
+ *
+ * Uses `useTranslations` (isomorphic) rather than `getTranslations` so it works
+ * in BOTH server contexts (site header/footer) and client contexts (the auth
+ * pages render it inside a `'use client'` boundary via AuthCard).
  */
-export async function Wordmark({ className }: { className?: string }) {
-  const t = await getTranslations('Common');
+export function Wordmark({ className }: { className?: string }) {
+  const t = useTranslations('Common');
   return (
     <Link
       href="/"
