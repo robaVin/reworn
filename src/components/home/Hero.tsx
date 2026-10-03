@@ -19,7 +19,7 @@ export async function Hero({ media }: { media?: HomepageOverride }) {
   const t = await getTranslations('Home');
   // Numeric values are locale-neutral; only the label + "Direct" word localize.
   const PRODUCT_FACTS = [
-    { value: '100%', label: t('statPreLoved') },
+    { value: '100%', label: t('statUnique') },
     { value: '0%', label: t('statCommission') },
     { value: t('statDirect'), label: t('statDirectLabel') },
   ] as const;
@@ -67,7 +67,7 @@ export async function Hero({ media }: { media?: HomepageOverride }) {
                   <dd className="font-display text-[26px] font-bold text-ink">
                     {fact.value}
                   </dd>
-                  <dd className="text-xs tracking-[0.05em] text-muted">
+                  <dd className="max-w-[20ch] text-xs leading-snug tracking-[0.05em] text-muted">
                     {fact.label}
                   </dd>
                 </div>
