@@ -14,11 +14,12 @@ import type { Config } from 'tailwindcss';
  *   muted        #8A7F6F → #6B5F51  (3.4:1 → 5.4:1 on cream, 4.9:1 on sand)
  *                The original value remains as `muted-soft` for large
  *                display text and decorative use ONLY (≥24px / 18.66px bold).
- *   terracotta   #C06B4E stays for DECORATIVE use (borders, icons, large
- *                display text, gradients, focus ring — non-text 3:1 ✓).
- *                `terracotta-strong` #9C4A2F is the variant for small text
- *                on cream/surface (5.3:1) and for filled controls carrying
- *                cream/white text (5.3:1 / 6.1:1).
+ *   terracotta   #CE0037 is the primary brand colour (borders, icons, large
+ *                display text, gradients, focus ring, and filled controls). It
+ *                is AA for small text on cream/surface/sand (4.98 / 5.38 /
+ *                4.53:1) and for cream/white text on the fill (4.98 / 5.71:1).
+ *                `terracotta-strong` is the same #CE0037 (the AA text/fill
+ *                tone); `terracotta-hover` #A80030 darkens it for hover/pressed.
  *   warning      #B26B00 → #8F5600  (3.7:1 → 5.2:1 on cream).
  */
 const config: Config = {
@@ -32,9 +33,9 @@ const config: Config = {
         sand: '#EDE4D6', // secondary surface
         // Brand
         terracotta: {
-          DEFAULT: '#C06B4E', // decorative accent: borders, icons, large text
-          strong: '#9C4A2F', // small text + filled controls (AA compliant)
-          hover: '#833E27', // hover for strong fills
+          DEFAULT: '#CE0037', // primary brand/accent: borders, icons, large text, fills
+          strong: '#CE0037', // small text + filled controls (AA: 4.98:1 on cream)
+          hover: '#A80030', // hover/pressed for filled controls
         },
         forest: {
           DEFAULT: '#2F4A3C', // secondary / success
