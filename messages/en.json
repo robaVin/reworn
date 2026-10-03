@@ -107,7 +107,9 @@
     "refunds": "Refunds & Cancellation",
     "payments": "Payments & Security",
     "contact": "Contact & Support",
-    "securePayments": "Secure payments by CaSys · Visa · Mastercard · Maestro"
+    "securePayments": "Secure payments by CaSys · Visa · Mastercard · Maestro",
+    "app": "App",
+    "getApp": "Get the app"
   },
   "Categories": {
     "clothing": "Clothing",
@@ -720,5 +722,26 @@
     "notFoundTitle": "This page isn’t here.",
     "notFoundBody": "The page may have moved, or it may not exist. Nothing was lost on your side.",
     "browse": "Browse the edit"
+  },
+  "Install": {
+    "title": "Get the galerija app",
+    "intro": "galerija is a web app that installs straight from your browser — there is nothing to download from an app store. Add it to your home screen and it opens in its own window, just like any other app.",
+    "installCta": "Install galerija",
+    "installHint": "Your browser will ask you to confirm.",
+    "installedTitle": "You're all set",
+    "installed": "galerija is installed on this device. Open it from your home screen or app launcher.",
+    "whatTitle": "What you get",
+    "what1": "Opens in its own window, without the browser bar.",
+    "what2": "A home-screen icon, just like a native app.",
+    "what3": "Works offline for pages you've already visited.",
+    "iosTitle": "Add to your iPhone or iPad",
+    "iosStep1": "Tap the Share button in Safari’s toolbar.",
+    "iosStep2": "Choose “Add to Home Screen”.",
+    "iosStep3": "Tap “Add” — galerija appears on your home screen.",
+    "iosSafariNote": "On iPhone and iPad this works in Safari.",
+    "desktopTitle": "Install on your computer",
+    "desktopBody": "In Chrome or Edge, click the install icon in the address bar, or open the browser menu and choose “Install galerija”.",
+    "genericTitle": "Add to your home screen",
+    "genericBody": "Open your browser’s menu and choose “Install” or “Add to Home Screen”."
   }
 }

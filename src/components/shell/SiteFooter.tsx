@@ -43,11 +43,15 @@ export async function SiteFooter() {
         { label: t('contact'), href: '/contact' },
       ],
     },
+    {
+      heading: t('app'),
+      links: [{ label: t('getApp'), href: '/install' }],
+    },
   ];
 
   return (
     <footer className="mt-16 border-t border-line">
-      <div className="mx-auto grid max-w-shell gap-10 px-4 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-5 lg:px-10">
+      <div className="mx-auto grid max-w-shell gap-10 px-4 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-6 lg:px-10">
         <div className="lg:col-span-2">
           <Wordmark />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">

@@ -107,7 +107,9 @@
     "refunds": "Rimbursimet dhe Anulimet",
     "payments": "Pagesat dhe Siguria",
     "contact": "Kontakti dhe Mbështetja",
-    "securePayments": "Pagesa të sigurta nga CaSys · Visa · Mastercard · Maestro"
+    "securePayments": "Pagesa të sigurta nga CaSys · Visa · Mastercard · Maestro",
+    "app": "Aplikacioni",
+    "getApp": "Merr aplikacionin"
   },
   "Categories": {
     "clothing": "Veshje",
@@ -720,5 +722,26 @@
     "notFoundTitle": "Kjo faqe nuk është këtu.",
     "notFoundBody": "Faqja mund të jetë zhvendosur, ose mund të mos ekzistojë. Asgjë nuk humbi nga ana juaj.",
     "browse": "Shfleto koleksionin"
+  },
+  "Install": {
+    "title": "Merr aplikacionin galerija",
+    "intro": "galerija është një aplikacion ueb që instalohet drejtpërdrejt nga shfletuesi — nuk ka asgjë për të shkarkuar nga një dyqan aplikacionesh. Shtoje në ekranin bazë dhe hapet në dritaren e vet, si çdo aplikacion tjetër.",
+    "installCta": "Instalo galerija",
+    "installHint": "Shfletuesi do të të kërkojë ta konfirmosh.",
+    "installedTitle": "Gjithçka gati",
+    "installed": "galerija është instaluar në këtë pajisje. Hape nga ekrani bazë ose nga lista e aplikacioneve.",
+    "whatTitle": "Çfarë përfiton",
+    "what1": "Hapet në dritaren e vet, pa shiritin e shfletuesit.",
+    "what2": "Një ikonë në ekranin bazë, si çdo aplikacion i mirëfilltë.",
+    "what3": "Funksionon edhe pa internet për faqet që ke vizituar.",
+    "iosTitle": "Shtoje në iPhone ose iPad",
+    "iosStep1": "Prek butonin Share (Shpërndaj) në shiritin e Safari-t.",
+    "iosStep2": "Zgjidh “Add to Home Screen” (Shto në ekranin bazë).",
+    "iosStep3": "Prek “Add” (Shto) — galerija shfaqet në ekranin bazë.",
+    "iosSafariNote": "Në iPhone dhe iPad kjo funksionon në Safari.",
+    "desktopTitle": "Instalo në kompjuter",
+    "desktopBody": "Në Chrome ose Edge, kliko ikonën e instalimit në shiritin e adresës, ose hap menynë e shfletuesit dhe zgjidh “Install galerija”.",
+    "genericTitle": "Shtoje në ekranin bazë",
+    "genericBody": "Hap menynë e shfletuesit dhe zgjidh “Install” ose “Add to Home Screen”."
   }
 }

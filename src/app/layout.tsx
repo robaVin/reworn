@@ -7,6 +7,7 @@ import { AnnouncementBar } from '@/components/shell/AnnouncementBar';
 import { SiteHeader } from '@/components/shell/SiteHeader';
 import { SiteFooter } from '@/components/shell/SiteFooter';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
+import { InstallPromptCapture } from '@/components/pwa/InstallPromptCapture';
 import './globals.css';
 
 /**
@@ -108,6 +109,7 @@ export default async function RootLayout({
           </div>
           <SiteFooter />
           <ServiceWorkerRegistrar />
+          <InstallPromptCapture />
         </NextIntlClientProvider>
       </body>
     </html>
