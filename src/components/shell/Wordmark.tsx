@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 /**
  * Galerija wordmark. The brand is shown lowercase, in Cyrillic (`галерија`) in
  * all three locales — see `Common.brand`. No monogram: the brand is the
- * wordmark alone (the Cyrillic Г monogram lives only in the app/favicon icon).
+ * wordmark alone (the Cyrillic г monogram lives only in the app/favicon icon).
  *
  * Uses `useTranslations` (isomorphic) rather than `getTranslations` so it works
  * in BOTH server contexts (site header/footer) and client contexts (the auth

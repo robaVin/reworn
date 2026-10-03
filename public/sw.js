@@ -10,7 +10,7 @@
  * Navigations are network-first; when the network is unavailable the offline
  * fallback is shown. Bump CACHE_VERSION to invalidate old caches on deploy.
  */
-const CACHE_VERSION = 'galerija-v2';
+const CACHE_VERSION = 'galerija-v3';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/icons/icon-192.png'];
 
