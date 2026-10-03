@@ -46,7 +46,6 @@ export function OAuthButtons({
       <Button href={href} variant="outline" className="w-full">
         {t('continueWithGoogle')}
       </Button>
-      <p className="text-xs text-muted">{t('oauthProviderNote')}</p>
       <p className="sr-only">
         {t.rich('oauthSrAlternative', {
           link: (chunks) => <Link href="/register">{chunks}</Link>,
