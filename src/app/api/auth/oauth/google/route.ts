@@ -12,20 +12,23 @@ import { logger } from '@/lib/logger';
  * to a truthful login error — never a simulated success.
  */
 export async function GET(request: NextRequest): Promise<Response> {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  // Canonical PUBLIC origin for every absolute URL we hand to the browser or to
+  // Supabase — never request.nextUrl.origin, which is `localhost` on Amplify's
+  // SSR compute and would otherwise be where the user lands after OAuth.
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
   const next = safeRedirectPath(searchParams.get('next'), '/');
 
   if (!isSupabaseConfigured()) {
-    return NextResponse.redirect(new URL('/login?error=config', origin));
+    return NextResponse.redirect(new URL('/login?error=config', base));
   }
 
   const supabase = await createSupabaseUserClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? origin;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${appUrl}/api/auth/callback?next=${encodeURIComponent(next)}`,
+      redirectTo: `${base}/api/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
 
@@ -33,7 +36,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     logger.warn('google oauth start failed', {
       reason: error?.message ?? 'no_url',
     });
-    return NextResponse.redirect(new URL('/login?error=oauth', origin));
+    return NextResponse.redirect(new URL('/login?error=oauth', base));
   }
 
   return NextResponse.redirect(data.url);

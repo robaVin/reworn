@@ -20,7 +20,12 @@ import { logger } from '@/lib/logger';
  * redirect through the callback.
  */
 export async function GET(request: NextRequest): Promise<Response> {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  // Build absolute redirects from the canonical PUBLIC origin, never
+  // request.nextUrl.origin: on Amplify's SSR compute the request's internal
+  // origin is `localhost:3000`, which would otherwise leak into the Location
+  // header and bounce the user there after OAuth / email verification.
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
   const code = searchParams.get('code');
   const next = safeRedirectPath(searchParams.get('next'), '/');
   const isRecovery = next === '/reset-password';
@@ -29,7 +34,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const fail = isRecovery
       ? '/reset-password?error=expired'
       : '/login?error=auth';
-    return NextResponse.redirect(new URL(fail, origin));
+    return NextResponse.redirect(new URL(fail, base));
   }
 
   const supabase = await createSupabaseUserClient();
@@ -43,7 +48,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const fail = isRecovery
       ? '/reset-password?error=expired'
       : '/login?error=auth';
-    return NextResponse.redirect(new URL(fail, origin));
+    return NextResponse.redirect(new URL(fail, base));
   }
 
   // Provision on OAuth / email-verify first login. Harmless (idempotent) on
@@ -60,5 +65,5 @@ export async function GET(request: NextRequest): Promise<Response> {
     });
   }
 
-  return NextResponse.redirect(new URL(next, origin));
+  return NextResponse.redirect(new URL(next, base));
 }
