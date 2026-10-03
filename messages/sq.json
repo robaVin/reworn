@@ -743,6 +743,12 @@
     "desktopTitle": "Instalo në kompjuter",
     "desktopBody": "Në Chrome ose Edge, kliko ikonën e instalimit në shiritin e adresës, ose hap menynë e shfletuesit dhe zgjidh “Install galerija”.",
     "genericTitle": "Shtoje në ekranin bazë",
-    "genericBody": "Hap menynë e shfletuesit dhe zgjidh “Install” ose “Add to Home Screen”."
+    "genericBody": "Hap menynë e shfletuesit dhe zgjidh “Install” ose “Add to Home Screen”.",
+    "bannerTitle": "Instalo galerija",
+    "bannerBody": "Shtoje në pajisjen tënde — falas, drejt nga shfletuesi.",
+    "bannerBodyIos": "Shtoje në ekranin bazë.",
+    "installShort": "Instalo",
+    "notNow": "Jo tani",
+    "bannerDismiss": "Mbyll"
   }
 }

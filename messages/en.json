@@ -743,6 +743,12 @@
     "desktopTitle": "Install on your computer",
     "desktopBody": "In Chrome or Edge, click the install icon in the address bar, or open the browser menu and choose “Install galerija”.",
     "genericTitle": "Add to your home screen",
-    "genericBody": "Open your browser’s menu and choose “Install” or “Add to Home Screen”."
+    "genericBody": "Open your browser’s menu and choose “Install” or “Add to Home Screen”.",
+    "bannerTitle": "Install galerija",
+    "bannerBody": "Add it to your device — free, straight from your browser.",
+    "bannerBodyIos": "Add it to your home screen.",
+    "installShort": "Install",
+    "notNow": "Not now",
+    "bannerDismiss": "Dismiss"
   }
 }
